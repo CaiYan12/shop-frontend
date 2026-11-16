@@ -1,0 +1,17 @@
+/*
+ * Tailwind 4 entry.
+ * - preflight is intentionally NOT imported: Vuetify 4 ships its own reset.
+ * - layer names must match public/layers.css.
+ */
+@import "tailwindcss/theme" layer(tailwind-theme);
+@import "tailwindcss/utilities" layer(tailwind-utilities);
+
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-xs: 0px;
+  --breakpoint-sm: 600px;
+  --breakpoint-md: 840px;
+  --breakpoint-lg: 1145px;
+  --breakpoint-xl: 1545px;
+  --breakpoint-xxl: 2138px;
+}
