@@ -1,35 +1,15 @@
 # Components
 
-Vue template files in this folder are automatically imported.
-
-## 🚀 Usage
-
-Importing is handled by [unplugin-vue-components](https://github.com/unplugin/unplugin-vue-components). This plugin automatically imports `.vue` files created in the `src/components` directory, and registers them as global components. This means that you can use any component in your application without having to manually import it.
-
-The following example assumes a component located at `src/components/MyComponent.vue`:
+放在此目录的 `.vue` 文件**不会**被自动注册为全局组件，使用前需要显式 import。
 
 ```vue
 <template>
-  <div>
-    <MyComponent />
-  </div>
-</template>
-
-<script lang="ts" setup>
-  //
-</script>
-```
-
-When your template is rendered, the component's import will automatically be inlined, which renders to this:
-
-```vue
-<template>
-  <div>
-    <MyComponent />
-  </div>
+  <MyComponent />
 </template>
 
 <script lang="ts" setup>
   import MyComponent from '@/components/MyComponent.vue'
 </script>
 ```
+
+> 说明：`vite.config.mts` 里的 `autoImport: true` 属于 `vite-plugin-vuetify`，只自动导入 Vuetify 自带组件，与本目录无关。

@@ -5,7 +5,7 @@ import Fonts from 'unplugin-fonts/vite'
 import { defineConfig } from 'vite'
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
-// https://vitejs.dev/config/
+// 端口由 scripts/dev.mjs 决定并通过 --port 传入，此处不再重复声明。
 export default defineConfig({
   plugins: [
     Vue({
@@ -36,8 +36,5 @@ export default defineConfig({
       '@': fileURLToPath(new URL('src', import.meta.url)),
     },
     extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
-  },
-  server: {
-    port: 5173,
   },
 })

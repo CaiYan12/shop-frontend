@@ -16,6 +16,7 @@ import App from './App.vue'
 // Styles
 import 'unfonts.css'
 import '@/styles/tailwind.css'
+import '@/styles/vuetify-rounded.css'
 
 const app = createApp(App)
 

@@ -1,0 +1,17 @@
+/*
+ * Vuetify 组件的 rounded 属性会生成 rounded-* 类。
+ * $utilities: false 关闭了 Vuetify 的工具类，Tailwind 又只生成源码里字面出现的类名，
+ * 因此 rounded="xl" 这类组件属性会静默失效。这里按 Vuetify 的 $rounded 映射补回。
+ * 取值来源：vuetify/lib/styles/settings/_variables.scss（$border-radius-root: 4px）。
+ */
+@layer vuetify-utilities {
+  .rounded-0 { border-radius: 0; }
+  .rounded-sm { border-radius: 2px; }
+  .rounded { border-radius: 4px; }
+  .rounded-md { border-radius: 4px; }
+  .rounded-lg { border-radius: 8px; }
+  .rounded-xl { border-radius: 24px; }
+  .rounded-pill { border-radius: 9999px; }
+  .rounded-circle { border-radius: 50%; }
+  .rounded-shaped { border-radius: 24px 0; }
+}

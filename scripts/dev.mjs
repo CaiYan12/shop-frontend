@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * 启动 shop-frontend 并记录进程归属，供 stop.mjs 校验。
- * 归属校验：pid 存活 + 该 pid 确实监听记录端口。
+ * 端口在本文件单点定义，并通过启动参数/环境变量强制下发给子进程，
+ * 保证「脚本探测的端口」与「应用实际监听的端口」不会漂移。
  */
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
@@ -16,10 +17,14 @@ const CONFIG = {
   name: 'shop-frontend',
   port: 5173,
   command: process.execPath,
-  args: [
-    join(root, 'node_modules', 'vite', 'bin', 'vite.js'),
-  ],
+  args: [],
 }
+
+CONFIG.args = [
+  join(root, 'node_modules', 'vite', 'bin', 'vite.js'),
+  '--port', String(CONFIG.port),
+  '--strictPort',
+]
 
 function readPidFile () {
   if (!existsSync(pidFile)) return null
@@ -74,7 +79,7 @@ mkdirSync(runDir, { recursive: true })
 const child = spawn(CONFIG.command, CONFIG.args, {
   cwd: root,
   stdio: 'inherit',
-  env: process.env,
+  env: { ...process.env },
 })
 
 writeFileSync(pidFile, JSON.stringify({
