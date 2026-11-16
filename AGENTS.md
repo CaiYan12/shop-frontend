@@ -27,7 +27,24 @@
 
 ## 命令
 
-Phase 1 建立骨架后补充。
+```bash
+pnpm install        # 安装依赖（精确版本，见 pnpm-lock.yaml）
+pnpm dev            # 开发服务器（Vite，默认 5173）
+pnpm build          # 类型检查 + 生产构建（run-p type-check build-only）
+pnpm type-check     # 统一类型检查入口（vue-tsc --build --force）
+pnpm preview        # 预览构建产物
+```
+
+启停（Windows）：
+
+```bat
+start.bat           # 启动开发服务器，端口 5173
+stop.bat            # 停止并释放端口
+```
+
+- 端口在 `scripts/dev.mjs` 单点定义，通过 `--port` 与 `--strictPort` 强制下发给 Vite，避免脚本探测端口与应用监听端口漂移。
+- 启动记录写入 `.run/dev.json`（已 gitignore）。`stop.bat` 会校验 pid 存活 + 该 pid 确实监听记录端口，不符时**拒绝终止**，避免误杀其他进程。
+- 重复执行 `start.bat` 不会产生第二个进程，会提示「已在运行」。
 
 ## Agent skills
 

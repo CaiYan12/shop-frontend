@@ -1,0 +1,24 @@
+/*
+ * Tailwind 4 entry.
+ * - preflight is intentionally NOT imported: Vuetify 4 ships its own reset.
+ * - layer names must match public/layers.css.
+ * - radius scale is aligned to Vuetify's $rounded map so that a Tailwind
+ *   rounded-* class and a Vuetify rounded="*" prop resolve to the same value.
+ */
+@import "tailwindcss/theme" layer(tailwind-theme);
+@import "tailwindcss/utilities" layer(tailwind-utilities);
+
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-xs: 0px;
+  --breakpoint-sm: 600px;
+  --breakpoint-md: 840px;
+  --breakpoint-lg: 1145px;
+  --breakpoint-xl: 1545px;
+  --breakpoint-xxl: 2138px;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 24px;
+}
