@@ -101,6 +101,15 @@
 | `3.webp` | 背面 3/4，VESA 安装板 | Raimond Spekking | CC BY-SA 4.0 | [File:Dell Professional P2212H-9902.jpg](https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9902.jpg) |
 | `4.webp` | 底部接口：电源、VGA、DVI、USB | Raimond Spekking | CC BY-SA 4.0 | [File:Dell Professional P2212H-9905.jpg](https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9905.jpg) |
 
+## dell-s3423dwc — Dell S3423DWC
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 正面，桌面场景与摄像头 | XALIRATE | CC BY 4.0 | [File:Dell S3423DWC unboxing, desk setup 1 (cropped).png](https://commons.wikimedia.org/wiki/File:Dell_S3423DWC_unboxing,_desk_setup_1_(cropped).png) |
+| `2.webp` | 桌面全景，显示器与麦克风、笔记本 | XALIRATE | CC BY 4.0 | [File:Dell S3423DWC unboxing, desk setup 1.png](https://commons.wikimedia.org/wiki/File:Dell_S3423DWC_unboxing,_desk_setup_1.png) |
+| `3.webp` | 正面 3/4，曲面弧度 | XALIRATE | CC BY 4.0 | [File:Dell S3423DWC unboxing, front angled.png](https://commons.wikimedia.org/wiki/File:Dell_S3423DWC_unboxing,_front_angled.png) |
+| `4.webp` | 正面正视，极窄边框 | XALIRATE | CC BY 4.0 | [File:Dell S3423DWC unboxing, front.png](https://commons.wikimedia.org/wiki/File:Dell_S3423DWC_unboxing,_front.png) |
+
 ## apple-watch-series-8 — Apple Watch Series 8
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

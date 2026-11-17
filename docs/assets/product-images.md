@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T16:28:11+08:00
+> 生成时间：2026-11-17T16:28:51+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 12 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 54 张 |
-| 类型分布 | audio 4 / displays 3 / peripherals 3 / wearables 2 |
+| 商品数 | 13 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 58 张 |
+| 类型分布 | audio 4 / displays 4 / peripherals 3 / wearables 2 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 3,195,972 字节（≈3121 KB） |
+| 体积 | 合计 3,275,860 字节（≈3199 KB） |
 | 图源 | 全部 Wikimedia Commons |
 | 许可 | CC BY 2.0、CC BY 4.0、CC BY-SA 2.0、CC BY-SA 4.0、Public domain |
-| 单件耗时合计 | 63 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 单件耗时合计 | 68 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -50,6 +50,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | `asus-pa246q` | ASUS ProArt PA246Q | displays | mid | 4 | 4 分钟 | Public domain |
 | `dell-e2210f` | Dell E2210f | displays | low | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `dell-p2212h` | Dell Professional P2212H | displays | mid | 4 | 4 分钟 | CC BY-SA 4.0 |
+| `dell-s3423dwc` | Dell S3423DWC | displays | high | 4 | 5 分钟 | CC BY 4.0 |
 | `apple-watch-series-8` | Apple Watch Series 8 | wearables | high | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `huawei-watch` | Huawei Watch | wearables | mid | 5 | 4 分钟 | CC BY 2.0 |
 
@@ -171,6 +172,17 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 2 | 背面，支架与线缆 | — | Raimond Spekking | CC BY-SA 4.0 |
 | 3 | 背面 3/4，VESA 安装板 | — | Raimond Spekking | CC BY-SA 4.0 |
 | 4 | 底部接口：电源、VGA、DVI、USB | — | Raimond Spekking | CC BY-SA 4.0 |
+
+### dell-s3423dwc — Dell S3423DWC
+
+画面规格：黑色机身 + 银色底座；建议维度：尺寸=34 英寸；支架=原装底座/第三方支架臂
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 正面，桌面场景与摄像头 | — | XALIRATE | CC BY 4.0 |
+| 2 | 桌面全景，显示器与麦克风、笔记本 | — | XALIRATE | CC BY 4.0 |
+| 3 | 正面 3/4，曲面弧度 | — | XALIRATE | CC BY 4.0 |
+| 4 | 正面正视，极窄边框 | — | XALIRATE | CC BY 4.0 |
 
 ### apple-watch-series-8 — Apple Watch Series 8
 
