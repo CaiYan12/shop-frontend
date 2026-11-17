@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T14:35:09+08:00",
+  "generatedAt": "2026-11-17T15:34:52+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -235,6 +235,116 @@
           "bytes": 44680,
           "originalWidth": 7366,
           "originalHeight": 4920
+        }
+      ]
+    },
+    {
+      "name": "Logitech G613",
+      "nameZh": "Logitech G613 无线机械键盘",
+      "category": {
+        "slug": "peripherals",
+        "name": "键盘外设"
+      },
+      "brand": "Logitech",
+      "model": "G613",
+      "priceBand": "mid",
+      "suggestedDemoPrice": 699,
+      "soldOutCandidate": false,
+      "depictedSpec": "黑色 + Romer-G 轴",
+      "proposedDimensions": [
+        {
+          "name": "轴体",
+          "options": [
+            "Romer-G 线性",
+            "Romer-G 段落"
+          ]
+        },
+        {
+          "name": "连接",
+          "options": [
+            "Lightspeed 无线",
+            "蓝牙"
+          ]
+        }
+      ],
+      "minutesSpent": 7,
+      "slug": "logitech-g613",
+      "imageCount": 5,
+      "images": [
+        {
+          "file": "/images/products/logitech-g613/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:MiNe-M_100-5799U_(41336816211).jpg",
+          "sourceFile": "File:MiNe-M 100-5799U (41336816211).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "MiNe from Taipei, Taiwan",
+          "note": "俯视全键盘，木桌面场景",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 133992,
+          "originalWidth": 3240,
+          "originalHeight": 2160
+        },
+        {
+          "file": "/images/products/logitech-g613/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:MiNe-M_100-5800U_(27464846318).jpg",
+          "sourceFile": "File:MiNe-M 100-5800U (27464846318).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "MiNe from Taipei, Taiwan",
+          "note": "G1-G6 宏键特写",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 87750,
+          "originalWidth": 3240,
+          "originalHeight": 2160
+        },
+        {
+          "file": "/images/products/logitech-g613/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:MiNe-M_100-5802U_(40623211694).jpg",
+          "sourceFile": "File:MiNe-M 100-5802U (40623211694).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "MiNe from Taipei, Taiwan",
+          "note": "左侧视角，可见宏键列与掌托",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 144020,
+          "originalWidth": 3240,
+          "originalHeight": 2160
+        },
+        {
+          "file": "/images/products/logitech-g613/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:MiNe-M_100-5804U_(41293871782).jpg",
+          "sourceFile": "File:MiNe-M 100-5804U (41293871782).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "MiNe from Taipei, Taiwan",
+          "note": "媒体控制键特写",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 116910,
+          "originalWidth": 3240,
+          "originalHeight": 2160
+        },
+        {
+          "file": "/images/products/logitech-g613/5.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:MiNe-M_100-5807U_(40623210714).jpg",
+          "sourceFile": "File:MiNe-M 100-5807U (40623210714).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "MiNe from Taipei, Taiwan",
+          "note": "背面，电池仓与支架",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 165602,
+          "originalWidth": 3240,
+          "originalHeight": 2160
         }
       ]
     },
@@ -540,9 +650,9 @@
     }
   ],
   "totals": {
-    "products": 5,
-    "images": 23,
-    "bytes": 1016566,
+    "products": 6,
+    "images": 28,
+    "bytes": 1664840,
     "categories": [
       "audio",
       "displays",

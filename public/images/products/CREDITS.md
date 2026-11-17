@@ -1,8 +1,8 @@
-# 图片素材署名与许可（T5 素材样本）
+# 图片素材署名与许可（T5 / T5b 素材样本）
 
 本目录下 `{slug}/{n}.webp` 的全部图片来自 **Wikimedia Commons**，按各文件页面标注的 CC 许可使用。
 
-**许可义务**：CC BY 2.0 与 CC BY-SA 4.0 均要求署名作者、标注许可名称并附许可链接；CC BY-SA 4.0 另要求改编作品以相同许可共享。本仓库对原图做了缩放（长边 ≤1200px）与 JPEG→WebP 转码，属于改编，因此这些文件整体按原许可（CC BY-SA 4.0 / CC BY 2.0）提供。
+**许可义务**：CC BY 2.0 / CC BY 4.0 / CC BY-SA 2.0 / CC BY-SA 4.0 均要求署名作者、标注许可名称并附许可链接；CC BY-SA 系列另要求改编作品以相同许可共享。本仓库对原图做了缩放（长边 ≤1200px）与 JPEG→WebP 转码，属于改编，因此这些文件整体按原许可提供。
 
 机器可读版本见 `docs/assets/product-images.json`。
 
@@ -25,6 +25,16 @@
 | `3.webp` | 左上角 esc / F1-F4 特写 | Triple-green | CC BY 2.0 | [File:F1 - Keychron K8 Non-Backlight Wireless Mechanical Keyboard.jpg](https://commons.wikimedia.org/wiki/File:F1_-_Keychron_K8_Non-Backlight_Wireless_Mechanical_Keyboard.jpg) |
 | `4.webp` | 右侧方向键与功能键区特写 | Triple-green | CC BY 2.0 | [File:Rechts.jpg](https://commons.wikimedia.org/wiki/File:Rechts.jpg) |
 | `5.webp` | 同一键盘换装 Camel 键帽套装 | Triple-green | CC BY 2.0 | [File:Keychron K8 Non-Backlight Wireless Mechanical Keyboard with Cherry Profile Double - Shot PBT Full Set Keycaps - Camel.jpg](https://commons.wikimedia.org/wiki/File:Keychron_K8_Non-Backlight_Wireless_Mechanical_Keyboard_with_Cherry_Profile_Double_-_Shot_PBT_Full_Set_Keycaps_-_Camel.jpg) |
+
+## logitech-g613 — Logitech G613
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 俯视全键盘，木桌面场景 | MiNe from Taipei, Taiwan | CC BY 2.0 | [File:MiNe-M 100-5799U (41336816211).jpg](https://commons.wikimedia.org/wiki/File:MiNe-M_100-5799U_(41336816211).jpg) |
+| `2.webp` | G1-G6 宏键特写 | MiNe from Taipei, Taiwan | CC BY 2.0 | [File:MiNe-M 100-5800U (27464846318).jpg](https://commons.wikimedia.org/wiki/File:MiNe-M_100-5800U_(27464846318).jpg) |
+| `3.webp` | 左侧视角，可见宏键列与掌托 | MiNe from Taipei, Taiwan | CC BY 2.0 | [File:MiNe-M 100-5802U (40623211694).jpg](https://commons.wikimedia.org/wiki/File:MiNe-M_100-5802U_(40623211694).jpg) |
+| `4.webp` | 媒体控制键特写 | MiNe from Taipei, Taiwan | CC BY 2.0 | [File:MiNe-M 100-5804U (41293871782).jpg](https://commons.wikimedia.org/wiki/File:MiNe-M_100-5804U_(41293871782).jpg) |
+| `5.webp` | 背面，电池仓与支架 | MiNe from Taipei, Taiwan | CC BY 2.0 | [File:MiNe-M 100-5807U (40623210714).jpg](https://commons.wikimedia.org/wiki/File:MiNe-M_100-5807U_(40623210714).jpg) |
 
 ## dell-e2210f — Dell E2210f
 
