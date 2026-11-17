@@ -14,6 +14,9 @@ importers:
       '@mdi/font':
         specifier: 7.4.47
         version: 7.4.47
+      openapi-fetch:
+        specifier: 0.17.0
+        version: 0.17.0
       pinia:
         specifier: 4.1.0
         version: 4.1.0(@typescript/typescript6@6.0.2)(@vue/devtools-api@8.2.1)(vue@3.5.45(@typescript/typescript6@6.0.2))
@@ -851,6 +854,12 @@ packages:
     resolution: {integrity: sha512-GuGRF8MddEKavyUzjy0k2z2pA76/N+eT8lHlypx0/AhShLKD2FOerQxHhpFhcqnQmAqCkunUCYlf6Z9RKh/4zg==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0, npm: '>= 10'}
     hasBin: true
+
+  openapi-fetch@0.17.0:
+    resolution: {integrity: sha512-PsbZR1wAPcG91eEthKhN+Zn92FMHxv+/faECIwjXdxfTODGSGegYv0sc1Olz+HYPvKOuoXfp+0pA2XVt2cI0Ig==}
+
+  openapi-typescript-helpers@0.1.0:
+    resolution: {integrity: sha512-OKTGPthhivLw/fHz6c3OPtg72vi86qaMlqbJuVJ23qOvQ+53uw1n7HdmkJFibloF7QEjDrDkzJiOJuockM/ljw==}
 
   path-browserify@1.0.1:
     resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
@@ -1933,6 +1942,12 @@ snapshots:
       read-package-json-fast: 6.0.0
       shell-quote: 1.12.0
       which: 7.0.0
+
+  openapi-fetch@0.17.0:
+    dependencies:
+      openapi-typescript-helpers: 0.1.0
+
+  openapi-typescript-helpers@0.1.0: {}
 
   path-browserify@1.0.1: {}
 
