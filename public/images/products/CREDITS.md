@@ -83,6 +83,15 @@
 | `3.webp` | 底部接口特写：电源、VGA、DVI | Raimond Spekking | CC BY-SA 4.0 | [File:Dell E2210f-2129.jpg](https://commons.wikimedia.org/wiki/File:Dell_E2210f-2129.jpg) |
 | `4.webp` | 正背面平视，铭牌与接口 | Raimond Spekking | CC BY-SA 4.0 | [File:Dell E2210f-2131.jpg](https://commons.wikimedia.org/wiki/File:Dell_E2210f-2131.jpg) |
 
+## dell-p2212h — Dell Professional P2212H
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 正面 3/4，Dell 标志与底座 | Raimond Spekking | CC BY-SA 4.0 | [File:Dell Professional P2212H-9899.jpg](https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9899.jpg) |
+| `2.webp` | 背面，支架与线缆 | Raimond Spekking | CC BY-SA 4.0 | [File:Dell Professional P2212H-9900.jpg](https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9900.jpg) |
+| `3.webp` | 背面 3/4，VESA 安装板 | Raimond Spekking | CC BY-SA 4.0 | [File:Dell Professional P2212H-9902.jpg](https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9902.jpg) |
+| `4.webp` | 底部接口：电源、VGA、DVI、USB | Raimond Spekking | CC BY-SA 4.0 | [File:Dell Professional P2212H-9905.jpg](https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9905.jpg) |
+
 ## apple-watch-series-8 — Apple Watch Series 8
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

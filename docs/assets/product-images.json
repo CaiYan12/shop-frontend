@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T15:37:19+08:00",
+  "generatedAt": "2026-11-17T16:27:44+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -854,6 +854,101 @@
       ]
     },
     {
+      "name": "Dell Professional P2212H",
+      "nameZh": "Dell Professional P2212H 22 英寸显示器",
+      "category": {
+        "slug": "displays",
+        "name": "显示设备"
+      },
+      "brand": "Dell",
+      "model": "P2212H",
+      "priceBand": "mid",
+      "suggestedDemoPrice": 899,
+      "soldOutCandidate": false,
+      "depictedSpec": "黑色机身 + 原装升降底座",
+      "proposedDimensions": [
+        {
+          "name": "支架",
+          "options": [
+            "原装升降底座",
+            "第三方支架臂"
+          ]
+        },
+        {
+          "name": "成色",
+          "options": [
+            "全新",
+            "官翻"
+          ]
+        }
+      ],
+      "minutesSpent": 4,
+      "slug": "dell-p2212h",
+      "imageCount": 4,
+      "images": [
+        {
+          "file": "/images/products/dell-p2212h/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9899.jpg",
+          "sourceFile": "File:Dell Professional P2212H-9899.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "正面 3/4，Dell 标志与底座",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 22386,
+          "originalWidth": 5529,
+          "originalHeight": 4147
+        },
+        {
+          "file": "/images/products/dell-p2212h/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9900.jpg",
+          "sourceFile": "File:Dell Professional P2212H-9900.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "背面，支架与线缆",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 60226,
+          "originalWidth": 5324,
+          "originalHeight": 3993
+        },
+        {
+          "file": "/images/products/dell-p2212h/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9902.jpg",
+          "sourceFile": "File:Dell Professional P2212H-9902.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "背面 3/4，VESA 安装板",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 64056,
+          "originalWidth": 4760,
+          "originalHeight": 3570
+        },
+        {
+          "file": "/images/products/dell-p2212h/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dell_Professional_P2212H-9905.jpg",
+          "sourceFile": "File:Dell Professional P2212H-9905.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "底部接口：电源、VGA、DVI、USB",
+          "spec": null,
+          "width": 1200,
+          "height": 675,
+          "bytes": 40790,
+          "originalWidth": 6720,
+          "originalHeight": 3780
+        }
+      ]
+    },
+    {
       "name": "Apple Watch Series 8",
       "nameZh": "Apple Watch Series 8 智能手表（Nike 款）",
       "category": {
@@ -1060,9 +1155,9 @@
     }
   ],
   "totals": {
-    "products": 10,
-    "images": 46,
-    "bytes": 2892676,
+    "products": 11,
+    "images": 50,
+    "bytes": 3080134,
     "categories": [
       "audio",
       "displays",

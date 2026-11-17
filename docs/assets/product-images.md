@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T15:37:19+08:00
+> 生成时间：2026-11-17T16:27:44+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 10 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 46 张 |
-| 类型分布 | audio 4 / displays 1 / peripherals 3 / wearables 2 |
+| 商品数 | 11 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 50 张 |
+| 类型分布 | audio 4 / displays 2 / peripherals 3 / wearables 2 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 2,892,676 字节（≈2825 KB） |
+| 体积 | 合计 3,080,134 字节（≈3008 KB） |
 | 图源 | 全部 Wikimedia Commons |
 | 许可 | CC BY 2.0、CC BY 4.0、CC BY-SA 2.0、CC BY-SA 4.0 |
-| 单件耗时合计 | 55 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 单件耗时合计 | 59 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -48,6 +48,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | `logitech-g15` | Logitech G15 | peripherals | low | 4 | 7 分钟 | CC BY-SA 2.0 |
 | `logitech-g613` | Logitech G613 | peripherals | mid | 5 | 7 分钟 | CC BY 2.0 |
 | `dell-e2210f` | Dell E2210f | displays | low | 4 | 4 分钟 | CC BY-SA 4.0 |
+| `dell-p2212h` | Dell Professional P2212H | displays | mid | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `apple-watch-series-8` | Apple Watch Series 8 | wearables | high | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `huawei-watch` | Huawei Watch | wearables | mid | 5 | 4 分钟 | CC BY 2.0 |
 
@@ -147,6 +148,17 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 2 | 背面 3/4，支架与 VESA 安装板 | 支架=第三方升降臂 | Raimond Spekking | CC BY-SA 4.0 |
 | 3 | 底部接口特写：电源、VGA、DVI | — | Raimond Spekking | CC BY-SA 4.0 |
 | 4 | 正背面平视，铭牌与接口 | — | Raimond Spekking | CC BY-SA 4.0 |
+
+### dell-p2212h — Dell Professional P2212H
+
+画面规格：黑色机身 + 原装升降底座；建议维度：支架=原装升降底座/第三方支架臂；成色=全新/官翻
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 正面 3/4，Dell 标志与底座 | — | Raimond Spekking | CC BY-SA 4.0 |
+| 2 | 背面，支架与线缆 | — | Raimond Spekking | CC BY-SA 4.0 |
+| 3 | 背面 3/4，VESA 安装板 | — | Raimond Spekking | CC BY-SA 4.0 |
+| 4 | 底部接口：电源、VGA、DVI、USB | — | Raimond Spekking | CC BY-SA 4.0 |
 
 ### apple-watch-series-8 — Apple Watch Series 8
 
