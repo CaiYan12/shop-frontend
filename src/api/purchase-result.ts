@@ -8,7 +8,9 @@
  * 任何分支漏写都会让 `assertNever` 收到非 `never` 实参，`pnpm type-check` 失败。
  * 这里不依赖全局 `noImplicitReturns`。
  */
-import type { PurchaseCheckResponse } from './client'
+import type { components } from './schema'
+
+type PurchaseCheckResponse = components['schemas']['PurchaseCheckResponse']
 
 /** 编译期兜底：联合类型里出现未处理的分支时，这里会变成类型错误。 */
 export function assertNever(value: never): never {
