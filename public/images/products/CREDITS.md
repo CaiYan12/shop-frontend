@@ -74,6 +74,15 @@
 | `4.webp` | 媒体控制键特写 | MiNe from Taipei, Taiwan | CC BY 2.0 | [File:MiNe-M 100-5804U (41293871782).jpg](https://commons.wikimedia.org/wiki/File:MiNe-M_100-5804U_(41293871782).jpg) |
 | `5.webp` | 背面，电池仓与支架 | MiNe from Taipei, Taiwan | CC BY 2.0 | [File:MiNe-M 100-5807U (40623210714).jpg](https://commons.wikimedia.org/wiki/File:MiNe-M_100-5807U_(40623210714).jpg) |
 
+## asus-pa246q — ASUS ProArt PA246Q
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 正面正视，屏幕与底座 | MKFI | Public domain | [File:Asus ProArt PA246Q monitor 2.JPG](https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_2.JPG) |
+| `2.webp` | 背面，VESA 孔位与铭牌 | MKFI | Public domain | [File:Asus ProArt PA246Q monitor 3.JPG](https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_3.JPG) |
+| `3.webp` | 侧面，USB 集线器与接口 | MKFI | Public domain | [File:Asus ProArt PA246Q monitor 4.JPG](https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_4.JPG) |
+| `4.webp` | 竖屏旋转状态 | MKFI | Public domain | [File:Asus ProArt PA246Q monitor 5.JPG](https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_5.JPG) |
+
 ## dell-e2210f — Dell E2210f
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

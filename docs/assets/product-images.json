@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T16:27:44+08:00",
+  "generatedAt": "2026-11-17T16:28:11+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -759,6 +759,101 @@
       ]
     },
     {
+      "name": "ASUS ProArt PA246Q",
+      "nameZh": "ASUS ProArt PA246Q 24 英寸专业显示器",
+      "category": {
+        "slug": "displays",
+        "name": "显示设备"
+      },
+      "brand": "ASUS",
+      "model": "PA246Q",
+      "priceBand": "mid",
+      "suggestedDemoPrice": 1299,
+      "soldOutCandidate": false,
+      "depictedSpec": "黑色机身 + 原装支架",
+      "proposedDimensions": [
+        {
+          "name": "支架",
+          "options": [
+            "原装支架",
+            "第三方支架臂"
+          ]
+        },
+        {
+          "name": "成色",
+          "options": [
+            "全新",
+            "二手"
+          ]
+        }
+      ],
+      "minutesSpent": 4,
+      "slug": "asus-pa246q",
+      "imageCount": 4,
+      "images": [
+        {
+          "file": "/images/products/asus-pa246q/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_2.JPG",
+          "sourceFile": "File:Asus ProArt PA246Q monitor 2.JPG",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "MKFI",
+          "note": "正面正视，屏幕与底座",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 19596,
+          "originalWidth": 5110,
+          "originalHeight": 3407
+        },
+        {
+          "file": "/images/products/asus-pa246q/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_3.JPG",
+          "sourceFile": "File:Asus ProArt PA246Q monitor 3.JPG",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "MKFI",
+          "note": "背面，VESA 孔位与铭牌",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 27222,
+          "originalWidth": 4656,
+          "originalHeight": 3104
+        },
+        {
+          "file": "/images/products/asus-pa246q/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_4.JPG",
+          "sourceFile": "File:Asus ProArt PA246Q monitor 4.JPG",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "MKFI",
+          "note": "侧面，USB 集线器与接口",
+          "spec": null,
+          "width": 800,
+          "height": 1200,
+          "bytes": 47176,
+          "originalWidth": 3393,
+          "originalHeight": 5090
+        },
+        {
+          "file": "/images/products/asus-pa246q/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Asus_ProArt_PA246Q_monitor_5.JPG",
+          "sourceFile": "File:Asus ProArt PA246Q monitor 5.JPG",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "MKFI",
+          "note": "竖屏旋转状态",
+          "spec": "支架=原装支架（可旋转）",
+          "width": 800,
+          "height": 1200,
+          "bytes": 21844,
+          "originalWidth": 3034,
+          "originalHeight": 4551
+        }
+      ]
+    },
+    {
       "name": "Dell E2210f",
       "nameZh": "Dell E2210f 22 英寸液晶显示器",
       "category": {
@@ -1155,9 +1250,9 @@
     }
   ],
   "totals": {
-    "products": 11,
-    "images": 50,
-    "bytes": 3080134,
+    "products": 12,
+    "images": 54,
+    "bytes": 3195972,
     "categories": [
       "audio",
       "displays",

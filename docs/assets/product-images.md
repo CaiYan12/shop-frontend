@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T16:27:44+08:00
+> 生成时间：2026-11-17T16:28:11+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 11 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 50 张 |
-| 类型分布 | audio 4 / displays 2 / peripherals 3 / wearables 2 |
+| 商品数 | 12 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 54 张 |
+| 类型分布 | audio 4 / displays 3 / peripherals 3 / wearables 2 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 3,080,134 字节（≈3008 KB） |
+| 体积 | 合计 3,195,972 字节（≈3121 KB） |
 | 图源 | 全部 Wikimedia Commons |
-| 许可 | CC BY 2.0、CC BY 4.0、CC BY-SA 2.0、CC BY-SA 4.0 |
-| 单件耗时合计 | 59 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 许可 | CC BY 2.0、CC BY 4.0、CC BY-SA 2.0、CC BY-SA 4.0、Public domain |
+| 单件耗时合计 | 63 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -47,6 +47,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | `keychron-k8` | Keychron K8 | peripherals | mid | 5 | 5 分钟 | CC BY 2.0 |
 | `logitech-g15` | Logitech G15 | peripherals | low | 4 | 7 分钟 | CC BY-SA 2.0 |
 | `logitech-g613` | Logitech G613 | peripherals | mid | 5 | 7 分钟 | CC BY 2.0 |
+| `asus-pa246q` | ASUS ProArt PA246Q | displays | mid | 4 | 4 分钟 | Public domain |
 | `dell-e2210f` | Dell E2210f | displays | low | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `dell-p2212h` | Dell Professional P2212H | displays | mid | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `apple-watch-series-8` | Apple Watch Series 8 | wearables | high | 4 | 4 分钟 | CC BY-SA 4.0 |
@@ -137,6 +138,17 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 3 | 左侧视角，可见宏键列与掌托 | — | MiNe from Taipei, Taiwan | CC BY 2.0 |
 | 4 | 媒体控制键特写 | — | MiNe from Taipei, Taiwan | CC BY 2.0 |
 | 5 | 背面，电池仓与支架 | — | MiNe from Taipei, Taiwan | CC BY 2.0 |
+
+### asus-pa246q — ASUS ProArt PA246Q
+
+画面规格：黑色机身 + 原装支架；建议维度：支架=原装支架/第三方支架臂；成色=全新/二手
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 正面正视，屏幕与底座 | — | MKFI | Public domain |
+| 2 | 背面，VESA 孔位与铭牌 | — | MKFI | Public domain |
+| 3 | 侧面，USB 集线器与接口 | — | MKFI | Public domain |
+| 4 | 竖屏旋转状态 | 支架=原装支架（可旋转） | MKFI | Public domain |
 
 ### dell-e2210f — Dell E2210f
 
