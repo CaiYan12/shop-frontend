@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T16:46:19+08:00
+> 生成时间：2026-11-17T16:47:04+08:00
 
 ---
 
@@ -264,24 +264,26 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | Razer Naga / Ouroboros、Logitech G19s、Cherry G80-3000（Sinchen.Lin） | 同机多角度齐全，但源图仅 **700×465**，放大到轮播尺寸会糊 |
 | Apple Watch Series 7（MIKI Yoshihito，3 张） | 只有 3 张，不足 4 张 |
 | AirPods Pro（aconcagua，3 张） | 只有 3 张；Burkhard Mücke 的 5 张混了 Pro 2 / Pro 3 两代 |
+| Logitech G910（Sinchen.Lin，27 张） | 源图仅 800×531，且多次下载遇 429 / TLS 握手失败；改用 Cherry G80-3850 |
+| BenQ SW2700PT（TAKA@P.P.R.S，19 张） | 多为 VESA 支架安装与接口特写，缺干净的产品角度图 |
 
 ## 6. 授权记录方式（事实）
 
 - 每张图在 `docs/assets/product-images.json` 里记录：`file`、`sourceUrl`（Commons 文件页）、`sourceFile`、`license`、`licenseUrl`、`author`、`note`、`spec`。
 - 署名清单 `public/images/products/CREDITS.md` 随素材一起提交，满足 CC BY / CC BY-SA 的署名义务。
-- 许可差异：工单里已核实的是 Unsplash / Pixabay 的「免费可商用、无需署名」；本次实际使用 CC BY 2.0 / CC BY 4.0 / CC BY-SA 2.0 / CC BY-SA 4.0，**均要求署名**，CC BY-SA 另要求同许可共享。已按此执行。
+- 许可差异：工单里已核实的是 Unsplash / Pixabay 的「免费可商用、无需署名」；本次实际使用 CC BY 2.0 / CC BY 4.0 / CC BY-SA 2.0 / CC BY-SA 4.0 与 Public domain，**CC 系列要求署名**，CC BY-SA 另要求同许可共享。已按此执行。
 - 无法确认许可的图一律没用（见 §5 排除清单）。
 
 ## 7. 可得性结论（事实 + 推论分开）
 
 **事实**：
-- 累计探测 Commons 类目 90+ 个（含品牌级与机型级）。
+- 累计探测 Commons 类目 100+ 个（含品牌级与机型级）。
 - 同一摄影师、同一台机器、≥4 张的类目是少数；大量类目只有 1–3 张，或由不同摄影师拍不同机器。
 - 命中率约 20–25%（按「先猜机型再查类目」的方式）。
 
 **推论**：
 - 单件耗时 4–8 分钟，**成本不是瓶颈，命中率才是**。
-- 按当前节奏，补齐到 16 件还需要再探测约 40–60 个类目。
+- 16 件已凑齐；若继续扩到 24 件，按同一命中率预计还需探测 40–60 个类目。
 
 ## 8. 规模建议（已定）
 
@@ -301,6 +303,6 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 ## 10. 遗留问题
 
 1. **署名义务**：CC BY / CC BY-SA 要求署名，与工单里 Unsplash / Pixabay 的「无需署名」不同；答辩报告需加一节素材来源与授权。
-2. **分辨率不齐**：Logitech G910 源图仅 800×531（未放大），其余为 1200px 长边。
+2. **分辨率**：输出统一为长边 ≤1200px（源图长边 2592–6720px）；Apple Watch 系列第 2 张为竖构图 896×1200。
 3. **老机型**：Dell E2210f、Huawei Watch（一代）、Logitech G15 均为 2010 年代产品，按「清仓 / 二手」定位合理。
 4. **后端占位 slug 未对齐**：按工单要求不迁就后端现有占位商品，T7 需按本清单改种子数据。
