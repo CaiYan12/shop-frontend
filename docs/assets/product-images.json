@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T16:30:25+08:00",
+  "generatedAt": "2026-11-17T16:46:19+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -440,6 +440,116 @@
           "bytes": 56668,
           "originalWidth": 5269,
           "originalHeight": 3513
+        }
+      ]
+    },
+    {
+      "name": "Cherry MX Board 3.0 (G80-3850)",
+      "nameZh": "Cherry MX Board 3.0 机械键盘（G80-3850）",
+      "category": {
+        "slug": "peripherals",
+        "name": "键盘外设"
+      },
+      "brand": "Cherry",
+      "model": "G80-3850",
+      "priceBand": "mid",
+      "suggestedDemoPrice": 499,
+      "soldOutCandidate": false,
+      "depictedSpec": "黑色 + 红色脚垫 + UK 105 键配列",
+      "proposedDimensions": [
+        {
+          "name": "轴体",
+          "options": [
+            "Cherry MX 红轴",
+            "Cherry MX 黑轴"
+          ]
+        },
+        {
+          "name": "配列",
+          "options": [
+            "US 104 键",
+            "UK 105 键"
+          ]
+        }
+      ],
+      "minutesSpent": 6,
+      "slug": "cherry-g80-3850",
+      "imageCount": 5,
+      "images": [
+        {
+          "file": "/images/products/cherry-g80-3850/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:G80-3850_--_Top_View_incl._Acc.jpg",
+          "sourceFile": "File:G80-3850 -- Top View incl. Acc.jpg",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "Broadmonkey",
+          "note": "俯视全键盘，红色脚垫与 USB 线",
+          "spec": "配列=UK 105 键",
+          "width": 1200,
+          "height": 716,
+          "bytes": 64424,
+          "originalWidth": 3264,
+          "originalHeight": 1947
+        },
+        {
+          "file": "/images/products/cherry-g80-3850/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:G80-3850_--_Caps_Lock.jpg",
+          "sourceFile": "File:G80-3850 -- Caps Lock.jpg",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "Broadmonkey",
+          "note": "左上角 3/4，Caps Lock 位置露出红轴",
+          "spec": null,
+          "width": 1200,
+          "height": 906,
+          "bytes": 98780,
+          "originalWidth": 2468,
+          "originalHeight": 1863
+        },
+        {
+          "file": "/images/products/cherry-g80-3850/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:G80-3850_--_Backside.jpg",
+          "sourceFile": "File:G80-3850 -- Backside.jpg",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "Broadmonkey",
+          "note": "背面，红色脚垫与 CHERRY 压印",
+          "spec": null,
+          "width": 1200,
+          "height": 901,
+          "bytes": 38688,
+          "originalWidth": 2512,
+          "originalHeight": 1887
+        },
+        {
+          "file": "/images/products/cherry-g80-3850/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:G80-3850_--_Label.jpg",
+          "sourceFile": "File:G80-3850 -- Label.jpg",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "Broadmonkey",
+          "note": "背面铭牌特写：MX 3850 USB / G80-3850",
+          "spec": null,
+          "width": 1200,
+          "height": 901,
+          "bytes": 80776,
+          "originalWidth": 2129,
+          "originalHeight": 1598
+        },
+        {
+          "file": "/images/products/cherry-g80-3850/5.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:G80-3850_--_Caps_Lock_Clear_Stem.jpg",
+          "sourceFile": "File:G80-3850 -- Caps Lock Clear Stem.jpg",
+          "license": "Public domain",
+          "licenseUrl": "",
+          "author": "Broadmonkey",
+          "note": "Caps Lock 键帽与轴心分解特写",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 36258,
+          "originalWidth": 2285,
+          "originalHeight": 1714
         }
       ]
     },
@@ -1548,9 +1658,9 @@
     }
   ],
   "totals": {
-    "products": 15,
-    "images": 67,
-    "bytes": 3745370,
+    "products": 16,
+    "images": 72,
+    "bytes": 4064296,
     "categories": [
       "audio",
       "displays",

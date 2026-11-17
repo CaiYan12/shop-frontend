@@ -45,6 +45,16 @@
 | `3.webp` | 3/4 视角，SONY 标志与按键 | Raimond Spekking | CC BY-SA 4.0 | [File:Sony WH-CH500-40872.jpg](https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40872.jpg) |
 | `4.webp` | 3/4 视角，耳罩内侧海绵 | Raimond Spekking | CC BY-SA 4.0 | [File:Sony WH-CH500-40873.jpg](https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40873.jpg) |
 
+## cherry-g80-3850 — Cherry MX Board 3.0 (G80-3850)
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 俯视全键盘，红色脚垫与 USB 线 | Broadmonkey | Public domain | [File:G80-3850 -- Top View incl. Acc.jpg](https://commons.wikimedia.org/wiki/File:G80-3850_--_Top_View_incl._Acc.jpg) |
+| `2.webp` | 左上角 3/4，Caps Lock 位置露出红轴 | Broadmonkey | Public domain | [File:G80-3850 -- Caps Lock.jpg](https://commons.wikimedia.org/wiki/File:G80-3850_--_Caps_Lock.jpg) |
+| `3.webp` | 背面，红色脚垫与 CHERRY 压印 | Broadmonkey | Public domain | [File:G80-3850 -- Backside.jpg](https://commons.wikimedia.org/wiki/File:G80-3850_--_Backside.jpg) |
+| `4.webp` | 背面铭牌特写：MX 3850 USB / G80-3850 | Broadmonkey | Public domain | [File:G80-3850 -- Label.jpg](https://commons.wikimedia.org/wiki/File:G80-3850_--_Label.jpg) |
+| `5.webp` | Caps Lock 键帽与轴心分解特写 | Broadmonkey | Public domain | [File:G80-3850 -- Caps Lock Clear Stem.jpg](https://commons.wikimedia.org/wiki/File:G80-3850_--_Caps_Lock_Clear_Stem.jpg) |
+
 ## keychron-k8 — Keychron K8
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

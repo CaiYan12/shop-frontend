@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T16:30:25+08:00
+> 生成时间：2026-11-17T16:46:19+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 15 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 67 张 |
-| 类型分布 | audio 4 / displays 4 / peripherals 3 / wearables 4 |
+| 商品数 | 16 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 72 张 |
+| 类型分布 | audio 4 / displays 4 / peripherals 4 / wearables 4 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 3,745,370 字节（≈3658 KB） |
+| 体积 | 合计 4,064,296 字节（≈3969 KB） |
 | 图源 | 全部 Wikimedia Commons |
 | 许可 | CC BY 2.0、CC BY 4.0、CC BY-SA 2.0、CC BY-SA 4.0、Public domain |
-| 单件耗时合计 | 77 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 单件耗时合计 | 83 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -44,6 +44,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | `apple-earpods` | Apple EarPods | audio | low | 5 | 6 分钟 | CC BY-SA 4.0 |
 | `sony-wh-1000xm3` | Sony WH-1000XM3 | audio | high | 5 | 7 分钟 | CC BY 4.0 |
 | `sony-wh-ch500` | Sony WH-CH500 | audio | low | 4 | 6 分钟 | CC BY-SA 4.0 |
+| `cherry-g80-3850` | Cherry MX Board 3.0 (G80-3850) | peripherals | mid | 5 | 6 分钟 | Public domain |
 | `keychron-k8` | Keychron K8 | peripherals | mid | 5 | 5 分钟 | CC BY 2.0 |
 | `logitech-g15` | Logitech G15 | peripherals | low | 4 | 7 分钟 | CC BY-SA 2.0 |
 | `logitech-g613` | Logitech G613 | peripherals | mid | 5 | 7 分钟 | CC BY 2.0 |
@@ -106,6 +107,18 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 2 | 头梁铭牌与耳罩特写 | — | Raimond Spekking | CC BY-SA 4.0 |
 | 3 | 3/4 视角，SONY 标志与按键 | — | Raimond Spekking | CC BY-SA 4.0 |
 | 4 | 3/4 视角，耳罩内侧海绵 | — | Raimond Spekking | CC BY-SA 4.0 |
+
+### cherry-g80-3850 — Cherry MX Board 3.0 (G80-3850)
+
+画面规格：黑色 + 红色脚垫 + UK 105 键配列；建议维度：轴体=Cherry MX 红轴/Cherry MX 黑轴；配列=US 104 键/UK 105 键
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 俯视全键盘，红色脚垫与 USB 线 | 配列=UK 105 键 | Broadmonkey | Public domain |
+| 2 | 左上角 3/4，Caps Lock 位置露出红轴 | — | Broadmonkey | Public domain |
+| 3 | 背面，红色脚垫与 CHERRY 压印 | — | Broadmonkey | Public domain |
+| 4 | 背面铭牌特写：MX 3850 USB / G80-3850 | — | Broadmonkey | Public domain |
+| 5 | Caps Lock 键帽与轴心分解特写 | — | Broadmonkey | Public domain |
 
 ### keychron-k8 — Keychron K8
 
