@@ -1,0 +1,14 @@
+{
+  "name": "@shop-frontend/openapi-tools",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "从 shop-backend 的 openapi.json 生成前端契约类型（D65）",
+  "scripts": {
+    "generate": "node scripts/generate.mjs"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}
