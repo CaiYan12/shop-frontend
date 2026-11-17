@@ -10,44 +10,58 @@ import type { components, operations, paths } from './schema'
 /** openapi.json 的 servers[0]；本机开发默认值，可用 VITE_API_BASE_URL 覆盖。 */
 const DEFAULT_BASE_URL = 'http://127.0.0.1:3001'
 
-const configuredBaseUrl: unknown = import.meta.env.VITE_API_BASE_URL
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL
 
 export const apiBaseUrl: string =
   typeof configuredBaseUrl === 'string' && configuredBaseUrl.length > 0 ? configuredBaseUrl : DEFAULT_BASE_URL
 
-export const client = createClient<paths>({ baseUrl: apiBaseUrl })
+const client = createClient<paths>({ baseUrl: apiBaseUrl })
 
-export type ProductListQuery = NonNullable<operations['listProducts']['parameters']['query']>
-export type ProductListResponse = components['schemas']['ProductListResponse']
-export type ProductListItem = components['schemas']['ProductListItem']
-export type PurchaseCheckRequest = operations['checkPurchase']['requestBody']['content']['application/json']
-export type PurchaseCheckResponse = components['schemas']['PurchaseCheckResponse']
+type ProductListQuery = NonNullable<operations['listProducts']['parameters']['query']>
+type ProductListResponse = components['schemas']['ProductListResponse']
+type PurchaseCheckRequest = operations['checkPurchase']['requestBody']['content']['application/json']
+type PurchaseCheckResponse = components['schemas']['PurchaseCheckResponse']
 
-/** 后端未在 OpenAPI 里声明错误响应体，客户端只能拿到状态码。 */
+/** 后端错误信封：`{ error: { code, message, details? } }`（七码枚举）。 */
+type ApiErrorResponse = components['schemas']['ErrorResponse']
+
+/** openapi-fetch 的返回形状：成功取 `data`，失败取 `error`（错误信封）。 */
+type ApiResult<T> = {
+  data?: T
+  error?: ApiErrorResponse
+  response: Response
+}
+
 export class ApiError extends Error {
   readonly status: number
+  readonly error: ApiErrorResponse | undefined
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, error?: ApiErrorResponse) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.error = error
   }
+}
+
+/** 两个端点共用的「解包 + 判空 + 抛错」，避免重复实现。 */
+function unwrap<T>(result: ApiResult<T>, label: string): T {
+  if (result.data) {
+    return result.data
+  }
+  const detail = result.error?.error
+  const reason = detail?.message
+    ? `${detail.message}（HTTP ${result.response.status}）`
+    : `HTTP ${result.response.status}`
+  throw new ApiError(result.response.status, `${label}请求失败：${reason}`, result.error)
 }
 
 /** GET /api/products —— 商品列表（分页 + 筛选 + 排序）。 */
 export async function fetchProductList(query: ProductListQuery): Promise<ProductListResponse> {
-  const { data, response } = await client.GET('/api/products', { params: { query } })
-  if (!data) {
-    throw new ApiError(response.status, `商品列表请求失败：HTTP ${response.status}`)
-  }
-  return data
+  return unwrap(await client.GET('/api/products', { params: { query } }), '商品列表')
 }
 
 /** POST /api/purchase-check —— 购买校验（只校验，不写库）。 */
 export async function checkPurchase(body: PurchaseCheckRequest): Promise<PurchaseCheckResponse> {
-  const { data, response } = await client.POST('/api/purchase-check', { body })
-  if (!data) {
-    throw new ApiError(response.status, `购买校验请求失败：HTTP ${response.status}`)
-  }
-  return data
+  return unwrap(await client.POST('/api/purchase-check', { body }), '购买校验')
 }
