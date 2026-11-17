@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T15:36:41+08:00",
+  "generatedAt": "2026-11-17T15:37:19+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -235,6 +235,116 @@
           "bytes": 102914,
           "originalWidth": 3024,
           "originalHeight": 3024
+        }
+      ]
+    },
+    {
+      "name": "Sony WH-1000XM3",
+      "nameZh": "Sony WH-1000XM3 无线降噪头戴耳机",
+      "category": {
+        "slug": "audio",
+        "name": "音频设备"
+      },
+      "brand": "Sony",
+      "model": "WH-1000XM3",
+      "priceBand": "high",
+      "suggestedDemoPrice": 2299,
+      "soldOutCandidate": false,
+      "depictedSpec": "黑色（Black）",
+      "proposedDimensions": [
+        {
+          "name": "颜色",
+          "options": [
+            "黑色",
+            "铂金银"
+          ]
+        },
+        {
+          "name": "版本",
+          "options": [
+            "标准版",
+            "含收纳包套装"
+          ]
+        }
+      ],
+      "minutesSpent": 7,
+      "slug": "sony-wh-1000xm3",
+      "imageCount": 5,
+      "images": [
+        {
+          "file": "/images/products/sony-wh-1000xm3/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.2.jpg",
+          "sourceFile": "File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.2.jpg",
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "www.digitalpush.net",
+          "note": "收纳包内俯视，耳机与线材",
+          "spec": null,
+          "width": 900,
+          "height": 1200,
+          "bytes": 119718,
+          "originalWidth": 3024,
+          "originalHeight": 4032
+        },
+        {
+          "file": "/images/products/sony-wh-1000xm3/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.3.jpg",
+          "sourceFile": "File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.3.jpg",
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "www.digitalpush.net",
+          "note": "俯视平放，双耳罩与头梁",
+          "spec": "颜色=黑色",
+          "width": 1200,
+          "height": 900,
+          "bytes": 33490,
+          "originalWidth": 4032,
+          "originalHeight": 3024
+        },
+        {
+          "file": "/images/products/sony-wh-1000xm3/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.4.jpg",
+          "sourceFile": "File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.4.jpg",
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "www.digitalpush.net",
+          "note": "3/4 视角，耳罩外壳与 NFC 标志",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 29772,
+          "originalWidth": 4032,
+          "originalHeight": 3024
+        },
+        {
+          "file": "/images/products/sony-wh-1000xm3/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.5.jpg",
+          "sourceFile": "File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.5.jpg",
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "www.digitalpush.net",
+          "note": "正面，耳罩内侧与 NC/AMBIENT 按键",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 58954,
+          "originalWidth": 4032,
+          "originalHeight": 3024
+        },
+        {
+          "file": "/images/products/sony-wh-1000xm3/5.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.jpg",
+          "sourceFile": "File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.jpg",
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "www.digitalpush.net",
+          "note": "开包俯视，耳机与 USB-C 线",
+          "spec": null,
+          "width": 900,
+          "height": 1200,
+          "bytes": 90502,
+          "originalWidth": 3024,
+          "originalHeight": 4032
         }
       ]
     },
@@ -950,9 +1060,9 @@
     }
   ],
   "totals": {
-    "products": 9,
-    "images": 41,
-    "bytes": 2560240,
+    "products": 10,
+    "images": 46,
+    "bytes": 2892676,
     "categories": [
       "audio",
       "displays",

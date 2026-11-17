@@ -26,6 +26,16 @@
 | `4.webp` | 开盒竖构图，线材盘绕 | FASTILY | CC BY-SA 4.0 | [File:EarPods 4 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_4_2018-03-21.jpg) |
 | `5.webp` | 耳机 3/4 特写 | FASTILY | CC BY-SA 4.0 | [File:EarPods 6 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_6_2018-03-21.jpg) |
 
+## sony-wh-1000xm3 — Sony WH-1000XM3
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 收纳包内俯视，耳机与线材 | www.digitalpush.net | CC BY 4.0 | [File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.2.jpg](https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.2.jpg) |
+| `2.webp` | 俯视平放，双耳罩与头梁 | www.digitalpush.net | CC BY 4.0 | [File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.3.jpg](https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.3.jpg) |
+| `3.webp` | 3/4 视角，耳罩外壳与 NFC 标志 | www.digitalpush.net | CC BY 4.0 | [File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.4.jpg](https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.4.jpg) |
+| `4.webp` | 正面，耳罩内侧与 NC/AMBIENT 按键 | www.digitalpush.net | CC BY 4.0 | [File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.5.jpg](https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.5.jpg) |
+| `5.webp` | 开包俯视，耳机与 USB-C 线 | www.digitalpush.net | CC BY 4.0 | [File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.jpg](https://commons.wikimedia.org/wiki/File:Sony-WH-1000XM3-kabellose-Bluetooth-Noise-Cancelling-Kopfhoerer.jpg) |
+
 ## sony-wh-ch500 — Sony WH-CH500
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |
