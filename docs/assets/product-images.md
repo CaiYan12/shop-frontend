@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T15:36:18+08:00
+> 生成时间：2026-11-17T15:36:41+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 8 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 37 张 |
-| 类型分布 | audio 2 / displays 1 / peripherals 3 / wearables 2 |
+| 商品数 | 9 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 41 张 |
+| 类型分布 | audio 3 / displays 1 / peripherals 3 / wearables 2 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 2,354,162 字节（≈2299 KB） |
+| 体积 | 合计 2,560,240 字节（≈2500 KB） |
 | 图源 | 全部 Wikimedia Commons |
 | 许可 | CC BY 2.0、CC BY-SA 2.0、CC BY-SA 4.0 |
-| 单件耗时合计 | 42 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 单件耗时合计 | 48 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -42,6 +42,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 |---|---|---|---|---|---|---|
 | `airpods-max` | Apple AirPods Max | audio | high | 5 | 5 分钟 | CC BY-SA 4.0 |
 | `apple-earpods` | Apple EarPods | audio | low | 5 | 6 分钟 | CC BY-SA 4.0 |
+| `sony-wh-ch500` | Sony WH-CH500 | audio | low | 4 | 6 分钟 | CC BY-SA 4.0 |
 | `keychron-k8` | Keychron K8 | peripherals | mid | 5 | 5 分钟 | CC BY 2.0 |
 | `logitech-g15` | Logitech G15 | peripherals | low | 4 | 7 分钟 | CC BY-SA 2.0 |
 | `logitech-g613` | Logitech G613 | peripherals | mid | 5 | 7 分钟 | CC BY 2.0 |
@@ -76,6 +77,17 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 3 | 耳机与线控平铺 | — | FASTILY | CC BY-SA 4.0 |
 | 4 | 开盒竖构图，线材盘绕 | — | FASTILY | CC BY-SA 4.0 |
 | 5 | 耳机 3/4 特写 | — | FASTILY | CC BY-SA 4.0 |
+
+### sony-wh-ch500 — Sony WH-CH500
+
+画面规格：蓝色（Blue）；建议维度：颜色=蓝色/黑色；连接=蓝牙/蓝牙+NFC
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 俯视平放，双耳罩全貌 | 颜色=蓝色 | Raimond Spekking | CC BY-SA 4.0 |
+| 2 | 头梁铭牌与耳罩特写 | — | Raimond Spekking | CC BY-SA 4.0 |
+| 3 | 3/4 视角，SONY 标志与按键 | — | Raimond Spekking | CC BY-SA 4.0 |
+| 4 | 3/4 视角，耳罩内侧海绵 | — | Raimond Spekking | CC BY-SA 4.0 |
 
 ### keychron-k8 — Keychron K8
 

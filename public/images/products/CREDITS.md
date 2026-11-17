@@ -26,6 +26,15 @@
 | `4.webp` | 开盒竖构图，线材盘绕 | FASTILY | CC BY-SA 4.0 | [File:EarPods 4 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_4_2018-03-21.jpg) |
 | `5.webp` | 耳机 3/4 特写 | FASTILY | CC BY-SA 4.0 | [File:EarPods 6 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_6_2018-03-21.jpg) |
 
+## sony-wh-ch500 — Sony WH-CH500
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 俯视平放，双耳罩全貌 | Raimond Spekking | CC BY-SA 4.0 | [File:Sony WH-CH500-40869.jpg](https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40869.jpg) |
+| `2.webp` | 头梁铭牌与耳罩特写 | Raimond Spekking | CC BY-SA 4.0 | [File:Sony WH-CH500-40871.jpg](https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40871.jpg) |
+| `3.webp` | 3/4 视角，SONY 标志与按键 | Raimond Spekking | CC BY-SA 4.0 | [File:Sony WH-CH500-40872.jpg](https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40872.jpg) |
+| `4.webp` | 3/4 视角，耳罩内侧海绵 | Raimond Spekking | CC BY-SA 4.0 | [File:Sony WH-CH500-40873.jpg](https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40873.jpg) |
+
 ## keychron-k8 — Keychron K8
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

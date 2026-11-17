@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T15:36:18+08:00",
+  "generatedAt": "2026-11-17T15:36:41+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -235,6 +235,101 @@
           "bytes": 102914,
           "originalWidth": 3024,
           "originalHeight": 3024
+        }
+      ]
+    },
+    {
+      "name": "Sony WH-CH500",
+      "nameZh": "Sony WH-CH500 无线头戴耳机",
+      "category": {
+        "slug": "audio",
+        "name": "音频设备"
+      },
+      "brand": "Sony",
+      "model": "WH-CH500",
+      "priceBand": "low",
+      "suggestedDemoPrice": 499,
+      "soldOutCandidate": true,
+      "depictedSpec": "蓝色（Blue）",
+      "proposedDimensions": [
+        {
+          "name": "颜色",
+          "options": [
+            "蓝色",
+            "黑色"
+          ]
+        },
+        {
+          "name": "连接",
+          "options": [
+            "蓝牙",
+            "蓝牙+NFC"
+          ]
+        }
+      ],
+      "minutesSpent": 6,
+      "slug": "sony-wh-ch500",
+      "imageCount": 4,
+      "images": [
+        {
+          "file": "/images/products/sony-wh-ch500/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40869.jpg",
+          "sourceFile": "File:Sony WH-CH500-40869.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "俯视平放，双耳罩全貌",
+          "spec": "颜色=蓝色",
+          "width": 1200,
+          "height": 1200,
+          "bytes": 59418,
+          "originalWidth": 4480,
+          "originalHeight": 4480
+        },
+        {
+          "file": "/images/products/sony-wh-ch500/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40871.jpg",
+          "sourceFile": "File:Sony WH-CH500-40871.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "头梁铭牌与耳罩特写",
+          "spec": null,
+          "width": 1200,
+          "height": 675,
+          "bytes": 36768,
+          "originalWidth": 5575,
+          "originalHeight": 3136
+        },
+        {
+          "file": "/images/products/sony-wh-ch500/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40872.jpg",
+          "sourceFile": "File:Sony WH-CH500-40872.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "3/4 视角，SONY 标志与按键",
+          "spec": null,
+          "width": 1200,
+          "height": 675,
+          "bytes": 53224,
+          "originalWidth": 5322,
+          "originalHeight": 2994
+        },
+        {
+          "file": "/images/products/sony-wh-ch500/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sony_WH-CH500-40873.jpg",
+          "sourceFile": "File:Sony WH-CH500-40873.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Raimond Spekking",
+          "note": "3/4 视角，耳罩内侧海绵",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 56668,
+          "originalWidth": 5269,
+          "originalHeight": 3513
         }
       ]
     },
@@ -855,9 +950,9 @@
     }
   ],
   "totals": {
-    "products": 8,
-    "images": 37,
-    "bytes": 2354162,
+    "products": 9,
+    "images": 41,
+    "bytes": 2560240,
     "categories": [
       "audio",
       "displays",
