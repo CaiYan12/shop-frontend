@@ -45,6 +45,8 @@ stop.bat            # 停止并释放端口
 - 端口在 `scripts/dev.mjs` 单点定义，通过 `--port` 与 `--strictPort` 强制下发给 Vite，避免脚本探测端口与应用监听端口漂移。
 - 启动记录写入 `.run/dev.json`（已 gitignore）。`stop.bat` 会校验 pid 存活 + 该 pid 确实监听记录端口，不符时**拒绝终止**，避免误杀其他进程。
 - 重复执行 `start.bat` 不会产生第二个进程，会提示「已在运行」。
+- 新建 worktree 的准备工作（依赖单独安装、读 `node_modules` 的路径写法、素材目录）见 `docs/worktree-setup.md`。
+- 提交前由 pre-commit hook 自动跑 `pnpm build`（含 type-check）；`pnpm install` 时经 `prepare` 安装。
 - **依赖构建白名单**：pnpm 12 用 `pnpm-workspace.yaml` 的 `allowBuilds`（**映射形式** `'包名': true`）决定哪些依赖可以跑构建脚本。写在 `package.json` 的 `pnpm` 字段**不生效**，写成列表会报 `expected mapping start`。本仓库用它放行 `@parcel/watcher`（`sass` 的依赖）。
 
 ## Agent skills
