@@ -119,6 +119,15 @@
 | `3.webp` | 表体斜置全貌 | iGeeksBlog | CC BY-SA 4.0 | [File:Apple Watch Series 8.jpg](https://commons.wikimedia.org/wiki/File:Apple_Watch_Series_8.jpg) |
 | `4.webp` | 表盘特写（Nike 表盘） | iGeeksBlog | CC BY-SA 4.0 | [File:Close Up of Apple Watch 8.jpg](https://commons.wikimedia.org/wiki/File:Close_Up_of_Apple_Watch_8.jpg) |
 
+## apple-watch-ultra — Apple Watch Ultra
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 佩戴状态，运动界面 | KKPCW（Kyu3） | CC BY-SA 4.0 | [File:Apple Watch Ultra - 3.jpg](https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_3.jpg) |
+| `2.webp` | 侧面，数码表冠与侧键 | KKPCW（Kyu3） | CC BY-SA 4.0 | [File:Apple Watch Ultra - 4.jpg](https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_4.jpg) |
+| `3.webp` | 背面，传感器与钛金属铭文 | KKPCW（Kyu3） | CC BY-SA 4.0 | [File:Apple Watch Ultra - 5.jpg](https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_5.jpg) |
+| `4.webp` | 另一侧，橙色操作按钮与扬声器 | KKPCW（Kyu3） | CC BY-SA 4.0 | [File:Apple Watch Ultra - 6.jpg](https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_6.jpg) |
+
 ## huawei-watch — Huawei Watch
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

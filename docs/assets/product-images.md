@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T16:29:39+08:00
+> 生成时间：2026-11-17T16:30:25+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 14 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 63 张 |
-| 类型分布 | audio 4 / displays 4 / peripherals 3 / wearables 3 |
+| 商品数 | 15 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 67 张 |
+| 类型分布 | audio 4 / displays 4 / peripherals 3 / wearables 4 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 3,472,658 字节（≈3391 KB） |
+| 体积 | 合计 3,745,370 字节（≈3658 KB） |
 | 图源 | 全部 Wikimedia Commons |
 | 许可 | CC BY 2.0、CC BY 4.0、CC BY-SA 2.0、CC BY-SA 4.0、Public domain |
-| 单件耗时合计 | 73 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 单件耗时合计 | 77 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -52,6 +52,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | `dell-p2212h` | Dell Professional P2212H | displays | mid | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `dell-s3423dwc` | Dell S3423DWC | displays | high | 4 | 5 分钟 | CC BY 4.0 |
 | `apple-watch-series-8` | Apple Watch Series 8 | wearables | high | 4 | 4 分钟 | CC BY-SA 4.0 |
+| `apple-watch-ultra` | Apple Watch Ultra | wearables | high | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `huawei-watch` | Huawei Watch | wearables | mid | 5 | 4 分钟 | CC BY 2.0 |
 | `samsung-gear-s3` | Samsung Gear S3 Frontier | wearables | mid | 5 | 5 分钟 | CC BY 2.0 |
 
@@ -195,6 +196,17 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 2 | 表体与包装盒竖构图 | — | iGeeksBlog | CC BY-SA 4.0 |
 | 3 | 表体斜置全貌 | — | iGeeksBlog | CC BY-SA 4.0 |
 | 4 | 表盘特写（Nike 表盘） | 表带=Nike 运动表带 | iGeeksBlog | CC BY-SA 4.0 |
+
+### apple-watch-ultra — Apple Watch Ultra
+
+画面规格：钛金属表壳 + 白色海洋表带；建议维度：表带=海洋表带/越野回环；表壳=49mm 钛金属
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 佩戴状态，运动界面 | — | KKPCW（Kyu3） | CC BY-SA 4.0 |
+| 2 | 侧面，数码表冠与侧键 | — | KKPCW（Kyu3） | CC BY-SA 4.0 |
+| 3 | 背面，传感器与钛金属铭文 | — | KKPCW（Kyu3） | CC BY-SA 4.0 |
+| 4 | 另一侧，橙色操作按钮与扬声器 | — | KKPCW（Kyu3） | CC BY-SA 4.0 |
 
 ### huawei-watch — Huawei Watch
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T16:29:39+08:00",
+  "generatedAt": "2026-11-17T16:30:25+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -1233,6 +1233,100 @@
       ]
     },
     {
+      "name": "Apple Watch Ultra",
+      "nameZh": "Apple Watch Ultra 智能手表",
+      "category": {
+        "slug": "wearables",
+        "name": "智能穿戴"
+      },
+      "brand": "Apple",
+      "model": "A2626",
+      "priceBand": "high",
+      "suggestedDemoPrice": 6299,
+      "soldOutCandidate": false,
+      "depictedSpec": "钛金属表壳 + 白色海洋表带",
+      "proposedDimensions": [
+        {
+          "name": "表带",
+          "options": [
+            "海洋表带",
+            "越野回环"
+          ]
+        },
+        {
+          "name": "表壳",
+          "options": [
+            "49mm 钛金属"
+          ]
+        }
+      ],
+      "minutesSpent": 4,
+      "slug": "apple-watch-ultra",
+      "imageCount": 4,
+      "images": [
+        {
+          "file": "/images/products/apple-watch-ultra/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_3.jpg",
+          "sourceFile": "File:Apple Watch Ultra - 3.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "KKPCW（Kyu3）",
+          "note": "佩戴状态，运动界面",
+          "spec": null,
+          "width": 900,
+          "height": 1200,
+          "bytes": 51682,
+          "originalWidth": 2160,
+          "originalHeight": 2880
+        },
+        {
+          "file": "/images/products/apple-watch-ultra/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_4.jpg",
+          "sourceFile": "File:Apple Watch Ultra - 4.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "KKPCW（Kyu3）",
+          "note": "侧面，数码表冠与侧键",
+          "spec": null,
+          "width": 1200,
+          "height": 1200,
+          "bytes": 69088,
+          "originalWidth": 2160,
+          "originalHeight": 2160
+        },
+        {
+          "file": "/images/products/apple-watch-ultra/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_5.jpg",
+          "sourceFile": "File:Apple Watch Ultra - 5.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "KKPCW（Kyu3）",
+          "note": "背面，传感器与钛金属铭文",
+          "spec": null,
+          "width": 1200,
+          "height": 1200,
+          "bytes": 81220,
+          "originalWidth": 2018,
+          "originalHeight": 2018
+        },
+        {
+          "file": "/images/products/apple-watch-ultra/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Apple_Watch_Ultra_-_6.jpg",
+          "sourceFile": "File:Apple Watch Ultra - 6.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "KKPCW（Kyu3）",
+          "note": "另一侧，橙色操作按钮与扬声器",
+          "spec": null,
+          "width": 1200,
+          "height": 1200,
+          "bytes": 70722,
+          "originalWidth": 2133,
+          "originalHeight": 2133
+        }
+      ]
+    },
+    {
       "name": "Huawei Watch",
       "nameZh": "Huawei Watch 智能手表（第一代）",
       "category": {
@@ -1454,9 +1548,9 @@
     }
   ],
   "totals": {
-    "products": 14,
-    "images": 63,
-    "bytes": 3472658,
+    "products": 15,
+    "images": 67,
+    "bytes": 3745370,
     "categories": [
       "audio",
       "displays",
