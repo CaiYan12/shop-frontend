@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T15:34:52+08:00",
+  "generatedAt": "2026-11-17T15:35:18+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -235,6 +235,101 @@
           "bytes": 44680,
           "originalWidth": 7366,
           "originalHeight": 4920
+        }
+      ]
+    },
+    {
+      "name": "Logitech G15",
+      "nameZh": "Logitech G15 游戏键盘",
+      "category": {
+        "slug": "peripherals",
+        "name": "键盘外设"
+      },
+      "brand": "Logitech",
+      "model": "G15",
+      "priceBand": "low",
+      "suggestedDemoPrice": 299,
+      "soldOutCandidate": true,
+      "depictedSpec": "银色面板 + 蓝色背光",
+      "proposedDimensions": [
+        {
+          "name": "版本",
+          "options": [
+            "初代",
+            "v2"
+          ]
+        },
+        {
+          "name": "成色",
+          "options": [
+            "全新",
+            "二手"
+          ]
+        }
+      ],
+      "minutesSpent": 7,
+      "slug": "logitech-g15",
+      "imageCount": 4,
+      "images": [
+        {
+          "file": "/images/products/logitech-g15/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Logitech_G15_and_Apple_keyboards.jpg",
+          "sourceFile": "File:Logitech G15 and Apple keyboards.jpg",
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "William Hook",
+          "note": "桌面场景，G15 与 Apple 键盘并排",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 96544,
+          "originalWidth": 2592,
+          "originalHeight": 1944
+        },
+        {
+          "file": "/images/products/logitech-g15/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Logitech_G15_Branding.jpg",
+          "sourceFile": "File:Logitech G15 Branding.jpg",
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "William Hook",
+          "note": "左上角 Logitech G15 标识特写",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 54476,
+          "originalWidth": 2592,
+          "originalHeight": 1944
+        },
+        {
+          "file": "/images/products/logitech-g15/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Logitech_G15_LCD.jpg",
+          "sourceFile": "File:Logitech G15 LCD.jpg",
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "William Hook",
+          "note": "可编程 LCD 屏特写",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 29762,
+          "originalWidth": 2592,
+          "originalHeight": 1944
+        },
+        {
+          "file": "/images/products/logitech-g15/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Logitech_G15_Media_Keys.jpg",
+          "sourceFile": "File:Logitech G15 Media Keys.jpg",
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "William Hook",
+          "note": "多媒体按键区特写",
+          "spec": null,
+          "width": 1200,
+          "height": 900,
+          "bytes": 59434,
+          "originalWidth": 2592,
+          "originalHeight": 1944
         }
       ]
     },
@@ -650,9 +745,9 @@
     }
   ],
   "totals": {
-    "products": 6,
-    "images": 28,
-    "bytes": 1664840,
+    "products": 7,
+    "images": 32,
+    "bytes": 1905056,
     "categories": [
       "audio",
       "displays",

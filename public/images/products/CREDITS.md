@@ -26,6 +26,15 @@
 | `4.webp` | 右侧方向键与功能键区特写 | Triple-green | CC BY 2.0 | [File:Rechts.jpg](https://commons.wikimedia.org/wiki/File:Rechts.jpg) |
 | `5.webp` | 同一键盘换装 Camel 键帽套装 | Triple-green | CC BY 2.0 | [File:Keychron K8 Non-Backlight Wireless Mechanical Keyboard with Cherry Profile Double - Shot PBT Full Set Keycaps - Camel.jpg](https://commons.wikimedia.org/wiki/File:Keychron_K8_Non-Backlight_Wireless_Mechanical_Keyboard_with_Cherry_Profile_Double_-_Shot_PBT_Full_Set_Keycaps_-_Camel.jpg) |
 
+## logitech-g15 — Logitech G15
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 桌面场景，G15 与 Apple 键盘并排 | William Hook | CC BY-SA 2.0 | [File:Logitech G15 and Apple keyboards.jpg](https://commons.wikimedia.org/wiki/File:Logitech_G15_and_Apple_keyboards.jpg) |
+| `2.webp` | 左上角 Logitech G15 标识特写 | William Hook | CC BY-SA 2.0 | [File:Logitech G15 Branding.jpg](https://commons.wikimedia.org/wiki/File:Logitech_G15_Branding.jpg) |
+| `3.webp` | 可编程 LCD 屏特写 | William Hook | CC BY-SA 2.0 | [File:Logitech G15 LCD.jpg](https://commons.wikimedia.org/wiki/File:Logitech_G15_LCD.jpg) |
+| `4.webp` | 多媒体按键区特写 | William Hook | CC BY-SA 2.0 | [File:Logitech G15 Media Keys.jpg](https://commons.wikimedia.org/wiki/File:Logitech_G15_Media_Keys.jpg) |
+
 ## logitech-g613 — Logitech G613
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

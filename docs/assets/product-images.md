@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T15:34:52+08:00
+> 生成时间：2026-11-17T15:35:18+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 6 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 28 张 |
-| 类型分布 | audio 1 / displays 1 / peripherals 2 / wearables 2 |
+| 商品数 | 7 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 32 张 |
+| 类型分布 | audio 1 / displays 1 / peripherals 3 / wearables 2 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 1,664,840 字节（≈1626 KB） |
+| 体积 | 合计 1,905,056 字节（≈1860 KB） |
 | 图源 | 全部 Wikimedia Commons |
-| 许可 | CC BY 2.0、CC BY-SA 4.0 |
-| 单件耗时合计 | 29 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 许可 | CC BY 2.0、CC BY-SA 2.0、CC BY-SA 4.0 |
+| 单件耗时合计 | 36 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -42,6 +42,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 |---|---|---|---|---|---|---|
 | `airpods-max` | Apple AirPods Max | audio | high | 5 | 5 分钟 | CC BY-SA 4.0 |
 | `keychron-k8` | Keychron K8 | peripherals | mid | 5 | 5 分钟 | CC BY 2.0 |
+| `logitech-g15` | Logitech G15 | peripherals | low | 4 | 7 分钟 | CC BY-SA 2.0 |
 | `logitech-g613` | Logitech G613 | peripherals | mid | 5 | 7 分钟 | CC BY 2.0 |
 | `dell-e2210f` | Dell E2210f | displays | low | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `apple-watch-series-8` | Apple Watch Series 8 | wearables | high | 4 | 4 分钟 | CC BY-SA 4.0 |
@@ -74,6 +75,17 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 3 | 左上角 esc / F1-F4 特写 | — | Triple-green | CC BY 2.0 |
 | 4 | 右侧方向键与功能键区特写 | — | Triple-green | CC BY 2.0 |
 | 5 | 同一键盘换装 Camel 键帽套装 | 键帽=Camel PBT 套装 | Triple-green | CC BY 2.0 |
+
+### logitech-g15 — Logitech G15
+
+画面规格：银色面板 + 蓝色背光；建议维度：版本=初代/v2；成色=全新/二手
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 桌面场景，G15 与 Apple 键盘并排 | — | William Hook | CC BY-SA 2.0 |
+| 2 | 左上角 Logitech G15 标识特写 | — | William Hook | CC BY-SA 2.0 |
+| 3 | 可编程 LCD 屏特写 | — | William Hook | CC BY-SA 2.0 |
+| 4 | 多媒体按键区特写 | — | William Hook | CC BY-SA 2.0 |
 
 ### logitech-g613 — Logitech G613
 
