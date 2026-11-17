@@ -16,6 +16,16 @@
 | `4.webp` | 支架正面，桌面场景 | SimonWaldherr | CC BY-SA 4.0 | [File:Apple AirPods Max 8.jpg](https://commons.wikimedia.org/wiki/File:Apple_AirPods_Max_8.jpg) |
 | `5.webp` | 零售包装盒正面 | SimonWaldherr | CC BY-SA 4.0 | [File:Apple AirPods Max packaging.jpg](https://commons.wikimedia.org/wiki/File:Apple_AirPods_Max_packaging.jpg) |
 
+## apple-earpods — Apple EarPods
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 包装盒与耳机俯视 | FASTILY | CC BY-SA 4.0 | [File:EarPods 1 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_1_2018-03-21.jpg) |
+| `2.webp` | 包装盒正面与耳机 | FASTILY | CC BY-SA 4.0 | [File:EarPods 2 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_2_2018-03-21.jpg) |
+| `3.webp` | 耳机与线控平铺 | FASTILY | CC BY-SA 4.0 | [File:EarPods 3 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_3_2018-03-21.jpg) |
+| `4.webp` | 开盒竖构图，线材盘绕 | FASTILY | CC BY-SA 4.0 | [File:EarPods 4 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_4_2018-03-21.jpg) |
+| `5.webp` | 耳机 3/4 特写 | FASTILY | CC BY-SA 4.0 | [File:EarPods 6 2018-03-21.jpg](https://commons.wikimedia.org/wiki/File:EarPods_6_2018-03-21.jpg) |
+
 ## keychron-k8 — Keychron K8
 
 | 文件 | 内容 | 作者 | 许可 | 来源 |

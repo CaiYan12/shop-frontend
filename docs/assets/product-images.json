@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T15:35:18+08:00",
+  "generatedAt": "2026-11-17T15:36:18+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -125,6 +125,116 @@
           "bytes": 26570,
           "originalWidth": 4598,
           "originalHeight": 3678
+        }
+      ]
+    },
+    {
+      "name": "Apple EarPods",
+      "nameZh": "Apple EarPods 有线耳机（Lightning）",
+      "category": {
+        "slug": "audio",
+        "name": "音频设备"
+      },
+      "brand": "Apple",
+      "model": "MMTN2",
+      "priceBand": "low",
+      "suggestedDemoPrice": 149,
+      "soldOutCandidate": false,
+      "depictedSpec": "白色（Lightning 接头）",
+      "proposedDimensions": [
+        {
+          "name": "接口",
+          "options": [
+            "Lightning",
+            "3.5mm"
+          ]
+        },
+        {
+          "name": "包装",
+          "options": [
+            "盒装",
+            "简装"
+          ]
+        }
+      ],
+      "minutesSpent": 6,
+      "slug": "apple-earpods",
+      "imageCount": 5,
+      "images": [
+        {
+          "file": "/images/products/apple-earpods/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:EarPods_1_2018-03-21.jpg",
+          "sourceFile": "File:EarPods 1 2018-03-21.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "FASTILY",
+          "note": "包装盒与耳机俯视",
+          "spec": null,
+          "width": 1200,
+          "height": 1200,
+          "bytes": 84510,
+          "originalWidth": 3024,
+          "originalHeight": 3024
+        },
+        {
+          "file": "/images/products/apple-earpods/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:EarPods_2_2018-03-21.jpg",
+          "sourceFile": "File:EarPods 2 2018-03-21.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "FASTILY",
+          "note": "包装盒正面与耳机",
+          "spec": null,
+          "width": 1200,
+          "height": 1200,
+          "bytes": 124718,
+          "originalWidth": 3024,
+          "originalHeight": 3024
+        },
+        {
+          "file": "/images/products/apple-earpods/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:EarPods_3_2018-03-21.jpg",
+          "sourceFile": "File:EarPods 3 2018-03-21.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "FASTILY",
+          "note": "耳机与线控平铺",
+          "spec": null,
+          "width": 1200,
+          "height": 1200,
+          "bytes": 40868,
+          "originalWidth": 3024,
+          "originalHeight": 3024
+        },
+        {
+          "file": "/images/products/apple-earpods/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:EarPods_4_2018-03-21.jpg",
+          "sourceFile": "File:EarPods 4 2018-03-21.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "FASTILY",
+          "note": "开盒竖构图，线材盘绕",
+          "spec": null,
+          "width": 900,
+          "height": 1200,
+          "bytes": 96096,
+          "originalWidth": 3024,
+          "originalHeight": 4032
+        },
+        {
+          "file": "/images/products/apple-earpods/5.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:EarPods_6_2018-03-21.jpg",
+          "sourceFile": "File:EarPods 6 2018-03-21.jpg",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "FASTILY",
+          "note": "耳机 3/4 特写",
+          "spec": null,
+          "width": 1200,
+          "height": 1200,
+          "bytes": 102914,
+          "originalWidth": 3024,
+          "originalHeight": 3024
         }
       ]
     },
@@ -745,9 +855,9 @@
     }
   ],
   "totals": {
-    "products": 7,
-    "images": 32,
-    "bytes": 1905056,
+    "products": 8,
+    "images": 37,
+    "bytes": 2354162,
     "categories": [
       "audio",
       "displays",
