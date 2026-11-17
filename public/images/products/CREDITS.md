@@ -128,3 +128,13 @@
 | `3.webp` | 立于桌面正视 | Maurizio Pesce from Milan, Italia | CC BY 2.0 | [File:Huawei Watch (16948546718).jpg](https://commons.wikimedia.org/wiki/File:Huawei_Watch_(16948546718).jpg) |
 | `4.webp` | 正面 3/4，消息通知界面 | Maurizio Pesce from Milan, Italia | CC BY 2.0 | [File:Huawei Watch (16950131059).jpg](https://commons.wikimedia.org/wiki/File:Huawei_Watch_(16950131059).jpg) |
 | `5.webp` | 侧面，表体厚度与表冠 | Maurizio Pesce from Milan, Italia | CC BY 2.0 | [File:Huawei Watch (17110363956).jpg](https://commons.wikimedia.org/wiki/File:Huawei_Watch_(17110363956).jpg) |
+
+## samsung-gear-s3 — Samsung Gear S3 Frontier
+
+| 文件 | 内容 | 作者 | 许可 | 来源 |
+|---|---|---|---|---|
+| `1.webp` | 背面，心率传感器与机型铭文 | Kārlis Dambrāns from Latvia | CC BY 2.0 | [File:Samsung Gear 3 Frontier (32116271093).jpg](https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32116271093).jpg) |
+| `2.webp` | 置于充电底座，表盘正面 | Kārlis Dambrāns from Latvia | CC BY 2.0 | [File:Samsung Gear 3 Frontier (32550534130).jpg](https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32550534130).jpg) |
+| `3.webp` | 佩戴状态，表盘正面 | Kārlis Dambrāns from Latvia | CC BY 2.0 | [File:Samsung Gear 3 Frontier (32550534290).jpg](https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32550534290).jpg) |
+| `4.webp` | 佩戴状态，心率监测界面 | Kārlis Dambrāns from Latvia | CC BY 2.0 | [File:Samsung Gear 3 Frontier (32550534510).jpg](https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32550534510).jpg) |
+| `5.webp` | 侧面，表体厚度与表冠 | Kārlis Dambrāns from Latvia | CC BY 2.0 | [File:Samsung Gear 3 Frontier (32807208431).jpg](https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32807208431).jpg) |

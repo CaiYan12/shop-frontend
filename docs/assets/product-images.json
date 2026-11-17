@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "ticket": "CaiYan12/shop-frontend#2 · T5 素材样本与授权记录",
-  "generatedAt": "2026-11-17T16:28:51+08:00",
+  "generatedAt": "2026-11-17T16:29:39+08:00",
   "pathConvention": "/images/products/{slug}/{n}.webp",
   "assetRoot": "public/images/products/{slug}/",
   "licensePolicy": {
@@ -1341,12 +1341,122 @@
           "originalHeight": 3456
         }
       ]
+    },
+    {
+      "name": "Samsung Gear S3 Frontier",
+      "nameZh": "Samsung Gear S3 Frontier 智能手表",
+      "category": {
+        "slug": "wearables",
+        "name": "智能穿戴"
+      },
+      "brand": "Samsung",
+      "model": "SM-R760",
+      "priceBand": "mid",
+      "suggestedDemoPrice": 1499,
+      "soldOutCandidate": false,
+      "depictedSpec": "黑色（Frontier）+ 黑色橡胶表带",
+      "proposedDimensions": [
+        {
+          "name": "表带",
+          "options": [
+            "橡胶",
+            "真皮"
+          ]
+        },
+        {
+          "name": "版本",
+          "options": [
+            "蓝牙版",
+            "LTE 版"
+          ]
+        }
+      ],
+      "minutesSpent": 5,
+      "slug": "samsung-gear-s3",
+      "imageCount": 5,
+      "images": [
+        {
+          "file": "/images/products/samsung-gear-s3/1.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32116271093).jpg",
+          "sourceFile": "File:Samsung Gear 3 Frontier (32116271093).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "Kārlis Dambrāns from Latvia",
+          "note": "背面，心率传感器与机型铭文",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 28106,
+          "originalWidth": 3000,
+          "originalHeight": 2000
+        },
+        {
+          "file": "/images/products/samsung-gear-s3/2.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32550534130).jpg",
+          "sourceFile": "File:Samsung Gear 3 Frontier (32550534130).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "Kārlis Dambrāns from Latvia",
+          "note": "置于充电底座，表盘正面",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 35126,
+          "originalWidth": 3000,
+          "originalHeight": 2000
+        },
+        {
+          "file": "/images/products/samsung-gear-s3/3.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32550534290).jpg",
+          "sourceFile": "File:Samsung Gear 3 Frontier (32550534290).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "Kārlis Dambrāns from Latvia",
+          "note": "佩戴状态，表盘正面",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 57556,
+          "originalWidth": 3000,
+          "originalHeight": 2000
+        },
+        {
+          "file": "/images/products/samsung-gear-s3/4.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32550534510).jpg",
+          "sourceFile": "File:Samsung Gear 3 Frontier (32550534510).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "Kārlis Dambrāns from Latvia",
+          "note": "佩戴状态，心率监测界面",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 46702,
+          "originalWidth": 3000,
+          "originalHeight": 2000
+        },
+        {
+          "file": "/images/products/samsung-gear-s3/5.webp",
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsung_Gear_3_Frontier_(32807208431).jpg",
+          "sourceFile": "File:Samsung Gear 3 Frontier (32807208431).jpg",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "Kārlis Dambrāns from Latvia",
+          "note": "侧面，表体厚度与表冠",
+          "spec": null,
+          "width": 1200,
+          "height": 800,
+          "bytes": 29308,
+          "originalWidth": 3000,
+          "originalHeight": 2000
+        }
+      ]
     }
   ],
   "totals": {
-    "products": 13,
-    "images": 58,
-    "bytes": 3275860,
+    "products": 14,
+    "images": 63,
+    "bytes": 3472658,
     "categories": [
       "audio",
       "displays",

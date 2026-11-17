@@ -4,7 +4,7 @@
 > 机器可读清单：`docs/assets/product-images.json`
 > 素材目录：`public/images/products/{slug}/{n}.webp`
 > 署名清单：`public/images/products/CREDITS.md`
-> 生成时间：2026-11-17T16:28:51+08:00
+> 生成时间：2026-11-17T16:29:39+08:00
 
 ---
 
@@ -12,14 +12,14 @@
 
 | 项 | 值 |
 |---|---|
-| 商品数 | 13 件（目标 16 件 = 4 类 × 4） |
-| 图片数 | 58 张 |
-| 类型分布 | audio 4 / displays 4 / peripherals 3 / wearables 2 |
+| 商品数 | 14 件（目标 16 件 = 4 类 × 4） |
+| 图片数 | 63 张 |
+| 类型分布 | audio 4 / displays 4 / peripherals 3 / wearables 3 |
 | 格式与尺寸 | 全部 WebP，长边 ≤1200px |
-| 体积 | 合计 3,275,860 字节（≈3199 KB） |
+| 体积 | 合计 3,472,658 字节（≈3391 KB） |
 | 图源 | 全部 Wikimedia Commons |
 | 许可 | CC BY 2.0、CC BY 4.0、CC BY-SA 2.0、CC BY-SA 4.0、Public domain |
-| 单件耗时合计 | 68 分钟（墙钟分摊，精度 ±2 分钟/件） |
+| 单件耗时合计 | 73 分钟（墙钟分摊，精度 ±2 分钟/件） |
 
 ## 2. 图源路线（事实：试过什么、结果如何）
 
@@ -53,6 +53,7 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | `dell-s3423dwc` | Dell S3423DWC | displays | high | 4 | 5 分钟 | CC BY 4.0 |
 | `apple-watch-series-8` | Apple Watch Series 8 | wearables | high | 4 | 4 分钟 | CC BY-SA 4.0 |
 | `huawei-watch` | Huawei Watch | wearables | mid | 5 | 4 分钟 | CC BY 2.0 |
+| `samsung-gear-s3` | Samsung Gear S3 Frontier | wearables | mid | 5 | 5 分钟 | CC BY 2.0 |
 
 价格档为演示定位（低 / 中 / 高），`suggestedDemoPrice` 是**演示价，不是市场价**。
 
@@ -206,6 +207,18 @@ Commons 的 API 在连续请求时会返回 **429 Too Many Requests**；补描�
 | 3 | 立于桌面正视 | — | Maurizio Pesce from Milan, Italia | CC BY 2.0 |
 | 4 | 正面 3/4，消息通知界面 | — | Maurizio Pesce from Milan, Italia | CC BY 2.0 |
 | 5 | 侧面，表体厚度与表冠 | — | Maurizio Pesce from Milan, Italia | CC BY 2.0 |
+
+### samsung-gear-s3 — Samsung Gear S3 Frontier
+
+画面规格：黑色（Frontier）+ 黑色橡胶表带；建议维度：表带=橡胶/真皮；版本=蓝牙版/LTE 版
+
+| # | 内容 | 规格标注 | 作者 | 许可 |
+|---|---|---|---|---|
+| 1 | 背面，心率传感器与机型铭文 | — | Kārlis Dambrāns from Latvia | CC BY 2.0 |
+| 2 | 置于充电底座，表盘正面 | — | Kārlis Dambrāns from Latvia | CC BY 2.0 |
+| 3 | 佩戴状态，表盘正面 | — | Kārlis Dambrāns from Latvia | CC BY 2.0 |
+| 4 | 佩戴状态，心率监测界面 | — | Kārlis Dambrāns from Latvia | CC BY 2.0 |
+| 5 | 侧面，表体厚度与表冠 | — | Kārlis Dambrāns from Latvia | CC BY 2.0 |
 
 ## 5. 视觉核验（事实：怎么验的）
 
