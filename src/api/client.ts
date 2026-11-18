@@ -7,8 +7,12 @@
 import createClient from 'openapi-fetch'
 import type { components, operations, paths } from './schema'
 
-/** openapi.json 的 servers[0]；本机开发默认值，可用 VITE_API_BASE_URL 覆盖。 */
-const DEFAULT_BASE_URL = 'http://127.0.0.1:3001'
+/**
+ * 默认用相对空串：浏览器按当前源发 `/api/*`，由 Vite 的 `/api` 代理转发到后端
+ * （dev 与 preview 共用同一份配置），从根上避开跨域。静态产物独立部署时，
+ * 需要在部署层把同源 `/api` 转发到后端；`VITE_API_BASE_URL` 仍可覆盖为绝对基址。
+ */
+const DEFAULT_BASE_URL = ''
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL
 
