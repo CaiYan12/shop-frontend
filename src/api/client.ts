@@ -23,6 +23,8 @@ const client = createClient<paths>({ baseUrl: apiBaseUrl })
 
 type ProductListQuery = NonNullable<operations['listProducts']['parameters']['query']>
 type ProductListResponse = components['schemas']['ProductListResponse']
+type ProductSuggestionQuery = NonNullable<operations['listSuggestions']['parameters']['query']>
+type ProductSuggestionsResponse = components['schemas']['ProductSuggestionsResponse']
 type PurchaseCheckRequest = operations['checkPurchase']['requestBody']['content']['application/json']
 type PurchaseCheckResponse = components['schemas']['PurchaseCheckResponse']
 
@@ -63,6 +65,22 @@ function unwrap<T>(result: ApiResult<T>, label: string): T {
 /** GET /api/products —— 商品列表（分页 + 筛选 + 排序）。 */
 export async function fetchProductList(query: ProductListQuery): Promise<ProductListResponse> {
   return unwrap(await client.GET('/api/products', { params: { query } }), '商品列表')
+}
+
+/**
+ * GET /api/products/suggestions —— 商品联想（#11）。
+ *
+ * `signal` 交给 openapi-fetch 的 `RequestInit`（0.17 会原样传给 `fetch`），
+ * 关闭 / 清空 / 提交 / 跳页时由调用方 abort 在途请求。
+ */
+export async function fetchProductSuggestions(
+  query: ProductSuggestionQuery,
+  signal?: AbortSignal,
+): Promise<ProductSuggestionsResponse> {
+  return unwrap(
+    await client.GET('/api/products/suggestions', { params: { query }, signal }),
+    '商品联想',
+  )
 }
 
 /** POST /api/purchase-check —— 购买校验（只校验，不写库）。 */

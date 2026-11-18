@@ -15,6 +15,7 @@
       <!-- 搜索框常驻在筛选条上方：提交只写 URL，请求由路由变化触发（#10）。 -->
       <ProductSearchBar
         :keyword="listQuery.keyword"
+        @select="onSuggestionSelect"
         @submit="onSearchSubmit"
       />
 
@@ -224,6 +225,14 @@
       return
     }
     pushListQuery(next)
+  }
+
+  /**
+   * 选中联想项直达详情（#11）：`push` 到 `/product/{slug}`，不新增列表查询参数。
+   * 浏览器返回后列表条件由 URL 原样恢复；联想请求由子组件在跳转前取消。
+   */
+  function onSuggestionSelect (slug: string): void {
+    void router.push({ name: 'product', params: { slug } })
   }
 
   /** 切页只改 URL；第 1 页是默认值，移除 `page` 而不是写成 `page=1`。 */
