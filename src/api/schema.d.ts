@@ -143,20 +143,44 @@ export interface components {
             sales: number;
             coverImage: components["schemas"]["ProductCoverImage"];
         };
+        ProductHighlight: {
+            name?: string[];
+            brand?: string[];
+            model?: string[];
+        };
+        ProductSearchListItem: {
+            slug: string;
+            name: string;
+            brand: string;
+            model: string;
+            category: components["schemas"]["ProductCategory"];
+            displayPriceCents: number;
+            displayOriginalPriceCents: number;
+            soldOut: boolean;
+            rating: number;
+            sales: number;
+            coverImage: components["schemas"]["ProductCoverImage"];
+            highlight?: components["schemas"]["ProductHighlight"];
+        };
         ProductListResponse: {
             page: number;
             pageSize: number;
             total: number;
             totalPages: number;
-            items: components["schemas"]["ProductListItem"][];
+            items: components["schemas"]["ProductSearchListItem"][];
         };
         ProductRecommendationsResponse: {
             items: components["schemas"]["ProductListItem"][];
+        };
+        ProductSuggestionHighlight: {
+            name?: string[];
+            brand?: string[];
         };
         ProductSuggestionItem: {
             slug: string;
             name: string;
             brand: string;
+            highlight?: components["schemas"]["ProductSuggestionHighlight"];
         };
         ProductSuggestionsResponse: {
             items: components["schemas"]["ProductSuggestionItem"][];
