@@ -1,6 +1,12 @@
 <template>
+  <!--
+    联想下拉在卡片外展开：Vuetify 的 `.v-card` 自带 `overflow: hidden`，
+    会把 `top-full` 的 listbox 裁到卡片底部；`overflow-visible` 解除裁切。
+    卡片同时抬到筛选条之上（两者都是 `z-index: 0` 的 v-card，DOM 靠后的
+    筛选条会盖住下拉），保证下拉整体可见且可点击。
+  -->
   <v-card
-    class="rounded-xl border border-outline bg-surface p-4"
+    class="relative z-20 overflow-visible rounded-xl border border-outline bg-surface p-4"
     role="search"
     variant="flat"
   >
