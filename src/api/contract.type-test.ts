@@ -5,8 +5,8 @@
  * 类型检查就会失败。它证明 `schema.d.ts` 与 `openapi-fetch` 消费端的类型
  * 与后端 OpenAPI 契约一致（D65 / V17），而不是「能生成就算数」。
  *
- * 覆盖范围：全部 15 个命名组件（列表 / 详情 / 规格组合 / 推荐 / 分类 /
- * 购买校验 / 错误信封）与 5 个 operation 的请求、响应、错误响应类型。
+ * 覆盖范围：全部 20 个命名组件（列表 / 命中高亮 / 联想 / 详情 / 规格组合 / 推荐 / 分类 /
+ * 购买校验 / 错误信封）与 6 个 operation 的请求、响应、错误响应类型。
  */
 import type { components, operations } from './schema'
 import type { ApiError, apiBaseUrl, checkPurchase, fetchProductList } from './client'
@@ -24,6 +24,11 @@ type CategoryListItem = Schemas['CategoryListItem']
 type CategoriesResponse = Schemas['CategoriesResponse']
 type ProductListResponse = Schemas['ProductListResponse']
 type ProductListItem = Schemas['ProductListItem']
+type ProductSearchListItem = Schemas['ProductSearchListItem']
+type ProductHighlight = Schemas['ProductHighlight']
+type ProductSuggestionItem = Schemas['ProductSuggestionItem']
+type ProductSuggestionHighlight = Schemas['ProductSuggestionHighlight']
+type ProductSuggestionsResponse = Schemas['ProductSuggestionsResponse']
 type ProductRecommendationsResponse = Schemas['ProductRecommendationsResponse']
 type ProductDimension = Schemas['ProductDimension']
 type ProductVariant = Schemas['ProductVariant']
@@ -38,7 +43,7 @@ type _Page = Expect<Equal<ProductListResponse['page'], number>>
 type _PageSize = Expect<Equal<ProductListResponse['pageSize'], number>>
 type _Total = Expect<Equal<ProductListResponse['total'], number>>
 type _TotalPages = Expect<Equal<ProductListResponse['totalPages'], number>>
-type _Items = Expect<Equal<ProductListResponse['items'], ProductListItem[]>>
+type _Items = Expect<Equal<ProductListResponse['items'], ProductSearchListItem[]>>
 
 // —— 列表项：金额是整数分（number），不是格式化字符串 ——
 type _DisplayPrice = Expect<Equal<ProductListItem['displayPriceCents'], number>>
@@ -48,6 +53,28 @@ type _Rating = Expect<Equal<ProductListItem['rating'], number>>
 type _Sales = Expect<Equal<ProductListItem['sales'], number>>
 type _ListItemCategory = Expect<Equal<ProductListItem['category'], ProductCategory>>
 type _ListItemCover = Expect<Equal<ProductListItem['coverImage'], ProductCoverImage>>
+
+// —— 命中高亮（#23）：列表项覆盖 name / brand / model，片段是字符串数组 ——
+type _HighlightFields = Expect<Equal<keyof ProductHighlight, 'name' | 'brand' | 'model'>>
+type _HighlightFragments = Expect<Equal<ProductHighlight['name'], string[] | undefined>>
+type _ListHighlight = Expect<Equal<ProductSearchListItem['highlight'], ProductHighlight | undefined>>
+type _SearchListItemBase = Expect<
+  Equal<Pick<ProductSearchListItem, keyof ProductListItem>, ProductListItem>
+>
+
+// —— 联想（#22、#23）：条目是 slug / name / brand，命中时额外带 name / brand 高亮 ——
+type _SuggestionItems = Expect<Equal<ProductSuggestionsResponse['items'], ProductSuggestionItem[]>>
+type _SuggestionBase = Expect<
+  Equal<Pick<ProductSuggestionItem, 'slug' | 'name' | 'brand'>, { slug: string; name: string; brand: string }>
+>
+type _SuggestionHighlight = Expect<
+  Equal<ProductSuggestionItem['highlight'], ProductSuggestionHighlight | undefined>
+>
+type _SuggestionHighlightFields = Expect<Equal<keyof ProductSuggestionHighlight, 'name' | 'brand'>>
+type _SuggestionFragments = Expect<Equal<ProductSuggestionHighlight['brand'], string[] | undefined>>
+type _SuggestionError = Expect<
+  Equal<operations['listSuggestions']['responses'][503]['content']['application/json'], ErrorResponse>
+>
 
 // —— 图片 / 分类 / 推荐 / 分类列表 ——
 type _CoverImage = Expect<Equal<ProductCoverImage, { path: string; alt: string }>>
@@ -169,6 +196,10 @@ export type ContractTypeTests =
   | _Total
   | _TotalPages
   | _Items
+  | _HighlightFields
+  | _HighlightFragments
+  | _ListHighlight
+  | _SearchListItemBase
   | _DisplayPrice
   | _DisplayOriginalPrice
   | _SoldOut
@@ -181,6 +212,12 @@ export type ContractTypeTests =
   | _CategoryListItem
   | _CategoriesItems
   | _RecommendationItems
+  | _SuggestionItems
+  | _SuggestionBase
+  | _SuggestionHighlight
+  | _SuggestionHighlightFields
+  | _SuggestionFragments
+  | _SuggestionError
   | _DetailStock
   | _DetailImages
   | _DetailDimensions
