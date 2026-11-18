@@ -15,6 +15,7 @@ import type {
   ListFilterSelection,
   ListQueryState,
   PriceBandId,
+  PriceParamIssueKind,
   PriceSelection,
   ProductListQuery,
   ProductSort,
@@ -23,8 +24,10 @@ import type {
   SerializedListQuery,
   SortSelection,
   clearListFilters,
+  clearPriceRange,
   filterSelectionOf,
   hasActiveFilters,
+  inspectPriceParams,
   isSameListConditions,
   isSameSerializedQuery,
   normalizeSort,
@@ -222,6 +225,25 @@ type _SameConditions = Expect<Equal<ReturnType<typeof isSameListConditions>, boo
 type _HasFilters = Expect<Equal<ReturnType<typeof hasActiveFilters>, boolean>>
 type _Clear = Expect<Equal<ReturnType<typeof clearListFilters>, ListQueryState>>
 
+// —— 非法价格参数（#13）：检查结果形状、入参形状与清除入口 ——
+type _PriceIssueKind = Expect<
+  Equal<PriceParamIssueKind, 'duplicate' | 'not-integer' | 'out-of-range' | 'range-reversed'>
+>
+type _PriceInspection = Expect<
+  Equal<
+    ReturnType<typeof inspectPriceParams>,
+    {
+      invalid: boolean
+      kind: PriceParamIssueKind | null
+      message: string
+      priceMinCents: number | null
+      priceMaxCents: number | null
+    }
+  >
+>
+type _PriceInspectionArg = Expect<Equal<Parameters<typeof inspectPriceParams>, [raw: RawQuery]>>
+type _ClearPriceRange = Expect<Equal<ReturnType<typeof clearPriceRange>, ListQueryState>>
+
 // —— 关键词生命周期（#10）：长度上限与提交后的状态迁移 ——
 type _KeywordMax = Expect<Equal<typeof KEYWORD_MAX_LENGTH, 100>>
 type _WithKeyword = Expect<Equal<ReturnType<typeof withKeyword>, ListQueryState>>
@@ -275,6 +297,10 @@ export type ListQueryTypeTests =
   | _SameConditions
   | _HasFilters
   | _Clear
+  | _PriceIssueKind
+  | _PriceInspection
+  | _PriceInspectionArg
+  | _ClearPriceRange
   | _KeywordMax
   | _WithKeyword
   | _WithKeywordArgs
