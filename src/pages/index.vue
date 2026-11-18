@@ -49,24 +49,11 @@
         v-else-if="items.length > 0"
         class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
       >
-        <v-card
+        <ProductCard
           v-for="item in items"
           :key="item.slug"
-          :to="{ name: 'product', params: { slug: item.slug } }"
-          class="h-full overflow-hidden rounded-xl border border-outline bg-surface"
-          variant="flat"
-        >
-          <v-img
-            :alt="item.coverImage.alt"
-            :src="item.coverImage.path"
-            aspect-ratio="1"
-            cover
-          />
-          <div class="flex flex-col gap-1 p-4">
-            <h2 class="line-clamp-2 text-base font-medium leading-snug">{{ item.name }}</h2>
-            <p class="text-lg font-semibold text-primary">{{ formatPriceCents(item.displayPriceCents) }}</p>
-          </div>
-        </v-card>
+          :item="item"
+        />
       </div>
 
       <v-card
@@ -98,6 +85,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { ApiError, fetchProductList } from '@/api/client'
   import type { components } from '@/api/schema'
+  import ProductCard from '@/components/ProductCard.vue'
 
   /** 每页固定 8 件（规格「排序与分页」），不暴露每页条数选择器。 */
   const PAGE_SIZE = 8
@@ -182,16 +170,6 @@
       query.page = String(next)
     }
     void router.push({ name: 'home', query })
-  }
-
-  const priceFormatter = new Intl.NumberFormat('zh-CN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-
-  /** 契约里的金额是整数分，卡片只负责展示。 */
-  function formatPriceCents (cents: number): string {
-    return `¥${priceFormatter.format(cents / 100)}`
   }
 
   watch(currentPage, () => { void load() }, { immediate: true })
