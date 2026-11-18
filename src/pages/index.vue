@@ -176,20 +176,26 @@
         </v-btn>
       </v-card>
 
-      <!-- 分页：空态隐藏；有旧结果时暂时停用（#13）。 -->
+      <!-- 分页：空态隐藏；有旧结果时整块用原生 `fieldset` 禁用（含键盘，#13）。 -->
       <nav
         v-if="showPagination"
         :aria-disabled="paginationDisabled ? 'true' : undefined"
-        :class="paginationDisabled ? 'pointer-events-none flex justify-center opacity-50' : 'flex justify-center'"
         aria-label="分页"
         data-state="pagination"
       >
-        <v-pagination
-          :length="totalPages"
-          :model-value="currentPage"
-          :total-visible="5"
-          @update:model-value="goToPage"
-        />
+        <fieldset
+          :disabled="paginationDisabled"
+          class="m-0 min-w-0 border-0 p-0"
+        >
+          <div :class="paginationDisabled ? 'pointer-events-none flex justify-center opacity-50' : 'flex justify-center'">
+            <v-pagination
+              :length="totalPages"
+              :model-value="currentPage"
+              :total-visible="5"
+              @update:model-value="goToPage"
+            />
+          </div>
+        </fieldset>
       </nav>
     </div>
   </v-container>
@@ -288,9 +294,17 @@
 
   /** 只允许最新一次请求落盘：快速切筛选 / 切页时旧响应不会覆盖新结果。 */
   let latestRequestId = 0
+  /** 在途请求的真实取消入口；与 `latestRequestId` 组成两道闸。 */
+  let inFlight: AbortController | null = null
 
-  async function load (): Promise<void> {
+  async function load(): Promise<void> {
     const requestId = ++latestRequestId
+
+    // 发新请求前 abort 上一条；`latestRequestId` 兜住「abort 前已 resolve」的竞态。
+    if (inFlight !== null) {
+      inFlight.abort()
+      inFlight = null
+    }
 
     if (priceIssue.value.invalid) {
       // 非法价格参数：暂停请求，不按默认值静默请求；提示由模板呈现。
@@ -305,14 +319,16 @@
       return
     }
 
+    const controller = new AbortController()
+    inFlight = controller
     pending.value = true
 
     try {
       const data = await fetchProductList({
         ...toApiQuery(listQuery.value),
         pageSize: PAGE_SIZE,
-      })
-      if (requestId !== latestRequestId) {
+      }, controller.signal)
+      if (requestId !== latestRequestId || controller.signal.aborted) {
         return
       }
 
@@ -336,7 +352,8 @@
       errorMessage.value = ''
       errorKind.value = null
     } catch (error) {
-      if (requestId !== latestRequestId) {
+      // 被新请求 abort 的旧请求只是过客：不写错误态、不改当前 pending。
+      if (requestId !== latestRequestId || controller.signal.aborted) {
         return
       }
       const unavailable = isSearchUnavailableError(error)
@@ -358,17 +375,18 @@
     } finally {
       if (requestId === latestRequestId) {
         pending.value = false
+        inFlight = null
       }
     }
   }
 
   /** 搜索降级只认 503 / `SEARCH_NOT_AVAILABLE`；其它错误走通用错误态。 */
-  function isSearchUnavailableError (error: unknown): boolean {
+  function isSearchUnavailableError(error: unknown): boolean {
     return error instanceof ApiError &&
       (error.status === 503 || error.error?.error?.code === 'SEARCH_NOT_AVAILABLE')
   }
 
-  function describeRequestError (error: unknown): string {
+  function describeRequestError(error: unknown): string {
     if (error instanceof ApiError) {
       return error.message
     }
@@ -376,34 +394,34 @@
   }
 
   /** 只写 URL；路由变化再由 `watch` 触发请求，保证 URL 是唯一来源。 */
-  function pushListQuery (next: ListQueryState): void {
+  async function pushListQuery(next: ListQueryState): Promise<void> {
     const nextQuery = serializeListQuery(next)
     if (isSameSerializedQuery(nextQuery, serializeListQuery(listQuery.value))) {
       return
     }
-    void router.push({ name: 'home', query: nextQuery })
+    await router.push({ name: 'home', query: nextQuery })
   }
 
   /**
    * 筛选 / 排序即时生效：条件没变时不产生历史（即使当前在第 2 页），
    * 有变化时只 push 一条并回到第 1 页。
    */
-  function onFilterChange (selection: ListFilterSelection): void {
+  function onFilterChange(selection: ListFilterSelection): void {
     const current = listQuery.value
     const next = withFilterSelection(current, selection)
     if (isSameListConditions(current, next)) {
       return
     }
-    pushListQuery({ ...next, page: 1 })
+    void pushListQuery({ ...next, page: 1 })
   }
 
   /** 清除筛选：保留关键词与排序，移除三类条件并回到第 1 页。 */
-  function onClearFilters (): void {
+  function onClearFilters(): void {
     const current = listQuery.value
     if (!hasActiveFilters(current)) {
       return
     }
-    pushListQuery(clearListFilters(current))
+    void pushListQuery(clearListFilters(current))
   }
 
   /**
@@ -411,31 +429,31 @@
    * 条件有变化时只 `push` URL，请求交给下面的路由 `watch`——即使请求返回 503，
    * URL 仍保留用户提交的关键词；条件未变时不新增历史、不重复请求。
    */
-  function onSearchSubmit (keyword: string | null): void {
+  function onSearchSubmit(keyword: string | null): void {
     const current = listQuery.value
     const next = withKeyword(current, keyword)
     if (isSameListConditions(current, next)) {
       return
     }
-    pushListQuery(next)
+    void pushListQuery(next)
   }
 
   /** 503 降级里的「清除关键词」：回到普通浏览；本来就没关键词时按重试处理。 */
-  function onClearKeyword (): void {
+  function onClearKeyword(): void {
     const current = listQuery.value
     const next = withKeyword(current, null)
     if (isSameListConditions(current, next)) {
       void load()
       return
     }
-    pushListQuery(next)
+    void pushListQuery(next)
   }
 
   /**
    * 非法价格参数的「清除价格条件」：用 `replace` 去掉非法参数并触发一次合法请求，
    * 不为一条非法 URL 新增历史。
    */
-  function onClearInvalidPrice (): void {
+  function onClearInvalidPrice(): void {
     void router.replace({
       name: 'home',
       query: serializeListQuery(clearPriceRange(listQuery.value)),
@@ -443,30 +461,34 @@
   }
 
   /** 空态的「清除搜索条件」：关键词与三类筛选一起移除，回到第 1 页。 */
-  function onClearAllConditions (): void {
+  function onClearAllConditions(): void {
     const current = listQuery.value
     const next = withKeyword(clearListFilters(current), null)
     if (isSameSerializedQuery(serializeListQuery(current), serializeListQuery(next))) {
       void load()
       return
     }
-    pushListQuery(next)
+    void pushListQuery(next)
   }
 
   /**
    * 选中联想项直达详情（#11）：`push` 到 `/product/{slug}`，不新增列表查询参数。
    * 浏览器返回后列表条件由 URL 原样恢复；联想请求由子组件在跳转前取消。
    */
-  function onSuggestionSelect (slug: string): void {
+  function onSuggestionSelect(slug: string): void {
     void router.push({ name: 'product', params: { slug } })
   }
 
-  /** 切页只改 URL；第 1 页是默认值，移除 `page` 而不是写成 `page=1`。 */
-  function goToPage (next: number): void {
+  /**
+   * 切页只改 URL；第 1 页是默认值，移除 `page` 而不是写成 `page=1`。
+   * 导航完成后回到列表顶部（规格「排序与分页」）。
+   */
+  async function goToPage(next: number): Promise<void> {
     if (next === currentPage.value) {
       return
     }
-    pushListQuery({ ...listQuery.value, page: next })
+    await pushListQuery({ ...listQuery.value, page: next })
+    window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
   watch(listQuery, () => { void load() }, { immediate: true })

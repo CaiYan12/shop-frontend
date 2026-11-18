@@ -157,7 +157,7 @@
 
   const SUGGESTION_LISTBOX_ID = 'product-suggestion-listbox'
 
-  function optionId (index: number): string {
+  function optionId(index: number): string {
     return `product-suggestion-option-${index}`
   }
 
@@ -166,7 +166,7 @@
   )
 
   /** 关闭下拉并取消待发 / 在途请求：Esc、清空、提交、跳页、点击外部共用。 */
-  function dismissSuggestions (): void {
+  function dismissSuggestions(): void {
     closeSuggestions()
     activeIndex.value = -1
   }
@@ -175,7 +175,7 @@
    * 触发条件：搜索框有焦点 + 输入法组合已结束 + `trim` 后长度 1–100。
    * 不满足时不发请求，并把已排队的请求一起取消。
    */
-  function refreshSuggestions (): void {
+  function refreshSuggestions(): void {
     const query = draft.value.trim()
     if (
       !focused.value ||
@@ -190,17 +190,17 @@
   }
 
   /** 用户输入：先同步本地值，再（防抖后）请求联想。 */
-  function onDraftChange (value: string | null): void {
+  function onDraftChange(value: string | null): void {
     draft.value = value ?? ''
     refreshSuggestions()
   }
 
-  function onFocusIn (): void {
+  function onFocusIn(): void {
     focused.value = true
     refreshSuggestions()
   }
 
-  function onFocusOut (event: FocusEvent): void {
+  function onFocusOut(event: FocusEvent): void {
     const next = event.relatedTarget
     if (next instanceof Node && searchRoot.value?.contains(next)) {
       return
@@ -209,18 +209,18 @@
     dismissSuggestions()
   }
 
-  function onCompositionStart (): void {
+  function onCompositionStart(): void {
     composing.value = true
     // 组合期间发出的联想请求不可信，直接取消（不发、也不等旧响应）。
     dismissSuggestions()
   }
 
-  function onCompositionEnd (): void {
+  function onCompositionEnd(): void {
     composing.value = false
     refreshSuggestions()
   }
 
-  function onKeydown (event: KeyboardEvent): void {
+  function onKeydown(event: KeyboardEvent): void {
     // 只处理输入框自身的按键；清空按钮等其它控件上的 Enter 不触发提交。
     if (!(event.target instanceof HTMLInputElement)) {
       return
@@ -252,7 +252,7 @@
   }
 
   /** ↑↓ 在条目间循环移动高亮；未展开或没有条目时不动。 */
-  function moveActive (step: number): void {
+  function moveActive(step: number): void {
     const count = items.value.length
     if (!isOpen.value || count === 0) {
       return
@@ -265,7 +265,7 @@
   }
 
   /** 有选中项时直达详情；没有选中项时保持 T5 的「提交整段关键词」。 */
-  function onKeydownEnter (event: KeyboardEvent): void {
+  function onKeydownEnter(event: KeyboardEvent): void {
     event.preventDefault()
 
     const selected = activeIndex.value >= 0 ? items.value[activeIndex.value] : undefined
@@ -277,7 +277,7 @@
   }
 
   /** 点选 / 回车选中：先取消联想（含在途请求），再交给页面跳详情。 */
-  function onSelectSuggestion (item: ProductSuggestionItem): void {
+  function onSelectSuggestion(item: ProductSuggestionItem): void {
     dismissSuggestions()
     emit('select', item.slug)
   }
@@ -286,7 +286,7 @@
    * 提交语义：`trim` 后长度 1–100 才接受；空串按「清除关键词」处理（回到普通浏览），
    * 超长只提示、不提交，URL 与请求都不动。提交即关闭联想并取消待发 / 在途请求。
    */
-  function submitDraft (): void {
+  function submitDraft(): void {
     dismissSuggestions()
     const accepted = draft.value.trim()
     if (accepted.length > KEYWORD_MAX_LENGTH) {
@@ -297,14 +297,14 @@
   }
 
   /** 「×」：清空输入并移除 URL 里的关键词（是否真的变化由页面判断）。 */
-  function onClear (): void {
+  function onClear(): void {
     dismissSuggestions()
     draft.value = ''
     emit('submit', null)
   }
 
   /** 点击外部关闭：用捕获阶段的 pointerdown / click，点在页面空白处也生效。 */
-  function onDocumentOutsideInteraction (event: Event): void {
+  function onDocumentOutsideInteraction(event: Event): void {
     const target = event.target
     if (target instanceof Node && searchRoot.value?.contains(target)) {
       return

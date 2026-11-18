@@ -36,7 +36,7 @@ export interface ProductSuggestions {
   close: () => void
 }
 
-export function useProductSuggestions (): ProductSuggestions {
+export function useProductSuggestions(): ProductSuggestions {
   const items = ref<ProductSuggestionItem[]>([])
   const isOpen = ref(false)
 
@@ -48,7 +48,7 @@ export function useProductSuggestions (): ProductSuggestions {
    * 取消「待发」与「在途」，并把序号 +1：即使某个响应赶在 abort 之前已经
    * resolve，它也会因为序号过期而被丢弃，不会重新打开下拉。
    */
-  function cancel (): void {
+  function cancel(): void {
     if (debounceTimer !== null) {
       clearTimeout(debounceTimer)
       debounceTimer = null
@@ -60,13 +60,13 @@ export function useProductSuggestions (): ProductSuggestions {
     latestSeq += 1
   }
 
-  function close (): void {
+  function close(): void {
     cancel()
     isOpen.value = false
     items.value = []
   }
 
-  async function request (query: string): Promise<void> {
+  async function request(query: string): Promise<void> {
     const seq = ++latestSeq
     const controller = new AbortController()
     inFlight = controller
@@ -95,7 +95,7 @@ export function useProductSuggestions (): ProductSuggestions {
     }
   }
 
-  function schedule (query: string): void {
+  function schedule(query: string): void {
     const trimmed = query.trim()
     // 关闭旧下拉，同时取消上一轮待发 / 在途（防抖期间不展示过期条目）。
     close()

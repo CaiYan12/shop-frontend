@@ -62,9 +62,20 @@ function unwrap<T>(result: ApiResult<T>, label: string): T {
   throw new ApiError(result.response.status, `${label}请求失败：${reason}`, result.error)
 }
 
-/** GET /api/products —— 商品列表（分页 + 筛选 + 排序）。 */
-export async function fetchProductList(query: ProductListQuery): Promise<ProductListResponse> {
-  return unwrap(await client.GET('/api/products', { params: { query } }), '商品列表')
+/**
+ * GET /api/products —— 商品列表（分页 + 筛选 + 排序）。
+ *
+ * `signal` 交给 openapi-fetch 的 `RequestInit`（0.17 会原样传给 `fetch`），
+ * 列表页发新请求前 abort 上一条，避免旧响应写回。
+ */
+export async function fetchProductList(
+  query: ProductListQuery,
+  signal?: AbortSignal,
+): Promise<ProductListResponse> {
+  return unwrap(
+    await client.GET('/api/products', { params: { query }, signal }),
+    '商品列表',
+  )
 }
 
 /**

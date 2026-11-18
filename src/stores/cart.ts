@@ -59,7 +59,7 @@ export interface CartState {
 }
 
 /** 正整数判定：`0`、负数、小数、`NaN`、`Infinity` 全部拒绝（D68）。 */
-function isPositiveInteger (value: number): boolean {
+function isPositiveInteger(value: number): boolean {
   return Number.isSafeInteger(value) && value > 0
 }
 
@@ -69,22 +69,22 @@ function isPositiveInteger (value: number): boolean {
  * 库存按契约是非负整数（D44）；这里用 `Math.floor` 兜住脏数据，`NaN` / 负数 /
  * 非有限值统一按 0 处理（即缺货），避免比较结果被 `NaN` 静默吞掉。
  */
-function resolveQuantityLimit (stock: number): number {
+function resolveQuantityLimit(stock: number): number {
   if (!Number.isFinite(stock) || stock <= 0) {
     return 0
   }
   return Math.min(CART_QUANTITY_LIMIT, Math.floor(stock))
 }
 
-function failInvalidQuantity (): CartFailure {
+function failInvalidQuantity(): CartFailure {
   return { ok: false, reason: 'INVALID_QUANTITY', message: '数量必须是正整数。' }
 }
 
-function failOutOfStock (): CartFailure {
+function failOutOfStock(): CartFailure {
   return { ok: false, reason: 'OUT_OF_STOCK', message: '该商品已售罄，无法加入购物车。' }
 }
 
-function failQuantityLimitExceeded (limit: number): CartFailure {
+function failQuantityLimitExceeded(limit: number): CartFailure {
   return {
     ok: false,
     reason: 'QUANTITY_LIMIT_EXCEEDED',
@@ -93,7 +93,7 @@ function failQuantityLimitExceeded (limit: number): CartFailure {
   }
 }
 
-function failNotInCart (): CartFailure {
+function failNotInCart(): CartFailure {
   return { ok: false, reason: 'NOT_IN_CART', message: '购物车中没有该商品。' }
 }
 

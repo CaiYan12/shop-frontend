@@ -8,7 +8,7 @@
  *   标记不成对都在运行时回退原文，调用方不需要再判空；
  * - 参数接受 `readonly string[] | undefined`，契约里的可选字段可直接传入。
  *
- * 不覆盖：具体切分与实体解码结果——由 `node` 直测真实模块覆盖。
+ * 不覆盖：具体切分与实体解码结果——本文件只钉住类型，不验证运行时。
  */
 import type { HighlightSegment } from './highlight'
 import { parseHighlight } from './highlight'
