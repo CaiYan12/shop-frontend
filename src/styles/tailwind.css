@@ -21,4 +21,29 @@
   --radius-md: 4px;
   --radius-lg: 8px;
   --radius-xl: 24px;
+
+  /*
+   * 主题色令牌（#5 视觉基线）。值指向 Vuetify 运行时注入的 CSS 变量，
+   * 所以同一批 Tailwind 类在浅色 / 暗色下自动换色，不需要写两套类名。
+   *
+   * 视觉基线（后续票直接复用）：
+   *   表面卡片 = `bg-surface rounded-xl border border-outline`
+   *   强调按钮 = `bg-primary text-on-primary`
+   * 24px 圆角来自上面的 --radius-xl；细边框取 Vuetify 的 border-color × border-opacity，
+   * 与组件 `border` / `variant="outlined"` 画出来的是同一条线。
+   */
+  --color-primary: rgb(var(--v-theme-primary));
+  --color-on-primary: rgb(var(--v-theme-on-primary));
+  --color-background: rgb(var(--v-theme-background));
+  --color-surface: rgb(var(--v-theme-surface));
+  --color-outline: rgb(var(--v-border-color), var(--v-border-opacity));
+}
+
+/*
+ * 页面底色跟随主题。v-app 只铺自己的盒子，html/body 不铺的话，暗色下
+ * 移动端滚动回弹会露出白底。
+ */
+html,
+body {
+  background-color: rgb(var(--v-theme-background));
 }
