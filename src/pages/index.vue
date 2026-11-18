@@ -12,6 +12,12 @@
         {{ pending ? '正在加载商品…' : '' }}
       </p>
 
+      <!-- 搜索框常驻在筛选条上方：提交只写 URL，请求由路由变化触发（#10）。 -->
+      <ProductSearchBar
+        :keyword="listQuery.keyword"
+        @submit="onSearchSubmit"
+      />
+
       <!-- 筛选与排序条：URL 是唯一来源，点击即写 URL 并触发请求（#9）。 -->
       <ProductFilterBar
         :state="listQuery"
@@ -94,6 +100,7 @@
   import type { components } from '@/api/schema'
   import ProductCard from '@/components/ProductCard.vue'
   import ProductFilterBar from '@/components/ProductFilterBar.vue'
+  import ProductSearchBar from '@/components/ProductSearchBar.vue'
   import {
     clearListFilters,
     hasActiveFilters,
@@ -103,6 +110,7 @@
     serializeListQuery,
     toApiQuery,
     withFilterSelection,
+    withKeyword,
   } from '@/utils/list-query'
   import type { ListFilterSelection, ListQueryState } from '@/utils/list-query'
 
@@ -202,6 +210,20 @@
       return
     }
     pushListQuery(clearListFilters(current))
+  }
+
+  /**
+   * 搜索提交（#10）：子组件已完成 `trim` 与 1–100 校验，`null` 表示清除关键词。
+   * 条件有变化时只 `push` URL，请求交给下面的路由 `watch`——即使请求返回 503，
+   * URL 仍保留用户提交的关键词；条件未变时不新增历史、不重复请求。
+   */
+  function onSearchSubmit (keyword: string | null): void {
+    const current = listQuery.value
+    const next = withKeyword(current, keyword)
+    if (isSameListConditions(current, next)) {
+      return
+    }
+    pushListQuery(next)
   }
 
   /** 切页只改 URL；第 1 页是默认值，移除 `page` 而不是写成 `page=1`。 */

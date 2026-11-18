@@ -1,14 +1,14 @@
 /**
  * src/utils/list-query.ts
  *
- * URL ↔ 列表查询参数的唯一编解码（#9）。
+ * URL ↔ 列表查询参数的唯一编解码（#9 / #10）。
  *
- * 规格「状态与 URL」要求 URL 中已提交的条件是唯一来源：筛选条、排序、分页都只
- * 通过这里读 `route.query`、写 `router.push`，组件不各自拼参数。把它抽成纯函数
- * 也满足 Testing Decisions 的「为后续单测预留两个纯函数」——本阶段用
+ * 规格「状态与 URL」要求 URL 中已提交的条件是唯一来源：搜索关键词、筛选条、排序、
+ * 分页都只通过这里读 `route.query`、写 `router.push`，组件不各自拼参数。把它抽成
+ * 纯函数也满足 Testing Decisions 的「为后续单测预留两个纯函数」——本阶段用
  * `list-query.type-test.ts` 在编译期钉住默认值、边界与选项形状。
  *
- * 规则（#9 / #4）：
+ * 规则（#9 / #10）：
  * - 默认值不写进 URL：`page=1`、空条件、普通浏览的 `sales_desc`、搜索的相关性
  *   （不传 `sort`）都省略。只有非默认值才写入。
  * - 价格档边界取自台账 R25：20000 / 50000 / 100000 / 200000 / 300000 分；
@@ -144,7 +144,9 @@ export type SerializedListQuery = Record<string, string>
 const PRICE_MAX_CENTS = 9_999_999_999
 const SALES_MAX = 1_000_000
 const PAGE_MAX = 200
-const KEYWORD_MAX_LENGTH = 100
+
+/** 关键词长度上限：与后端契约一致，`trim` 后 1–100 才接受（#10）。 */
+export const KEYWORD_MAX_LENGTH = 100
 
 /** 只取重复参数的第一条；其余形式（数字、布尔、空）都视为缺失。 */
 function firstRaw(value: RawQueryValue): string | null {
@@ -295,6 +297,26 @@ export function filterSelectionOf(state: ListQueryState): ListFilterSelection {
 /** 把筛选条的一次提交合并进状态；页码由调用方在「确实有变化」后重置。 */
 export function withFilterSelection(state: ListQueryState, selection: ListFilterSelection): ListQueryState {
   return { ...state, ...selection }
+}
+
+/**
+ * 提交关键词的状态迁移（#10）：`keyword` 由搜索框按「`trim` 后 1–100」校验后传入，
+ * `null` 表示空提交 / 点「×」清除。
+ *
+ * - 任何一次有效提交都回到第 1 页（页码从 URL 移除）；
+ * - 非空 → 非空时保留用户已选的显式排序；
+ * - 清除关键词时显式 `sales_desc` 回落为普通浏览默认值（不写 `sort`），
+ *   两个价格排序保留（规格「排序与分页」）；
+ * - 条件是否真的变化由调用方用 `isSameListConditions` 判断，未变不 push。
+ */
+export function withKeyword (state: ListQueryState, keyword: string | null): ListQueryState {
+  const nextKeyword = keyword === null || keyword.trim().length === 0 ? null : keyword.trim()
+  return {
+    ...state,
+    keyword: nextKeyword,
+    sort: normalizeSort(state.sort, nextKeyword),
+    page: LIST_QUERY_DEFAULTS.page,
+  }
 }
 
 /**
