@@ -52,8 +52,8 @@
         </v-text-field>
 
         <!--
-          条目只展示名称与品牌（纯文本；命中高亮归 #12）。`role="option"` 与
-          `aria-selected` 让 ↑↓ 高亮对辅助技术可见。
+          条目只展示名称与品牌；命中片段由 `HighlightedText` 解析（#12），
+          `role="option"` 与 `aria-selected` 让 ↑↓ 高亮对辅助技术可见。
         -->
         <ul
           v-if="isOpen"
@@ -73,8 +73,12 @@
             @click="onSelectSuggestion(item)"
             @mousedown.prevent
           >
-            <span class="font-medium">{{ item.name }}</span>
-            <span class="ml-2 opacity-70">{{ item.brand }}</span>
+            <span class="font-medium">
+              <HighlightedText :fallback="item.name" :fragments="item.highlight?.name" />
+            </span>
+            <span class="ml-2 opacity-70">
+              <HighlightedText :fallback="item.brand" :fragments="item.highlight?.brand" />
+            </span>
           </li>
         </ul>
       </div>
@@ -94,6 +98,7 @@
 
 <script lang="ts" setup>
   import { computed, onBeforeUnmount, ref, watch } from 'vue'
+  import HighlightedText from '@/components/HighlightedText.vue'
   import { useProductSuggestions } from '@/composables/useProductSuggestions'
   import type { ProductSuggestionItem } from '@/composables/useProductSuggestions'
   import { KEYWORD_MAX_LENGTH } from '@/utils/list-query'

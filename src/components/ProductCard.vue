@@ -21,8 +21,15 @@
 
     <div class="flex grow flex-col gap-2 p-4">
       <!-- 不使用 line-clamp / text-overflow：长名称在 390 / 768 / 1365 下换行显示完整。 -->
-      <h2 class="break-words text-base leading-snug font-medium">{{ item.name }}</h2>
-      <p class="text-sm opacity-70">{{ item.brand }} · {{ item.model }}</p>
+      <!-- 名称 / 品牌 / 型号按命中片段渲染，只有成对 `<em>` 变成强调（#12）。 -->
+      <h2 class="break-words text-base leading-snug font-medium">
+        <HighlightedText :fallback="item.name" :fragments="item.highlight?.name" />
+      </h2>
+      <p class="text-sm opacity-70">
+        <HighlightedText :fallback="item.brand" :fragments="item.highlight?.brand" />
+        <span aria-hidden="true"> · </span>
+        <HighlightedText :fallback="item.model" :fragments="item.highlight?.model" />
+      </p>
 
       <div class="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-1 pt-1">
         <span class="text-lg font-semibold text-primary">{{ formatPriceCents(item.displayPriceCents) }}</span>
@@ -43,6 +50,7 @@
 
 <script lang="ts" setup>
   import { computed } from 'vue'
+  import HighlightedText from '@/components/HighlightedText.vue'
   import type { components } from '@/api/schema'
   import { formatPriceCents, shouldShowOriginalPrice } from '@/utils/price'
 
