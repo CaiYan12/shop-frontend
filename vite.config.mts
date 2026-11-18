@@ -31,6 +31,18 @@ export default defineConfig({
     tailwindcss(),
   ],
   define: { 'process.env': {} },
+  server: {
+    // 浏览器只认识当前源：`/api/*` 由 Vite 转发到本机后端。
+    // 后端路由本身带 `/api` 前缀，因此保留前缀、不做 rewrite。
+    // Vite 8 的 preview 默认继承 server.proxy（`preview?.proxy ?? server.proxy`），
+    // 所以 preview 不重复配置，两种形态共用这一份。
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('src', import.meta.url)),
