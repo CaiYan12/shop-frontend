@@ -25,7 +25,7 @@ import {
  * - 初始值来自 `plugins/vuetify.ts` 的 `defaultTheme`（启动时已读过 localStorage），
  *   这里不重复读，避免两处判断不一致。
  */
-export function useThemePreference () {
+export function useThemePreference() {
   const theme = useTheme()
 
   const current = computed<ThemeName>(() => {
@@ -33,14 +33,14 @@ export function useThemePreference () {
     return isThemeName(name) ? name : DEFAULT_THEME
   })
 
-  function setTheme (name: ThemeName): void {
+  function setTheme(name: ThemeName): void {
     theme.global.name.value = name
     storeTheme(browserStorage(), name)
   }
 
-  function toggle (): void {
+  function toggle(): void {
     setTheme(otherTheme(current.value))
   }
 
-  return { current, toggle, setTheme }
+  return { current, toggle }
 }

@@ -7,10 +7,10 @@
  *
  * 边界（规格逐条对应）：
  * - 只认 `<em>` / `</em>` 这两个字面标记：带属性、大小写不同、`<b>` 等其它标签、
- *   `<em/>` 自闭合标记一律不当作标签；原文里的 `<` / `>` 只能以实体形式出现
- *   （ES `encoder: 'html'` 保证），因此片段里残留原始尖括号说明含未识别标记，
- *   按「不可解析」回退原字段，绝不把标签文本交给浏览器；
- * - 标记未成对（缺一半、嵌套、只有闭标签）时整段回退原字段，不做前端「修正」；
+ *   `<em/>` 自闭合标记一律不当作标签；文本段里残留的其它标签 / 原始尖括号按文本
+ *   原样展示（模板插值不会解释 HTML），不整段回退，也绝不把标签提升为 HTML；
+ * - 只有 `<em>` 标记未成对（缺一半、嵌套、只有闭标签）时才整段回退原字段，
+ *   不做前端「修正」；已配对的 `<em>` 必须保留为强调段；
  * - 解码只做一次且逐段进行：`&amp;lt;` → `&lt;`，解码出的 `<em>` 字样仍是文本；
  * - 保留 `._index_prefix` 给的强调范围：函数不移动、不补齐、不猜测命中位置。
  *
@@ -44,7 +44,7 @@ const ENTITY = /&(#[0-9]+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g
  * 解码 HTML 实体**一次**：只替换原串里真实出现的实体，替换结果不再参与匹配，
  * 所以 `&amp;lt;` 得到 `&lt;` 而不是 `<`。未知实体保持原样。
  */
-function decodeHtmlEntitiesOnce (text: string): string {
+function decodeHtmlEntitiesOnce(text: string): string {
   if (!text.includes('&')) {
     return text
   }
@@ -60,7 +60,7 @@ function decodeHtmlEntitiesOnce (text: string): string {
 }
 
 /** 数字实体解码；非法码点（越界、代理区）原样保留，不抛错。 */
-function decodeNumericEntity (digits: string, radix: 10 | 16, original: string): string {
+function decodeNumericEntity(digits: string, radix: 10 | 16, original: string): string {
   const codePoint = Number.parseInt(digits, radix)
   if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
     return original
@@ -75,7 +75,7 @@ function decodeNumericEntity (digits: string, radix: 10 | 16, original: string):
  * 把一条契约片段切成文本段 / 强调段；标记不成对或出现嵌套时返回 `null`
  * （调用方回退原字段）。切分在解码**之前**做，避免把实体解码出的 `<em>` 当标签。
  */
-function splitEmphasis (fragment: string): HighlightSegment[] | null {
+function splitEmphasis(fragment: string): HighlightSegment[] | null {
   const segments: HighlightSegment[] = []
   let cursor = 0
   let openAt = -1
@@ -112,13 +112,8 @@ function splitEmphasis (fragment: string): HighlightSegment[] | null {
     segments.push({ kind: 'text', text: fragment.slice(cursor) })
   }
 
-  // 合法片段里原文的尖括号都应被实体转义；残留原始尖括号只可能来自未识别标记，
-  // 整段视为不可解析（回退原字段），不把 `<b>` 之类的字样交给浏览器。
-  if (segments.some(segment => /[<>]/.test(segment.text))) {
-    return null
-  }
-
   // 逐段解码一次；强调范围仍由片段本身决定，函数不调整位置。
+  // 文本段里的其它标签 / 尖括号不解码成 HTML，按文本原样保留。
   return segments.map(segment => ({
     kind: segment.kind,
     text: decodeHtmlEntitiesOnce(segment.text),
@@ -132,7 +127,7 @@ function splitEmphasis (fragment: string): HighlightSegment[] | null {
  * @param fallback  未命中 / 不可解析时渲染的原文。
  * @returns 至少一个分段（回退时是单个文本段）；不会返回 `undefined`。
  */
-export function parseHighlight (
+export function parseHighlight(
   fragments: readonly string[] | undefined,
   fallback: string,
 ): HighlightSegment[] {

@@ -36,7 +36,7 @@ type _DefaultTheme = Expect<Equal<typeof DEFAULT_THEME, 'light'>>
 // 存储键是稳定字面量，供 localStorage 读写共用。
 type _StorageKey = Expect<Equal<typeof THEME_STORAGE_KEY, 'shop-frontend:theme'>>
 
-// 两套主题都存在，每套都有主色 / 主色前景 / 背景 / 表面 / 细边框五个槽位。
+// 两套主题都存在，每套都有主色 / 主色前景 / 背景 / 表面四个槽位。
 type _PaletteThemes = Expect<Equal<keyof typeof THEME_PALETTE, 'light' | 'dark'>>
 type _PaletteKeys = Expect<
   Equal<keyof (typeof THEME_PALETTE)['light'], 'primary' | 'onPrimary' | 'background' | 'surface'>

@@ -61,12 +61,12 @@ export const THEME_PALETTE = {
 } as const satisfies Record<ThemeName, ThemePalette>
 
 /** 判定任意值是否是合法主题名（供 localStorage 与 URL 参数复用）。 */
-export function isThemeName (value: unknown): value is ThemeName {
+export function isThemeName(value: unknown): value is ThemeName {
   return value === 'light' || value === 'dark'
 }
 
 /** 另一套主题。用于页头按钮的「切换」语义，避免调用方自己写三元。 */
-export function otherTheme (name: ThemeName): ThemeName {
+export function otherTheme(name: ThemeName): ThemeName {
   return name === 'dark' ? 'light' : 'dark'
 }
 
@@ -74,7 +74,7 @@ export function otherTheme (name: ThemeName): ThemeName {
  * 浏览器 localStorage。隐私模式或服务端渲染下拿不到，返回 null，
  * 调用方据此退回默认主题而不是抛错。
  */
-export function browserStorage (): Storage | null {
+export function browserStorage(): Storage | null {
   try {
     return typeof window === 'undefined' ? null : window.localStorage
   } catch {
@@ -86,7 +86,7 @@ export function browserStorage (): Storage | null {
  * 读取已保存的主题。存储缺失、取值非法或访问被拒时一律退回默认浅色，
  * 保证「首次访问默认浅色」在脏数据下也成立。
  */
-export function readStoredTheme (storage: Storage | null = browserStorage()): ThemeName {
+export function readStoredTheme(storage: Storage | null = browserStorage()): ThemeName {
   try {
     const stored = storage?.getItem(THEME_STORAGE_KEY)
     return isThemeName(stored) ? stored : DEFAULT_THEME
@@ -96,7 +96,7 @@ export function readStoredTheme (storage: Storage | null = browserStorage()): Th
 }
 
 /** 写入主题选择。写入失败（隐私模式、配额）只影响「下次记住」，不影响本次切换。 */
-export function storeTheme (storage: Storage | null | undefined, name: ThemeName): void {
+export function storeTheme(storage: Storage | null | undefined, name: ThemeName): void {
   try {
     storage?.setItem(THEME_STORAGE_KEY, name)
   } catch {

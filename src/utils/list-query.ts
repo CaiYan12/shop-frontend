@@ -68,11 +68,19 @@ export const CATEGORY_OPTIONS = [
   { value: 'wearables', label: '智能穿戴' },
 ] as const
 
-/** 合法的商品类型 slug（用于把 URL 里的脏值按默认值兜底）。 */
-export const KNOWN_CATEGORY_SLUGS = ['audio', 'peripherals', 'displays', 'wearables'] as const
-
 /** 商品类型选择值：`all` 表示不限。 */
 export type CategorySelection = typeof CATEGORY_OPTIONS[number]['value']
+
+/**
+ * 合法的商品类型 slug（用于把 URL 里的脏值按默认值兜底）。
+ * 从上面 chips 的非「全部」项派生，保证展示项与白名单只有一份事实来源。
+ */
+export const KNOWN_CATEGORY_SLUGS = [
+  CATEGORY_OPTIONS[1].value,
+  CATEGORY_OPTIONS[2].value,
+  CATEGORY_OPTIONS[3].value,
+  CATEGORY_OPTIONS[4].value,
+] as const
 
 /**
  * 价格六档（台账 R25）。数值单位是「分」，且全部是契约原始值：
@@ -170,7 +178,7 @@ type ParsedPriceParam =
  * 单个价格参数：缺失 / 空串视为未设置；重复、非整数、越界都是非法（#13）。
  * 与 `parseBoundedInteger` 的差别是这里把「为什么非法」带出来给页面提示。
  */
-function readPriceParam (value: RawQueryValue): ParsedPriceParam {
+function readPriceParam(value: RawQueryValue): ParsedPriceParam {
   if (value === undefined || value === null) {
     return { ok: true, value: null }
   }
@@ -207,7 +215,7 @@ function readPriceParam (value: RawQueryValue): ParsedPriceParam {
  * 否则会静默发出一个不符合 URL 的请求。这里把两端一起置为 `null` 并返回提示，
  * 由列表页暂停请求；用户点击「清除价格条件」或重选价格档后恢复。
  */
-export function inspectPriceParams (raw: RawQuery): PriceParamInspection {
+export function inspectPriceParams(raw: RawQuery): PriceParamInspection {
   const min = readPriceParam(raw.priceMinCents)
   if (!min.ok) {
     return { invalid: true, kind: min.kind, message: min.message, priceMinCents: null, priceMaxCents: null }
@@ -305,27 +313,34 @@ export function parseListQuery(raw: RawQuery): ListQueryState {
   }
 }
 
+/**
+ * 「非 `null` 才赋值」：默认值不写进 URL，也不出现在 API 查询里。
+ * URL 侧的数字先经 `optionalString` 转成字符串，API 侧直接传原值。
+ */
+function assignWhenPresent<T extends object, K extends keyof T>(
+  target: T,
+  key: K,
+  value: T[K] | null,
+): void {
+  if (value !== null) {
+    target[key] = value
+  }
+}
+
+/** 数字参数转字符串；`null` 保持 `null`，交给 `assignWhenPresent` 判断是否省略。 */
+function optionalString(value: number | null): string | null {
+  return value === null ? null : String(value)
+}
+
 /** 页面状态 → URL。默认值全部省略；输出只含字符串，可直接交给 `router.push`。 */
-export function serializeListQuery(state: ListQueryState): SerializedListQuery {  const query: SerializedListQuery = {}
-  if (state.category !== null) {
-    query.category = state.category
-  }
-  if (state.priceMinCents !== null) {
-    query.priceMinCents = String(state.priceMinCents)
-  }
-  if (state.priceMaxCents !== null) {
-    query.priceMaxCents = String(state.priceMaxCents)
-  }
-  if (state.minSales !== null) {
-    query.minSales = String(state.minSales)
-  }
-  if (state.keyword !== null) {
-    query.keyword = state.keyword
-  }
-  const sort = normalizeSort(state.sort, state.keyword)
-  if (sort !== null) {
-    query.sort = sort
-  }
+export function serializeListQuery(state: ListQueryState): SerializedListQuery {
+  const query: SerializedListQuery = {}
+  assignWhenPresent(query, 'category', state.category)
+  assignWhenPresent(query, 'priceMinCents', optionalString(state.priceMinCents))
+  assignWhenPresent(query, 'priceMaxCents', optionalString(state.priceMaxCents))
+  assignWhenPresent(query, 'minSales', optionalString(state.minSales))
+  assignWhenPresent(query, 'keyword', state.keyword)
+  assignWhenPresent(query, 'sort', normalizeSort(state.sort, state.keyword))
   if (state.page > LIST_QUERY_DEFAULTS.page) {
     query.page = String(state.page)
   }
@@ -344,25 +359,12 @@ export function isSameSerializedQuery(a: SerializedListQuery, b: SerializedListQ
 /** 页面状态 → API 查询（不含 `pageSize`，由列表页固定传 8）。 */
 export function toApiQuery(state: ListQueryState): ProductListQuery {
   const query: ProductListQuery = { page: state.page }
-  if (state.category !== null) {
-    query.category = state.category
-  }
-  if (state.priceMinCents !== null) {
-    query.priceMinCents = state.priceMinCents
-  }
-  if (state.priceMaxCents !== null) {
-    query.priceMaxCents = state.priceMaxCents
-  }
-  if (state.minSales !== null) {
-    query.minSales = state.minSales
-  }
-  if (state.keyword !== null) {
-    query.keyword = state.keyword
-  }
-  const sort = normalizeSort(state.sort, state.keyword)
-  if (sort !== null) {
-    query.sort = sort
-  }
+  assignWhenPresent(query, 'category', state.category)
+  assignWhenPresent(query, 'priceMinCents', state.priceMinCents)
+  assignWhenPresent(query, 'priceMaxCents', state.priceMaxCents)
+  assignWhenPresent(query, 'minSales', state.minSales)
+  assignWhenPresent(query, 'keyword', state.keyword)
+  assignWhenPresent(query, 'sort', normalizeSort(state.sort, state.keyword))
   return query
 }
 
@@ -392,7 +394,7 @@ export function withFilterSelection(state: ListQueryState, selection: ListFilter
  *   两个价格排序保留（规格「排序与分页」）；
  * - 条件是否真的变化由调用方用 `isSameListConditions` 判断，未变不 push。
  */
-export function withKeyword (state: ListQueryState, keyword: string | null): ListQueryState {
+export function withKeyword(state: ListQueryState, keyword: string | null): ListQueryState {
   const nextKeyword = keyword === null || keyword.trim().length === 0 ? null : keyword.trim()
   return {
     ...state,

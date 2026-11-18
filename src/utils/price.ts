@@ -17,7 +17,7 @@ const priceFormatter = new Intl.NumberFormat('zh-CN', {
 })
 
 /** 整数分 → `¥2,299.00`。 */
-export function formatPriceCents (cents: number): string {
+export function formatPriceCents(cents: number): string {
   return `¥${priceFormatter.format(cents / 100)}`
 }
 
@@ -27,6 +27,6 @@ export function formatPriceCents (cents: number): string {
  * 两者相等（没有折扣）或原价更低（脏数据）都不显示，避免无意义的划线；
  * 用「分」比较，不经过元的小数换算。
  */
-export function shouldShowOriginalPrice (displayPriceCents: number, displayOriginalPriceCents: number): boolean {
+export function shouldShowOriginalPrice(displayPriceCents: number, displayOriginalPriceCents: number): boolean {
   return displayOriginalPriceCents > displayPriceCents
 }

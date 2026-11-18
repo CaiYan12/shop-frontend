@@ -73,16 +73,15 @@
 <script lang="ts" setup>
   import { computed } from 'vue'
   import {
-    BROWSE_SORT_OPTIONS,
     CATEGORY_OPTIONS,
     PRICE_BANDS,
     PRODUCT_SORTS,
     SALES_TIERS,
-    SEARCH_SORT_OPTIONS,
     filterSelectionOf,
     readPriceSelection,
     readSalesSelection,
     readSortSelection,
+    sortOptionsFor,
   } from '@/utils/list-query'
   import type {
     CategorySelection,
@@ -128,14 +127,15 @@
 
   /** 有关键词时四项（相关性默认），无关键词时三项（销量降序默认）。 */
   const sortItems = computed(() => {
-    const options = props.state.keyword === null ? BROWSE_SORT_OPTIONS : SEARCH_SORT_OPTIONS
-    return options.map(option => ({ title: option.label, value: option.value as SortSelection }))
+    const options: readonly { readonly value: SortSelection, readonly label: string }[] =
+      sortOptionsFor(props.state.keyword)
+    return options.map(option => ({ title: option.label, value: option.value }))
   })
 
   const sortSelection = computed<SortSelection>(() => readSortSelection(props.state))
 
   /** 非预设但合法的价格区间显示为只读项，展示实际金额，便于用户知道 URL 里是什么。 */
-  function describePriceRange (state: ListQueryState): string {
+  function describePriceRange(state: ListQueryState): string {
     if (state.priceMinCents !== null && state.priceMaxCents !== null) {
       return `${formatPriceCents(state.priceMinCents)}–${formatPriceCents(state.priceMaxCents)}`
     }
@@ -178,11 +178,11 @@
     return items
   })
 
-  function emitSelection (patch: Partial<ListFilterSelection>): void {
+  function emitSelection(patch: Partial<ListFilterSelection>): void {
     emit('change', { ...filterSelectionOf(props.state), ...patch })
   }
 
-  function onCategoryUpdate (value: unknown): void {
+  function onCategoryUpdate(value: unknown): void {
     const next = typeof value === 'string' ? value : 'all'
     if (next === categorySelection.value) {
       return
@@ -190,7 +190,7 @@
     emitSelection({ category: next === 'all' ? null : next })
   }
 
-  function onPriceUpdate (value: unknown): void {
+  function onPriceUpdate(value: unknown): void {
     if (typeof value !== 'string' || value === priceSelection.value) {
       return
     }
@@ -204,7 +204,7 @@
     }
   }
 
-  function onSalesUpdate (value: unknown): void {
+  function onSalesUpdate(value: unknown): void {
     if (typeof value !== 'string' || value === salesSelection.value) {
       return
     }
@@ -214,7 +214,7 @@
     }
   }
 
-  function onSortUpdate (value: unknown): void {
+  function onSortUpdate(value: unknown): void {
     if (typeof value !== 'string' || value === sortSelection.value) {
       return
     }

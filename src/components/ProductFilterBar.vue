@@ -114,11 +114,11 @@
     activeFilterCount.value > 0 ? `筛选，已选 ${activeFilterCount.value} 项` : '筛选',
   )
 
-  function onChange (selection: ListFilterSelection): void {
+  function onChange(selection: ListFilterSelection): void {
     emit('change', selection)
   }
 
-  function onClear (): void {
+  function onClear(): void {
     emit('clear')
   }
 </script>
