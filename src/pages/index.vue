@@ -12,6 +12,13 @@
         {{ pending ? '正在加载商品…' : '' }}
       </p>
 
+      <!-- 筛选与排序条：URL 是唯一来源，点击即写 URL 并触发请求（#9）。 -->
+      <ProductFilterBar
+        :state="listQuery"
+        @change="onFilterChange"
+        @clear="onClearFilters"
+      />
+
       <v-progress-linear
         v-if="pending && items.length > 0"
         color="primary"
@@ -86,6 +93,18 @@
   import { ApiError, fetchProductList } from '@/api/client'
   import type { components } from '@/api/schema'
   import ProductCard from '@/components/ProductCard.vue'
+  import ProductFilterBar from '@/components/ProductFilterBar.vue'
+  import {
+    clearListFilters,
+    hasActiveFilters,
+    isSameListConditions,
+    isSameSerializedQuery,
+    parseListQuery,
+    serializeListQuery,
+    toApiQuery,
+    withFilterSelection,
+  } from '@/utils/list-query'
+  import type { ListFilterSelection, ListQueryState } from '@/utils/list-query'
 
   /** 每页固定 8 件（规格「排序与分页」），不暴露每页条数选择器。 */
   const PAGE_SIZE = 8
@@ -103,21 +122,14 @@
   const errorMessage = ref('')
 
   /**
-   * URL 是页码的唯一来源：缺省或非法值都按第 1 页处理。
-   * 缺省值不会写回 URL（只有 `goToPage` 写入非默认页）。
+   * URL 是筛选、排序与页码的唯一来源：缺省值即默认值，非法值由编解码
+   * 按默认值兜底（完整提示归 #13）。`page` 缺省时是第 1 页。
    */
-  function parsePage (raw: unknown): number {
-    const value = Array.isArray(raw) ? raw[0] : raw
-    if (typeof value !== 'string') {
-      return 1
-    }
-    const page = Number(value)
-    return Number.isInteger(page) && page >= 1 ? page : 1
-  }
+  const listQuery = computed(() => parseListQuery(route.query))
 
-  const currentPage = computed(() => parsePage(route.query.page))
+  const currentPage = computed(() => listQuery.value.page)
 
-  /** 只允许最新一次请求落盘：快速切页时旧响应不会覆盖新结果。 */
+  /** 只允许最新一次请求落盘：快速切筛选 / 切页时旧响应不会覆盖新结果。 */
   let latestRequestId = 0
 
   async function load (): Promise<void> {
@@ -126,7 +138,10 @@
     errorMessage.value = ''
 
     try {
-      const data = await fetchProductList({ page: currentPage.value, pageSize: PAGE_SIZE })
+      const data = await fetchProductList({
+        ...toApiQuery(listQuery.value),
+        pageSize: PAGE_SIZE,
+      })
       if (requestId !== latestRequestId) {
         return
       }
@@ -158,19 +173,44 @@
     return '商品列表加载失败，请检查网络后重试。'
   }
 
+  /** 只写 URL；路由变化再由 `watch` 触发请求，保证 URL 是唯一来源。 */
+  function pushListQuery (next: ListQueryState): void {
+    const nextQuery = serializeListQuery(next)
+    if (isSameSerializedQuery(nextQuery, serializeListQuery(listQuery.value))) {
+      return
+    }
+    void router.push({ name: 'home', query: nextQuery })
+  }
+
+  /**
+   * 筛选 / 排序即时生效：条件没变时不产生历史（即使当前在第 2 页），
+   * 有变化时只 push 一条并回到第 1 页。
+   */
+  function onFilterChange (selection: ListFilterSelection): void {
+    const current = listQuery.value
+    const next = withFilterSelection(current, selection)
+    if (isSameListConditions(current, next)) {
+      return
+    }
+    pushListQuery({ ...next, page: 1 })
+  }
+
+  /** 清除筛选：保留关键词与排序，移除三类条件并回到第 1 页。 */
+  function onClearFilters (): void {
+    const current = listQuery.value
+    if (!hasActiveFilters(current)) {
+      return
+    }
+    pushListQuery(clearListFilters(current))
+  }
+
   /** 切页只改 URL；第 1 页是默认值，移除 `page` 而不是写成 `page=1`。 */
   function goToPage (next: number): void {
     if (next === currentPage.value) {
       return
     }
-    const query = { ...route.query }
-    if (next <= 1) {
-      delete query.page
-    } else {
-      query.page = String(next)
-    }
-    void router.push({ name: 'home', query })
+    pushListQuery({ ...listQuery.value, page: next })
   }
 
-  watch(currentPage, () => { void load() }, { immediate: true })
+  watch(listQuery, () => { void load() }, { immediate: true })
 </script>
