@@ -36,10 +36,12 @@ import type {
   sortOptionsFor,
   toApiQuery,
   withFilterSelection,
+  withKeyword,
 } from './list-query'
 import {
   BROWSE_SORT_OPTIONS,
   CATEGORY_OPTIONS,
+  KEYWORD_MAX_LENGTH,
   KNOWN_CATEGORY_SLUGS,
   LIST_QUERY_DEFAULTS,
   PRICE_BANDS,
@@ -220,6 +222,13 @@ type _SameConditions = Expect<Equal<ReturnType<typeof isSameListConditions>, boo
 type _HasFilters = Expect<Equal<ReturnType<typeof hasActiveFilters>, boolean>>
 type _Clear = Expect<Equal<ReturnType<typeof clearListFilters>, ListQueryState>>
 
+// —— 关键词生命周期（#10）：长度上限与提交后的状态迁移 ——
+type _KeywordMax = Expect<Equal<typeof KEYWORD_MAX_LENGTH, 100>>
+type _WithKeyword = Expect<Equal<ReturnType<typeof withKeyword>, ListQueryState>>
+type _WithKeywordArgs = Expect<
+  Equal<Parameters<typeof withKeyword>, [state: ListQueryState, keyword: string | null]>
+>
+
 /** 显式导出，避免断言别名被当成死代码；本项目未开 `noUnusedLocals`。 */
 export type ListQueryTypeTests =
   | _Defaults
@@ -266,3 +275,6 @@ export type ListQueryTypeTests =
   | _SameConditions
   | _HasFilters
   | _Clear
+  | _KeywordMax
+  | _WithKeyword
+  | _WithKeywordArgs
