@@ -23,9 +23,10 @@ const REPO_ROOT = join(TOOL_ROOT, '..', '..')
 
 /** 后端契约的预期形状；与 shop-backend 的 OpenAPI 生成器保持同步。 */
 const EXPECTED_OPENAPI = '3.1.0'
-const EXPECTED_PATH_COUNT = 5
+const EXPECTED_PATH_COUNT = 6
 const EXPECTED_OPERATION_IDS = [
   'listProducts',
+  'listSuggestions',
   'getProduct',
   'listRecommendations',
   'listCategories',

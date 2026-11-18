@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/products/{slug}": {
         parameters: {
             query?: never;
@@ -136,6 +152,14 @@ export interface components {
         };
         ProductRecommendationsResponse: {
             items: components["schemas"]["ProductListItem"][];
+        };
+        ProductSuggestionItem: {
+            slug: string;
+            name: string;
+            brand: string;
+        };
+        ProductSuggestionsResponse: {
+            items: components["schemas"]["ProductSuggestionItem"][];
         };
         ProductDimension: {
             name: string;
@@ -258,6 +282,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductListResponse"];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listSuggestions: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductSuggestionsResponse"];
                 };
             };
             /** @description Default Response */
