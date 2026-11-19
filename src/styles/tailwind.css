@@ -37,6 +37,12 @@
   --color-background: rgb(var(--v-theme-background));
   --color-surface: rgb(var(--v-theme-surface));
   --color-outline: rgb(var(--v-border-color), var(--v-border-opacity));
+  /*
+   * 弱化文字色（#13 对比度修复）：两套主题各自由 `THEME_PALETTE.muted` /
+   * `warningInk` 提供，暗色下不再退化到 2.77:1 / 4.18:1 的固定色值。
+   */
+  --color-muted: rgb(var(--v-theme-on-surface-muted));
+  --color-warning-ink: rgb(var(--v-theme-warning-ink));
 }
 
 /*

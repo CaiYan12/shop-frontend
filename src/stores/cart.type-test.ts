@@ -7,7 +7,7 @@
  *   `quantity` / `stock` 六个，且都是只读；
  * - 四个动作统一返回 `CartActionResult`，失败分支必有 `reason`，越界分支还带
  *   `limit`；`CartActionResult` 不是 `void`；
- * - 失败原因码只有四支，与运行时构造的失败对象一致；
+ * - 失败原因码只有五支，与运行时构造的失败对象一致；
  * - getters 是 `number`，可直接参与金额汇总。
  *
  * 不覆盖：合并、拒绝、清空等运行时行为——本文件只钉住类型，不验证运行时。
@@ -57,10 +57,16 @@ type _ResultIsUnion = Expect<Equal<CartActionResult, CartSuccess | CartFailure>>
 type _FailureReason = Expect<Equal<CartFailure['reason'], CartFailureReason>>
 type _FailureHasMessage = Expect<Equal<CartFailure['message'], string>>
 type _ReasonUnion = Expect<
-  Equal<CartFailureReason, 'INVALID_QUANTITY' | 'OUT_OF_STOCK' | 'QUANTITY_LIMIT_EXCEEDED' | 'NOT_IN_CART'>
+  Equal<
+    CartFailureReason,
+    'INVALID_QUANTITY' | 'INVALID_ITEM' | 'OUT_OF_STOCK' | 'QUANTITY_LIMIT_EXCEEDED' | 'NOT_IN_CART'
+  >
 >
 type _LimitOnlyOnOverflow = Expect<
   Equal<Extract<CartFailure, { reason: 'QUANTITY_LIMIT_EXCEEDED' }>['limit'], number>
+>
+type _NoLimitOnInvalidItem = Expect<
+  Equal<'limit' extends keyof Extract<CartFailure, { reason: 'INVALID_ITEM' }> ? true : false, false>
 >
 type _NoLimitOnInvalid = Expect<
   Equal<'limit' extends keyof Extract<CartFailure, { reason: 'INVALID_QUANTITY' }> ? true : false, false>

@@ -15,7 +15,7 @@ import { onBeforeUnmount, ref } from 'vue'
 import type { Ref } from 'vue'
 import { fetchProductSuggestions } from '@/api/client'
 import type { components } from '@/api/schema'
-import { KEYWORD_MAX_LENGTH } from '@/utils/list-query'
+import { KEYWORD_MAX_LENGTH, keywordLength } from '@/utils/list-query'
 
 /** 一次最多 5 条（票 #11）。 */
 export const SUGGESTION_LIMIT = 5
@@ -99,7 +99,8 @@ export function useProductSuggestions(): ProductSuggestions {
     const trimmed = query.trim()
     // 关闭旧下拉，同时取消上一轮待发 / 在途（防抖期间不展示过期条目）。
     close()
-    if (trimmed.length < 1 || trimmed.length > KEYWORD_MAX_LENGTH) {
+    const length = keywordLength(trimmed)
+    if (length < 1 || length > KEYWORD_MAX_LENGTH) {
       return
     }
     debounceTimer = setTimeout(() => {

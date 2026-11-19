@@ -3,7 +3,7 @@
     <div class="flex flex-col gap-6">
       <header class="flex flex-wrap items-end justify-between gap-2">
         <h1 class="text-2xl font-bold md:text-3xl">商品列表</h1>
-        <p v-if="showSummary" class="text-sm text-slate-600">
+        <p v-if="showSummary" class="text-sm text-muted">
           共 {{ total }} 件 / {{ totalPages }} 页
         </p>
       </header>
@@ -27,27 +27,27 @@
       />
 
       <!--
-        非法价格参数（#13）：重复 / 非整数 / 越界 / 下限大于上限时，暂停列表请求，
-        提示「清除或重选价格条件」。筛选条就在上方，重选价格档也能脱困。
+        非法参数（#13）：商品类型 / 价格 / 销量任一非法时，暂停列表请求并提示。
+        在用户点「清除无效条件」（或重选对应筛选）之前，非法参数不会从 URL 消失。
       -->
       <v-alert
-        v-if="priceIssue.invalid"
+        v-if="paramIssue.invalid"
         class="rounded-xl"
-        data-state="invalid-price"
+        data-state="invalid-params"
         type="warning"
         variant="tonal"
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <span>{{ priceIssue.message }}</span>
-          <v-btn size="small" variant="text" @click="onClearInvalidPrice">
-            清除价格条件
+          <span>{{ paramIssue.message }}</span>
+          <v-btn size="small" variant="text" @click="onClearInvalidParams">
+            清除无效条件
           </v-btn>
         </div>
       </v-alert>
 
       <!-- 后续筛选 / 翻页：顶部进度条 + 保留旧卡片（#13）。 -->
       <v-progress-linear
-        v-if="pending && hasLoadedOnce && !priceIssue.invalid"
+        v-if="pending && hasLoadedOnce && !paramIssue.invalid"
         color="primary"
         data-state="progress"
         indeterminate
@@ -64,7 +64,7 @@
         <p class="text-base font-semibold">
           搜索服务暂时不可用，请稍后重试。
         </p>
-        <p class="mt-1 text-sm text-slate-600">
+        <p class="mt-1 text-sm text-muted">
           可以重试当前条件，或清除关键词后继续浏览全部商品。
         </p>
         <div class="mt-4 flex flex-wrap gap-2">
@@ -120,7 +120,7 @@
 
       <p
         v-if="showingStale"
-        class="text-sm font-medium text-amber-700"
+        class="text-sm font-medium text-warning-ink"
         data-state="stale-label"
       >
         正在显示上次结果
@@ -161,7 +161,7 @@
         variant="flat"
       >
         <p class="text-base font-semibold">没有找到符合条件的商品</p>
-        <p class="mt-2 text-sm text-slate-600">
+        <p class="mt-2 text-sm text-muted">
           试试清除关键词或筛选条件，或者换一个关键词。
         </p>
         <v-btn
@@ -202,7 +202,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed, ref, watch } from 'vue'
+  import { computed, onBeforeUnmount, ref, watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { ApiError, fetchProductList } from '@/api/client'
   import type { components } from '@/api/schema'
@@ -210,10 +210,10 @@
   import ProductFilterBar from '@/components/ProductFilterBar.vue'
   import ProductSearchBar from '@/components/ProductSearchBar.vue'
   import {
+    clearInvalidListParams,
     clearListFilters,
-    clearPriceRange,
     hasActiveFilters,
-    inspectPriceParams,
+    inspectListParams,
     isSameListConditions,
     isSameSerializedQuery,
     parseListQuery,
@@ -250,11 +250,11 @@
   const errorKind = ref<ListErrorKind | null>(null)
 
   /**
-   * URL 是筛选、排序与页码的唯一来源：缺省值即默认值。价格参数另做检查，
-   * 非法时不按默认值请求（#13）。
+   * URL 是筛选、排序与页码的唯一来源：缺省值即默认值。商品类型 / 价格 / 销量
+   * 任一非法时不按默认值请求（#13）。
    */
   const listQuery = computed(() => parseListQuery(route.query))
-  const priceIssue = computed(() => inspectPriceParams(route.query))
+  const paramIssue = computed(() => inspectListParams(route.query))
 
   const currentPage = computed(() => listQuery.value.page)
   const hasKeyword = computed(() => listQuery.value.keyword !== null)
@@ -264,12 +264,12 @@
   const searchUnavailable = computed(() => errorKind.value === 'search-unavailable')
 
   const showSummary = computed(
-    () => loaded.value && errorMessage.value === '' && !priceIssue.value.invalid,
+    () => loaded.value && errorMessage.value === '' && !paramIssue.value.invalid,
   )
 
   /** 首屏（或没有成功结果时重试）：8 张骨架卡。 */
   const showSkeleton = computed(
-    () => pending.value && !hasLoadedOnce.value && !priceIssue.value.invalid,
+    () => pending.value && !hasLoadedOnce.value && !paramIssue.value.invalid,
   )
 
   /** 只有成功响应且 `total = 0` 才是空态；503 与无效参数都不走这里。 */
@@ -277,13 +277,13 @@
     () => loaded.value &&
       !pending.value &&
       errorMessage.value === '' &&
-      !priceIssue.value.invalid &&
+      !paramIssue.value.invalid &&
       total.value === 0,
   )
 
   /** 空态隐藏分页；没有旧结果可保留时也不显示分页。 */
   const showPagination = computed(
-    () => !priceIssue.value.invalid &&
+    () => !paramIssue.value.invalid &&
       items.value.length > 0 &&
       totalPages.value > 1 &&
       !(errorMessage.value !== '' && !showingStale.value),
@@ -306,8 +306,8 @@
       inFlight = null
     }
 
-    if (priceIssue.value.invalid) {
-      // 非法价格参数：暂停请求，不按默认值静默请求；提示由模板呈现。
+    if (paramIssue.value.invalid) {
+      // 非法参数：暂停请求，不按默认值静默请求；提示与 URL 由模板 / 地址栏保留。
       pending.value = false
       loaded.value = false
       showingStale.value = false
@@ -336,6 +336,10 @@
       if (data.total > 0 && data.totalPages > 0 && listQuery.value.page > data.totalPages) {
         total.value = data.total
         totalPages.value = data.totalPages
+        // 离开列表页后迟到的响应不得再改写 URL（#13）。
+        if (route.name !== 'home') {
+          return
+        }
         void router.replace({
           name: 'home',
           query: serializeListQuery({ ...listQuery.value, page: data.totalPages }),
@@ -430,6 +434,11 @@
    * URL 仍保留用户提交的关键词；条件未变时不新增历史、不重复请求。
    */
   function onSearchSubmit(keyword: string | null): void {
+    // 存在非法参数时不能把「解析后的状态」写回 URL：那会把非法参数静默删掉。
+    // 保持 URL 与提示不变，等用户点「清除无效条件」后再允许提交。
+    if (paramIssue.value.invalid) {
+      return
+    }
     const current = listQuery.value
     const next = withKeyword(current, keyword)
     if (isSameListConditions(current, next)) {
@@ -450,13 +459,13 @@
   }
 
   /**
-   * 非法价格参数的「清除价格条件」：用 `replace` 去掉非法参数并触发一次合法请求，
-   * 不为一条非法 URL 新增历史。
+   * 「清除无效条件」：用 `replace` 只删掉非法的商品类型 / 价格 / 销量参数，
+   * 其余参数原样保留，并触发一次合法请求；不为一条非法 URL 新增历史。
    */
-  function onClearInvalidPrice(): void {
+  function onClearInvalidParams(): void {
     void router.replace({
       name: 'home',
-      query: serializeListQuery(clearPriceRange(listQuery.value)),
+      query: clearInvalidListParams(route.query),
     })
   }
 
@@ -490,6 +499,18 @@
     await pushListQuery({ ...listQuery.value, page: next })
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
+
+  /**
+   * 离开列表页（例如选中联想项跳详情）时取消在途请求并让响应序号过期：
+   * 迟到的列表响应不得再写回已卸载页面的状态，更不得触发越页纠正的跳转（#13）。
+   */
+  onBeforeUnmount(() => {
+    latestRequestId += 1
+    if (inFlight !== null) {
+      inFlight.abort()
+      inFlight = null
+    }
+  })
 
   watch(listQuery, () => { void load() }, { immediate: true })
 </script>

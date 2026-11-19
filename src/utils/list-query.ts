@@ -14,8 +14,8 @@
  * - 价格档边界取自台账 R25：20000 / 50000 / 100000 / 200000 / 300000 分；
  *   前一档上限 = 下一档边界 − 1 分，首档只设上限 19999 分（明确排除 ¥200）。
  * - 契约原始值进 URL（`category` / `priceMinCents` / `priceMaxCents` / `minSales`），
- *   不引入档位 id。类型 / 排序的非法值按默认值兜底；价格参数的非法值不静默兜底，
- *   由 `inspectPriceParams` 交给页面暂停请求并提示（#13）。
+ *   不引入档位 id。类型 / 排序的非法值按默认值兜底；**存在非法参数时**由
+ *   `inspectListParams` 交给页面暂停请求并提示，绝不静默请求或静默改写 URL（#13）。
  */
 import type { operations } from '@/api/schema'
 
@@ -236,8 +236,165 @@ export function inspectPriceParams(raw: RawQuery): PriceParamInspection {
   return { invalid: false, kind: null, message: '', priceMinCents: min.value, priceMaxCents: max.value }
 }
 
+/**
+ * 非法的列表参数类别（#13）：价格四种原因，加上商品类型与销量门槛。
+ * 与价格不同，后两者合法时能还原成状态，非法时只影响「提示 + 暂停请求」。
+ */
+export type ListParamIssueKind = PriceParamIssueKind | 'category' | 'min-sales'
+
+/** 一次「全部列表参数」检查的结果；`invalid` 为真时列表页必须暂停请求。 */
+export interface ListParamInspection {
+  invalid: boolean
+  kind: ListParamIssueKind | null
+  /** 面向用户的第一条提示；合法时为空串。 */
+  message: string
+  /** 需要一并清除的原始参数名；「清除无效条件」按钮据此改写 URL。 */
+  invalidKeys: readonly string[]
+}
+
+type ParsedTextParam =
+  | { ok: true, value: string | null }
+  | { ok: false }
+
+/** 重复参数（数组长度 > 1）在有歧义的字段上一律视为非法。 */
+function isDuplicateParam(value: RawQueryValue): boolean {
+  return Array.isArray(value) && value.length > 1
+}
+
+/**
+ * 商品类型：缺失 / 空串视为未设置；重复或不在白名单里的值非法（#13）。
+ * 与 `parseCategory` 的差别是这里保留「非法」这一事实，供页面提示并暂停请求。
+ */
+function readCategoryParam(value: RawQueryValue): ParsedTextParam {
+  if (value === undefined || value === null) {
+    return { ok: true, value: null }
+  }
+  if (isDuplicateParam(value)) {
+    return { ok: false }
+  }
+  const text = firstRaw(value)?.trim()
+  if (text === undefined || text === null || text.length === 0) {
+    return { ok: true, value: null }
+  }
+  return (KNOWN_CATEGORY_SLUGS as readonly string[]).includes(text)
+    ? { ok: true, value: text }
+    : { ok: false }
+}
+
+/** 销量门槛：缺失 / 空串视为未设置；重复、非整数、越界都非法（#13）。 */
+function isMinSalesParamValid(value: RawQueryValue): boolean {
+  if (value === undefined || value === null) {
+    return true
+  }
+  if (isDuplicateParam(value)) {
+    return false
+  }
+  const text = firstRaw(value)?.trim()
+  if (text === undefined || text === null || text.length === 0) {
+    return true
+  }
+  if (!/^\d+$/.test(text)) {
+    return false
+  }
+  const parsed = Number(text)
+  return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= SALES_MAX
+}
+
+/** 价格非法时具体要清除哪些 key；`range-reversed` 两端一起清除。 */
+function invalidPriceKeys(raw: RawQuery): string[] {
+  const min = readPriceParam(raw.priceMinCents)
+  const max = readPriceParam(raw.priceMaxCents)
+  if (!min.ok) {
+    return ['priceMinCents']
+  }
+  if (!max.ok) {
+    return ['priceMaxCents']
+  }
+  if (min.value !== null && max.value !== null && min.value > max.value) {
+    return ['priceMinCents', 'priceMaxCents']
+  }
+  return []
+}
+
+/**
+ * 检查 URL 里的全部列表参数（#13）：商品类型、价格两端、销量门槛。
+ *
+ * 与 `parseListQuery` 的「非法即按默认值兜底」不同，这里把非法事实带出来，
+ * 由列表页暂停请求并提示。**存在非法参数时页面不得用解析后的状态重写 URL**：
+ * 提交关键词、清除筛选等操作都必须先让用户点「清除无效条件」，否则非法参数
+ * 会被静默删掉（本次修复的核心）。
+ *
+ * 多条非法时返回第一条提示，但 `invalidKeys` 汇总全部需要清除的 key，
+ * 保证一次点击能脱困。
+ */
+export function inspectListParams(raw: RawQuery): ListParamInspection {
+  const issues: { kind: ListParamIssueKind, message: string, keys: string[] }[] = []
+
+  const category = readCategoryParam(raw.category)
+  if (!category.ok) {
+    issues.push({
+      kind: 'category',
+      message: `商品类型参数无效（可选：${KNOWN_CATEGORY_SLUGS.join(' / ')}），请清除或重选商品类型。`,
+      keys: ['category'],
+    })
+  }
+
+  const price = inspectPriceParams(raw)
+  if (price.invalid && price.kind !== null) {
+    issues.push({ kind: price.kind, message: price.message, keys: invalidPriceKeys(raw) })
+  }
+
+  const minSalesValid = isMinSalesParamValid(raw.minSales)
+  if (!minSalesValid) {
+    issues.push({
+      kind: 'min-sales',
+      message: `销量参数无效（需为 0–${SALES_MAX} 的整数），请清除或重选销量条件。`,
+      keys: ['minSales'],
+    })
+  }
+
+  if (issues.length === 0) {
+    return { invalid: false, kind: null, message: '', invalidKeys: [] }
+  }
+  return {
+    invalid: true,
+    kind: issues[0].kind,
+    message: issues[0].message,
+    invalidKeys: issues.flatMap(issue => issue.keys),
+  }
+}
+
+/**
+ * 「清除无效条件」的 URL 形状：只删掉非法 key，其余参数（含合法的原始写法）
+ * 原样保留，由页面 `router.replace` 触发一次合法请求（#13）。
+ */
+export function clearInvalidListParams(raw: RawQuery): SerializedListQuery {
+  const issues = inspectListParams(raw)
+  const query: SerializedListQuery = {}
+  for (const [key, value] of Object.entries(raw)) {
+    const first = Array.isArray(value) ? value[0] : value
+    if (typeof first === 'string') {
+      query[key] = first
+    }
+  }
+  for (const key of issues.invalidKeys) {
+    delete query[key]
+  }
+  return query
+}
+
 /** 关键词长度上限：与后端契约一致，`trim` 后 1–100 才接受（#10）。 */
 export const KEYWORD_MAX_LENGTH = 100
+
+/**
+ * 关键词长度：按 **Unicode 码点** 计数，与后端 JSON Schema 的 `maxLength` 一致（#10）。
+ *
+ * JS 的 `.length` 数的是 UTF-16 单元，一个 emoji 会算成 2，导致前端把后端接受的
+ * 51 个 emoji 误判为超长。统一用 `[...str].length`。
+ */
+export function keywordLength(text: string): number {
+  return [...text].length
+}
 
 /** 只取重复参数的第一条；其余形式（数字、布尔、空）都视为缺失。 */
 function firstRaw(value: RawQueryValue): string | null {
@@ -255,10 +412,14 @@ function parseBoundedInteger(value: RawQueryValue, min: number, max: number): nu
   return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max ? parsed : null
 }
 
-/** 关键词：与后端一致先 trim；空串或超过 100 字符按无关键词兜底。 */
+/** 关键词：与后端一致先 trim；空串或超过 100 个码点按无关键词兜底。 */
 function parseKeyword(value: RawQueryValue): string | null {
   const text = firstRaw(value)?.trim()
-  if (text === undefined || text === null || text.length === 0 || text.length > KEYWORD_MAX_LENGTH) {
+  if (text === undefined || text === null) {
+    return null
+  }
+  const length = keywordLength(text)
+  if (length === 0 || length > KEYWORD_MAX_LENGTH) {
     return null
   }
   return text

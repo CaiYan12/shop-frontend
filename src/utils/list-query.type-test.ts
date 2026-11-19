@@ -13,6 +13,8 @@
 import type {
   CategorySelection,
   ListFilterSelection,
+  ListParamInspection,
+  ListParamIssueKind,
   ListQueryState,
   PriceBandId,
   PriceParamIssueKind,
@@ -23,13 +25,16 @@ import type {
   SalesSelection,
   SerializedListQuery,
   SortSelection,
+  clearInvalidListParams,
   clearListFilters,
   clearPriceRange,
   filterSelectionOf,
   hasActiveFilters,
+  inspectListParams,
   inspectPriceParams,
   isSameListConditions,
   isSameSerializedQuery,
+  keywordLength,
   normalizeSort,
   parseListQuery,
   readPriceSelection,
@@ -244,6 +249,28 @@ type _PriceInspection = Expect<
 type _PriceInspectionArg = Expect<Equal<Parameters<typeof inspectPriceParams>, [raw: RawQuery]>>
 type _ClearPriceRange = Expect<Equal<ReturnType<typeof clearPriceRange>, ListQueryState>>
 
+// —— 全部列表参数（#13）：商品类型 / 价格 / 销量统一检查，非法时页面暂停请求 ——
+type _ListParamIssueKind = Expect<
+  Equal<ListParamIssueKind, PriceParamIssueKind | 'category' | 'min-sales'>
+>
+type _ListParamInspection = Expect<
+  Equal<
+    ListParamInspection,
+    {
+      invalid: boolean
+      kind: ListParamIssueKind | null
+      message: string
+      invalidKeys: readonly string[]
+    }
+  >
+>
+type _InspectListParams = Expect<Equal<ReturnType<typeof inspectListParams>, ListParamInspection>>
+type _ClearInvalidListParams = Expect<Equal<ReturnType<typeof clearInvalidListParams>, SerializedListQuery>>
+
+// —— 关键词长度按 Unicode 码点计数（#10，与后端 JSON Schema maxLength 一致） ——
+type _KeywordLength = Expect<Equal<ReturnType<typeof keywordLength>, number>>
+type _KeywordLengthArgs = Expect<Equal<Parameters<typeof keywordLength>, [text: string]>>
+
 // —— 关键词生命周期（#10）：长度上限与提交后的状态迁移 ——
 type _KeywordMax = Expect<Equal<typeof KEYWORD_MAX_LENGTH, 100>>
 type _WithKeyword = Expect<Equal<ReturnType<typeof withKeyword>, ListQueryState>>
@@ -301,6 +328,12 @@ export type ListQueryTypeTests =
   | _PriceInspection
   | _PriceInspectionArg
   | _ClearPriceRange
+  | _ListParamIssueKind
+  | _ListParamInspection
+  | _InspectListParams
+  | _ClearInvalidListParams
+  | _KeywordLength
+  | _KeywordLengthArgs
   | _KeywordMax
   | _WithKeyword
   | _WithKeywordArgs
