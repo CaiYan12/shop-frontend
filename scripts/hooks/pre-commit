@@ -1,10 +1,13 @@
 #!/bin/sh
-# 提交前跑构建（build 内含 type-check）。
+# 提交前跑文档数字校验与构建（build 内含 type-check）。
 # 为什么需要：Phase 2 里出现过「本地全绿、换布局就崩」的测试，前端同样需要一个提交时的最低保证。
 set -e
 echo "[pre-commit] whitespace"
 # 行尾空白与文件末尾多余空行：机械问题用检查拦，不靠人记（retro P2）。
 git diff --cached --check
+echo "[pre-commit] docs"
+# README 的契约数字与 schema.d.ts 对不上就拦（retro P4）。
+pnpm check:docs
 echo "[pre-commit] build（含 type-check）"
 pnpm build
 echo "[pre-commit] ok"

@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
+    "check:docs": "node scripts/check-docs.mjs",
+    "stack": "node scripts/stack-status.mjs",
     "prepare": "node scripts/install-hooks.mjs"
   },
   "dependencies": {

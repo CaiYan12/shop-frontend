@@ -32,6 +32,8 @@ pnpm install        # 安装依赖（精确版本，见 pnpm-lock.yaml）
 pnpm dev            # 开发服务器（Vite，默认 5173）
 pnpm build          # 类型检查 + 生产构建（run-p type-check build-only）
 pnpm type-check     # 统一类型检查入口（vue-tsc --build --force）
+pnpm check:docs     # README 契约数字（路径数 / 组件数）与 schema.d.ts 一致性
+pnpm stack          # 开发栈三端状态：前端 5173 / 后端 3001 / ES 9201
 pnpm preview        # 预览构建产物
 ```
 
@@ -46,7 +48,7 @@ stop.bat            # 停止并释放端口
 - 启动记录写入 `.run/dev.json`（已 gitignore）。`stop.bat` 会校验 pid 存活 + 该 pid 确实监听记录端口，不符时**拒绝终止**，避免误杀其他进程。
 - 重复执行 `start.bat` 不会产生第二个进程，会提示「已在运行」。
 - 新建 worktree 的准备工作（依赖单独安装、读 `node_modules` 的路径写法、素材目录）见 `docs/worktree-setup.md`。
-- 提交前由 pre-commit hook 自动跑 `pnpm build`（含 type-check）；`pnpm install` 时经 `prepare` 安装。
+- 提交前由 pre-commit hook 自动跑 `pnpm check:docs` 与 `pnpm build`（含 type-check）；`pnpm install` 时经 `prepare` 安装。
 - **依赖构建白名单**：pnpm 12 用 `pnpm-workspace.yaml` 的 `allowBuilds`（**映射形式** `'包名': true`）决定哪些依赖可以跑构建脚本。写在 `package.json` 的 `pnpm` 字段**不生效**，写成列表会报 `expected mapping start`。本仓库用它放行 `@parcel/watcher`（`sass` 的依赖）。
 
 ## Agent skills
