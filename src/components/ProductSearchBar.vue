@@ -107,7 +107,7 @@
   import HighlightedText from '@/components/HighlightedText.vue'
   import { useProductSuggestions } from '@/composables/useProductSuggestions'
   import type { ProductSuggestionItem } from '@/composables/useProductSuggestions'
-  import { KEYWORD_MAX_LENGTH } from '@/utils/list-query'
+  import { KEYWORD_MAX_LENGTH, keywordLength } from '@/utils/list-query'
 
   const props = defineProps<{
     /** URL 中已提交的关键词；`null` 表示普通浏览。 */
@@ -124,7 +124,12 @@
   /** 输入框本地状态：从 URL 初始化，并在浏览器前进 / 后退时跟随 URL。 */
   const draft = ref(props.keyword ?? '')
 
+  /**
+   * URL 关键词变化（提交、前进 / 后退）：先取消联想并清空旧条目与高亮，再同步输入框。
+   * 只同步 `draft` 会让上一轮的 `items / activeIndex` 残留，返回后按 Enter 会命中旧条目。
+   */
   watch(() => props.keyword, (keyword) => {
+    dismissSuggestions()
     draft.value = keyword ?? ''
   })
 
@@ -151,7 +156,7 @@
     activeIndex.value = -1
   })
 
-  const tooLong = computed(() => draft.value.trim().length > KEYWORD_MAX_LENGTH)
+  const tooLong = computed(() => keywordLength(draft.value.trim()) > KEYWORD_MAX_LENGTH)
 
   const showClear = computed(() => draft.value.length > 0 || props.keyword !== null)
 
@@ -177,11 +182,12 @@
    */
   function refreshSuggestions(): void {
     const query = draft.value.trim()
+    const length = keywordLength(query)
     if (
       !focused.value ||
       composing.value ||
-      query.length === 0 ||
-      query.length > KEYWORD_MAX_LENGTH
+      length === 0 ||
+      length > KEYWORD_MAX_LENGTH
     ) {
       dismissSuggestions()
       return
@@ -240,10 +246,9 @@
         moveActive(-1)
         return
       case 'Escape':
-        if (isOpen.value) {
-          event.preventDefault()
-          dismissSuggestions()
-        }
+        // 无条件取消：请求在途时 `isOpen` 仍为 false，不能只在下拉展开时处理。
+        event.preventDefault()
+        dismissSuggestions()
         return
       case 'Enter':
         onKeydownEnter(event)
@@ -289,7 +294,7 @@
   function submitDraft(): void {
     dismissSuggestions()
     const accepted = draft.value.trim()
-    if (accepted.length > KEYWORD_MAX_LENGTH) {
+    if (keywordLength(accepted) > KEYWORD_MAX_LENGTH) {
       return
     }
     draft.value = accepted

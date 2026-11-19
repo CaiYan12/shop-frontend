@@ -28,10 +28,14 @@ type _LightPrimary = Expect<Equal<Themes['light']['colors']['primary'], '#0071E3
 type _LightOnPrimary = Expect<Equal<Themes['light']['colors']['on-primary'], '#FFFFFF'>>
 type _LightBackground = Expect<Equal<Themes['light']['colors']['background'], '#F5F5F7'>>
 type _LightSurface = Expect<Equal<Themes['light']['colors']['surface'], '#FFFFFF'>>
+type _LightMuted = Expect<Equal<Themes['light']['colors']['on-surface-muted'], '#475569'>>
+type _LightWarningInk = Expect<Equal<Themes['light']['colors']['warning-ink'], '#B45309'>>
 
 type _DarkPrimary = Expect<Equal<Themes['dark']['colors']['primary'], '#0A84FF'>>
 type _DarkBackground = Expect<Equal<Themes['dark']['colors']['background'], '#000000'>>
 type _DarkSurface = Expect<Equal<Themes['dark']['colors']['surface'], '#1D1D1F'>>
+type _DarkMuted = Expect<Equal<Themes['dark']['colors']['on-surface-muted'], '#A1A1A6'>>
+type _DarkWarningInk = Expect<Equal<Themes['dark']['colors']['warning-ink'], '#FFB74D'>>
 
 /** 暗色前景色不得是白色：这是「白字 3.65:1 不采用」的编译期闸门。 */
 type IsWhite<T> = Equal<T, '#FFFFFF'>
@@ -47,7 +51,11 @@ export type _Summary =
   | _LightOnPrimary
   | _LightBackground
   | _LightSurface
+  | _LightMuted
+  | _LightWarningInk
   | _DarkPrimary
   | _DarkBackground
   | _DarkSurface
+  | _DarkMuted
+  | _DarkWarningInk
   | _DarkOnPrimaryIsNotWhite

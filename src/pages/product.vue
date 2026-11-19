@@ -2,8 +2,8 @@
   <v-container class="py-10">
     <div class="flex flex-col gap-4">
       <h1 class="text-2xl font-bold">商品详情</h1>
-      <p class="text-sm text-slate-600">slug：{{ slug }}</p>
-      <p class="text-sm text-slate-600">详情页 Phase 6 实现。</p>
+      <p class="text-sm text-muted">slug：{{ slug }}</p>
+      <p class="text-sm text-muted">详情页 Phase 6 实现。</p>
       <v-btn variant="text" :to="{ name: 'home' }">返回列表</v-btn>
     </div>
   </v-container>

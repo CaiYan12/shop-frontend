@@ -1,21 +1,24 @@
 <template>
   <div :class="layout === 'vertical' ? 'flex flex-col gap-5' : 'flex flex-wrap items-center gap-x-6 gap-y-3'">
     <div
+      ref="categoryGroup"
       :aria-label="`${ariaPrefix}商品类型`"
       :id="`${idPrefix}-category`"
       :class="layout === 'vertical' ? 'filter-chips' : 'filter-chips min-w-[18rem] flex-1'"
       role="radiogroup"
     >
       <v-chip
-        v-for="option in CATEGORY_OPTIONS"
+        v-for="(option, index) in CATEGORY_OPTIONS"
         :key="option.value"
         :aria-checked="categorySelection === option.value"
         :color="categorySelection === option.value ? 'primary' : undefined"
+        :tabindex="index === rovingCategoryIndex ? 0 : -1"
         :variant="categorySelection === option.value ? 'flat' : 'outlined'"
         link
         role="radio"
         size="small"
         @click="onCategoryUpdate(option.value)"
+        @keydown="onCategoryKeydown($event, index)"
       >
         {{ option.label }}
       </v-chip>
@@ -71,7 +74,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed } from 'vue'
+  import { computed, ref } from 'vue'
   import {
     CATEGORY_OPTIONS,
     PRICE_BANDS,
@@ -121,6 +124,18 @@
     () => (props.state.category ?? 'all') as CategorySelection,
   )
 
+  /** 商品类型 chips 的容器；方向键移动后按索引聚焦对应项。 */
+  const categoryGroup = ref<HTMLElement | null>(null)
+
+  /**
+   * roving tabindex 的落点：选中项 `0`、其余 `-1`；没有选中时第一项 `0`。
+   * 这样整组只占一个 Tab 停留点，组内移动交给方向键（WAI-ARIA 单选组）。
+   */
+  const rovingCategoryIndex = computed(() => {
+    const index = CATEGORY_OPTIONS.findIndex(option => option.value === categorySelection.value)
+    return index === -1 ? 0 : index
+  })
+
   const priceSelection = computed<PriceSelection>(() => readPriceSelection(props.state))
 
   const salesSelection = computed<SalesSelection>(() => readSalesSelection(props.state))
@@ -136,14 +151,15 @@
 
   /** 非预设但合法的价格区间显示为只读项，展示实际金额，便于用户知道 URL 里是什么。 */
   function describePriceRange(state: ListQueryState): string {
+    // 契约是闭区间（含端点）：只有上限时不能说「低于」，否则 ¥129.00 的结果会被误解。
     if (state.priceMinCents !== null && state.priceMaxCents !== null) {
-      return `${formatPriceCents(state.priceMinCents)}–${formatPriceCents(state.priceMaxCents)}`
+      return `${formatPriceCents(state.priceMinCents)}–${formatPriceCents(state.priceMaxCents)}（含）`
     }
     if (state.priceMinCents !== null) {
-      return `${formatPriceCents(state.priceMinCents)} 以上`
+      return `${formatPriceCents(state.priceMinCents)} 及以上`
     }
     if (state.priceMaxCents !== null) {
-      return `低于 ${formatPriceCents(state.priceMaxCents)}`
+      return `不高于 ${formatPriceCents(state.priceMaxCents)}`
     }
     return ''
   }
@@ -188,6 +204,36 @@
       return
     }
     emitSelection({ category: next === 'all' ? null : next })
+  }
+
+  /** 把焦点移到组内第 `index` 个 chip（DOM 顺序与 `CATEGORY_OPTIONS` 一致）。 */
+  function focusCategoryChip(index: number): void {
+    const chips = categoryGroup.value?.querySelectorAll<HTMLElement>('[role="radio"]')
+    chips?.[index]?.focus()
+  }
+
+  /**
+   * 单选组的方向键：←→ / ↑↓ 循环移动，焦点跟随并即时切换选中。
+   * Enter / Space 仍由 chip 自身的键盘处理（触发 click），这里不拦截。
+   */
+  function onCategoryKeydown(event: KeyboardEvent, index: number): void {
+    const count = CATEGORY_OPTIONS.length
+    let next: number
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        next = (index - 1 + count) % count
+        break
+      case 'ArrowRight':
+      case 'ArrowDown':
+        next = (index + 1) % count
+        break
+      default:
+        return
+    }
+    event.preventDefault()
+    focusCategoryChip(next)
+    onCategoryUpdate(CATEGORY_OPTIONS[next].value)
   }
 
   function onPriceUpdate(value: unknown): void {

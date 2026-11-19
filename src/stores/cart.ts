@@ -11,6 +11,8 @@
  * - 同一 `sku` 只保留一行，合并前先验证**累计**数量；
  * - 单行上限是 `min(999, stock)`，与购买校验的 `quantity` 上限一致；
  * - 缺货、越界、非法输入一律**拒绝**：不改动任何状态，并返回失败原因，绝不截断数量；
+ * - `unitPriceCents` 必须是非负安全整数（分），`stock` 必须是非负整数；
+ *   负数、小数、`NaN`、`Infinity` 一律按 `INVALID_ITEM` 拒绝（D43 / D44）；
  * - 数量归零不通过 `updateQuantity`，调用方应改用 `remove`（与 `updateQuantity` 只收正整数一致）。
  */
 import { defineStore } from 'pinia'
@@ -34,6 +36,7 @@ export type AddCartItemInput = Omit<CartItem, 'quantity'>
 /** 失败原因码；沿用后端错误码的 SCREAMING_SNAKE_CASE 风格，便于 UI 直接分支。 */
 export type CartFailureReason =
   | 'INVALID_QUANTITY'
+  | 'INVALID_ITEM'
   | 'OUT_OF_STOCK'
   | 'QUANTITY_LIMIT_EXCEEDED'
   | 'NOT_IN_CART'
@@ -46,6 +49,7 @@ export interface CartSuccess {
 /** 失败结果；`limit` 只在越界时出现，供 UI 提示「最多可买 N 件」。 */
 export type CartFailure =
   | { readonly ok: false, readonly reason: 'INVALID_QUANTITY', readonly message: string }
+  | { readonly ok: false, readonly reason: 'INVALID_ITEM', readonly message: string }
   | { readonly ok: false, readonly reason: 'OUT_OF_STOCK', readonly message: string }
   | { readonly ok: false, readonly reason: 'QUANTITY_LIMIT_EXCEEDED', readonly message: string, readonly limit: number }
   | { readonly ok: false, readonly reason: 'NOT_IN_CART', readonly message: string }
@@ -64,6 +68,14 @@ function isPositiveInteger(value: number): boolean {
 }
 
 /**
+ * 非负整数判定（金额分 / 库存）：负数、小数、`NaN`、`Infinity` 全部拒绝。
+ * 金额与库存都必须是整数（D43 / D44），不做静默取整。
+ */
+function isNonNegativeInteger(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0
+}
+
+/**
  * 单行上限 = `min(999, stock)`。
  *
  * 库存按契约是非负整数（D44）；这里用 `Math.floor` 兜住脏数据，`NaN` / 负数 /
@@ -78,6 +90,14 @@ function resolveQuantityLimit(stock: number): number {
 
 function failInvalidQuantity(): CartFailure {
   return { ok: false, reason: 'INVALID_QUANTITY', message: '数量必须是正整数。' }
+}
+
+function failInvalidItem(): CartFailure {
+  return {
+    ok: false,
+    reason: 'INVALID_ITEM',
+    message: '商品信息无效：金额必须是非负整数分，库存必须是非负整数。',
+  }
 }
 
 function failOutOfStock(): CartFailure {
@@ -124,7 +144,14 @@ export const useCartStore = defineStore('cart', {
         return failInvalidQuantity()
       }
 
-      const limit = resolveQuantityLimit(input.stock)
+      // 金额 / 库存是条目快照的一部分：非法时不写入（也不做 `Math.floor` 之类的静默修正）。
+      if (!isNonNegativeInteger(input.unitPriceCents) || !isNonNegativeInteger(input.stock)) {
+        return failInvalidItem()
+      }
+      const unitPriceCents = Math.trunc(input.unitPriceCents)
+      const stock = Math.trunc(input.stock)
+
+      const limit = resolveQuantityLimit(stock)
       if (limit === 0) {
         return failOutOfStock()
       }
@@ -138,15 +165,15 @@ export const useCartStore = defineStore('cart', {
       }
 
       if (existing) {
-        this.items[index] = { ...existing, quantity: nextQuantity, stock: input.stock }
+        this.items[index] = { ...existing, quantity: nextQuantity, stock }
       } else {
         this.items.push({
           sku: input.sku,
           slug: input.slug,
           name: input.name,
-          unitPriceCents: input.unitPriceCents,
+          unitPriceCents,
           quantity,
-          stock: input.stock,
+          stock,
         })
       }
 

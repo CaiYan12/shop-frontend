@@ -21,11 +21,15 @@ export const DEFAULT_THEME = 'light'
 export const THEME_STORAGE_KEY = 'shop-frontend:theme'
 
 /**
- * 一套主题的四个槽位。
+ * 一套主题的五个槽位。
  *
  * `onPrimary` 是主色上的前景色：暗色主色 `#0A84FF` 与白色只有 3.65:1，
  * 达不到 4.5:1，因此暗色的 `onPrimary` 必须是深色（取值与对比度见
  * `plugins/vuetify.ts` 的注释）。
+ *
+ * `muted` / `warningInk` 是正文以外的弱化色（摘要、空态说明、降级标签）：
+ * 旧的固定 `text-slate-600` / `text-amber-700` 在暗色 `#000` 上只有
+ * 2.77:1 / 4.18:1，必须由主题令牌提供两套取值（对比度见 `vuetify-theme.ts`）。
  */
 export interface ThemePalette {
   /** 主色：主要操作、强调文字。 */
@@ -36,6 +40,10 @@ export interface ThemePalette {
   background: string
   /** 卡片、页头等表面色。 */
   surface: string
+  /** 弱化正文：摘要、空态 / 错误说明等次要文字。 */
+  muted: string
+  /** 警告语义的弱化文字：降级 / 陈旧结果标签。 */
+  warningInk: string
 }
 
 /**
@@ -50,6 +58,10 @@ export const THEME_PALETTE = {
     onPrimary: '#FFFFFF',
     background: '#F5F5F7',
     surface: '#FFFFFF',
+    // 沿用改造前的 `text-slate-600`：浅色观感不变，对 #FFFFFF 7.58:1、对 #F5F5F7 6.96:1。
+    muted: '#475569',
+    // 沿用改造前的 `text-amber-700`：对 #FFFFFF 5.02:1、对 #F5F5F7 4.61:1。
+    warningInk: '#B45309',
   },
   dark: {
     // 主色 #0A84FF 配深色文字：白字 3.65:1 不达标，深色 5.13:1 达标（见 vuetify.ts）。
@@ -57,6 +69,10 @@ export const THEME_PALETTE = {
     onPrimary: '#0B1220',
     background: '#000000',
     surface: '#1D1D1F',
+    // 对 #000000 8.16:1、对 #1D1D1F 6.54:1。
+    muted: '#A1A1A6',
+    // 对 #000000 12.13:1、对 #1D1D1F 9.72:1。
+    warningInk: '#FFB74D',
   },
 } as const satisfies Record<ThemeName, ThemePalette>
 

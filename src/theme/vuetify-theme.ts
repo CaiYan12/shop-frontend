@@ -18,6 +18,10 @@ export const vuetifyThemes = {
       'on-primary': THEME_PALETTE.light.onPrimary,
       background: THEME_PALETTE.light.background,
       surface: THEME_PALETTE.light.surface,
+      // `on-` 前缀让 Vuetify 只生成 CSS 变量，不生成背景类；Tailwind 的
+      // `--color-muted` 直接引用这个变量（`$utilities: false` 下不使用工具类）。
+      'on-surface-muted': THEME_PALETTE.light.muted,
+      'warning-ink': THEME_PALETTE.light.warningInk,
     },
   },
   dark: {
@@ -28,6 +32,8 @@ export const vuetifyThemes = {
       'on-primary': THEME_PALETTE.dark.onPrimary,
       background: THEME_PALETTE.dark.background,
       surface: THEME_PALETTE.dark.surface,
+      'on-surface-muted': THEME_PALETTE.dark.muted,
+      'warning-ink': THEME_PALETTE.dark.warningInk,
     },
   },
 } as const satisfies Record<ThemeName, ThemeDefinition>
