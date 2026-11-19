@@ -104,6 +104,7 @@
 
 <script lang="ts" setup>
   import { computed, onBeforeUnmount, ref, watch } from 'vue'
+  import { useRoute } from 'vue-router'
   import HighlightedText from '@/components/HighlightedText.vue'
   import { useProductSuggestions } from '@/composables/useProductSuggestions'
   import type { ProductSuggestionItem } from '@/composables/useProductSuggestions'
@@ -124,6 +125,8 @@
   /** 输入框本地状态：从 URL 初始化，并在浏览器前进 / 后退时跟随 URL。 */
   const draft = ref(props.keyword ?? '')
 
+  const route = useRoute()
+
   /**
    * URL 关键词变化（提交、前进 / 后退）：先取消联想并清空旧条目与高亮，再同步输入框。
    * 只同步 `draft` 会让上一轮的 `items / activeIndex` 残留，返回后按 Enter 会命中旧条目。
@@ -132,6 +135,18 @@
     dismissSuggestions()
     draft.value = keyword ?? ''
   })
+
+  /**
+   * 整条路由变化（push / replace / popstate）同样要收掉联想：同关键词下只改筛选或
+   * 页码时 `props.keyword` 不变，上面那个 watcher 不会触发，旧条目与高亮会带到下一次
+   * Enter。这里以 `fullPath` 为信号，取消待发 / 在途请求、清空条目并把高亮置 -1，
+   * 同时把输入框对齐 URL。用户打字不改变路由，因此不会被误触发。
+   * `flush: 'post'` 保证读到父级按新路由算出的 `props.keyword`。
+   */
+  watch(() => route.fullPath, () => {
+    dismissSuggestions()
+    draft.value = props.keyword ?? ''
+  }, { flush: 'post' })
 
   /** 中文输入法组合期间按 Enter / 方向键不驱动提交或联想；失焦（blur）也不提交。 */
   const composing = ref(false)
