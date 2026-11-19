@@ -7,8 +7,12 @@
 import createClient from 'openapi-fetch'
 import type { components, operations, paths } from './schema'
 
-/** openapi.json 的 servers[0]；本机开发默认值，可用 VITE_API_BASE_URL 覆盖。 */
-const DEFAULT_BASE_URL = 'http://127.0.0.1:3001'
+/**
+ * 默认用相对空串：浏览器按当前源发 `/api/*`，由 Vite 的 `/api` 代理转发到后端
+ * （dev 与 preview 共用同一份配置），从根上避开跨域。静态产物独立部署时，
+ * 需要在部署层把同源 `/api` 转发到后端；`VITE_API_BASE_URL` 仍可覆盖为绝对基址。
+ */
+const DEFAULT_BASE_URL = ''
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL
 
@@ -19,6 +23,8 @@ const client = createClient<paths>({ baseUrl: apiBaseUrl })
 
 type ProductListQuery = NonNullable<operations['listProducts']['parameters']['query']>
 type ProductListResponse = components['schemas']['ProductListResponse']
+type ProductSuggestionQuery = NonNullable<operations['listSuggestions']['parameters']['query']>
+type ProductSuggestionsResponse = components['schemas']['ProductSuggestionsResponse']
 type PurchaseCheckRequest = operations['checkPurchase']['requestBody']['content']['application/json']
 type PurchaseCheckResponse = components['schemas']['PurchaseCheckResponse']
 
@@ -56,9 +62,36 @@ function unwrap<T>(result: ApiResult<T>, label: string): T {
   throw new ApiError(result.response.status, `${label}请求失败：${reason}`, result.error)
 }
 
-/** GET /api/products —— 商品列表（分页 + 筛选 + 排序）。 */
-export async function fetchProductList(query: ProductListQuery): Promise<ProductListResponse> {
-  return unwrap(await client.GET('/api/products', { params: { query } }), '商品列表')
+/**
+ * GET /api/products —— 商品列表（分页 + 筛选 + 排序）。
+ *
+ * `signal` 交给 openapi-fetch 的 `RequestInit`（0.17 会原样传给 `fetch`），
+ * 列表页发新请求前 abort 上一条，避免旧响应写回。
+ */
+export async function fetchProductList(
+  query: ProductListQuery,
+  signal?: AbortSignal,
+): Promise<ProductListResponse> {
+  return unwrap(
+    await client.GET('/api/products', { params: { query }, signal }),
+    '商品列表',
+  )
+}
+
+/**
+ * GET /api/products/suggestions —— 商品联想（#11）。
+ *
+ * `signal` 交给 openapi-fetch 的 `RequestInit`（0.17 会原样传给 `fetch`），
+ * 关闭 / 清空 / 提交 / 跳页时由调用方 abort 在途请求。
+ */
+export async function fetchProductSuggestions(
+  query: ProductSuggestionQuery,
+  signal?: AbortSignal,
+): Promise<ProductSuggestionsResponse> {
+  return unwrap(
+    await client.GET('/api/products/suggestions', { params: { query }, signal }),
+    '商品联想',
+  )
 }
 
 /** POST /api/purchase-check —— 购买校验（只校验，不写库）。 */

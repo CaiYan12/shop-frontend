@@ -1,31 +1,541 @@
 <template>
-  <v-container class="py-10">
-    <div class="flex flex-col gap-4 md:gap-6">
-      <h1 class="text-2xl font-bold md:text-3xl">商品列表（占位）</h1>
-      <p class="text-sm text-slate-600 md:text-base">
-        骨架页：Vuetify 组件、Tailwind 工具类、Pinia、Vue Router 均已接入。
+  <v-container class="py-8 md:py-10">
+    <div class="flex flex-col gap-6">
+      <header class="flex flex-wrap items-end justify-between gap-2">
+        <h1 class="text-2xl font-bold md:text-3xl">商品列表</h1>
+        <p v-if="showSummary" class="text-sm text-muted">
+          共 {{ total }} 件 / {{ totalPages }} 页
+        </p>
+      </header>
+
+      <p class="sr-only" role="status">
+        {{ pending ? '正在加载商品…' : '' }}
       </p>
 
-      <v-card class="p-4" rounded="xl" variant="outlined">
-        <div class="flex flex-wrap items-center gap-3">
-          <v-chip color="primary">Vuetify chip</v-chip>
-          <span class="rounded-pill bg-emerald-500 px-3 py-1 text-white">Tailwind pill</span>
+      <!-- 搜索框常驻在筛选条上方：提交只写 URL，请求由路由变化触发（#10）。 -->
+      <ProductSearchBar
+        :keyword="listQuery.keyword"
+        @select="onSuggestionSelect"
+        @submit="onSearchSubmit"
+      />
+
+      <!-- 筛选与排序条：URL 是唯一来源，点击即写 URL 并触发请求（#9）。 -->
+      <ProductFilterBar
+        :state="listQuery"
+        :can-clear="canClearFilters"
+        @change="onFilterChange"
+        @clear="onClearFilters"
+      />
+
+      <!--
+        非法参数（#13）：商品类型 / 价格 / 销量任一非法时，暂停列表请求并提示。
+        在用户点「清除无效条件」（或重选对应筛选）之前，非法参数不会从 URL 消失。
+      -->
+      <v-alert
+        v-if="paramIssue.invalid"
+        class="rounded-xl"
+        data-state="invalid-params"
+        type="warning"
+        variant="tonal"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span>{{ paramIssue.message }}</span>
+          <v-btn size="small" variant="text" @click="onClearInvalidParams">
+            清除无效条件
+          </v-btn>
+        </div>
+      </v-alert>
+
+      <!-- 后续筛选 / 翻页：顶部进度条 + 保留旧卡片（#13）。 -->
+      <v-progress-linear
+        v-if="pending && hasLoadedOnce && !paramIssue.invalid"
+        color="primary"
+        data-state="progress"
+        indeterminate
+        rounded
+      />
+
+      <!-- 503 且没有成功结果：整块错误态，文案与空态严格区分（#13）。 -->
+      <v-card
+        v-if="searchUnavailable && !showingStale && !pending"
+        class="rounded-xl border border-error/40 bg-surface p-6"
+        data-state="search-unavailable"
+        variant="flat"
+      >
+        <p class="text-base font-semibold">
+          搜索服务暂时不可用，请稍后重试。
+        </p>
+        <p class="mt-1 text-sm text-muted">
+          可以重试当前条件，或清除关键词后继续浏览全部商品。
+        </p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <v-btn color="primary" size="small" variant="flat" @click="load">
+            重试
+          </v-btn>
+          <v-btn size="small" variant="outlined" @click="onClearKeyword">
+            清除关键词
+          </v-btn>
         </div>
       </v-card>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <v-btn color="primary" @click="store.increment()">点击计数</v-btn>
-        <v-chip>计数：{{ store.clicks }}</v-chip>
-        <v-btn variant="text" :to="{ name: 'product', params: { id: 1 } }">
-          进入详情占位
-        </v-btn>
+      <!-- 非 503 的整块错误态（没有成功结果时）。 -->
+      <v-alert
+        v-else-if="errorMessage && !showingStale && !pending"
+        class="rounded-xl"
+        data-state="error"
+        type="error"
+        variant="tonal"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span>{{ errorMessage }}</span>
+          <v-btn size="small" variant="text" @click="load">重试</v-btn>
+        </div>
+      </v-alert>
+
+      <!-- 有旧卡片时的降级提示：保留旧卡片，暂时停用旧分页（#13）。 -->
+      <v-alert
+        v-if="showingStale && errorMessage"
+        class="rounded-xl"
+        :data-state="searchUnavailable ? 'search-unavailable-stale' : 'error-stale'"
+        :type="searchUnavailable ? 'warning' : 'error'"
+        variant="tonal"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span>{{ errorMessage }}</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <v-btn :disabled="pending" size="small" variant="text" @click="load">
+              重试
+            </v-btn>
+            <v-btn
+              v-if="searchUnavailable"
+              :disabled="pending"
+              size="small"
+              variant="text"
+              @click="onClearKeyword"
+            >
+              清除关键词
+            </v-btn>
+          </div>
+        </div>
+      </v-alert>
+
+      <p
+        v-if="showingStale"
+        class="text-sm font-medium text-warning-ink"
+        data-state="stale-label"
+      >
+        正在显示上次结果
+      </p>
+
+      <!-- 首屏 / 无成功结果时重试：8 张骨架卡，避免白屏（#13）。 -->
+      <div
+        v-if="showSkeleton"
+        aria-hidden="true"
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+        data-state="skeleton"
+      >
+        <v-skeleton-loader
+          v-for="index in PAGE_SIZE"
+          :key="index"
+          class="product-skeleton rounded-xl border border-outline"
+          type="card"
+        />
       </div>
+
+      <div
+        v-else-if="items.length > 0"
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+        data-state="results"
+      >
+        <ProductCard
+          v-for="item in items"
+          :key="item.slug"
+          :item="item"
+        />
+      </div>
+
+      <!-- 空态：只有 total = 0 才出现，且与 503 的文案 / 视觉不同（#13）。 -->
+      <v-card
+        v-else-if="showEmptyState"
+        class="rounded-xl border border-outline bg-surface p-8 text-center"
+        data-state="empty"
+        variant="flat"
+      >
+        <p class="text-base font-semibold">没有找到符合条件的商品</p>
+        <p class="mt-2 text-sm text-muted">
+          试试清除关键词或筛选条件，或者换一个关键词。
+        </p>
+        <v-btn
+          v-if="canClearConditions"
+          class="mt-4"
+          color="primary"
+          size="small"
+          variant="flat"
+          @click="onClearAllConditions"
+        >
+          清除搜索条件
+        </v-btn>
+      </v-card>
+
+      <!-- 分页：空态隐藏；有旧结果时整块用原生 `fieldset` 禁用（含键盘，#13）。 -->
+      <nav
+        v-if="showPagination"
+        :aria-disabled="paginationDisabled ? 'true' : undefined"
+        aria-label="分页"
+        data-state="pagination"
+      >
+        <fieldset
+          :disabled="paginationDisabled"
+          class="m-0 min-w-0 border-0 p-0"
+        >
+          <div :class="paginationDisabled ? 'pointer-events-none flex justify-center opacity-50' : 'flex justify-center'">
+            <v-pagination
+              :length="totalPages"
+              :model-value="currentPage"
+              :total-visible="5"
+              @update:model-value="goToPage"
+            />
+          </div>
+        </fieldset>
+      </nav>
     </div>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-  import { useDemoStore } from '@/stores/demo'
+  import { computed, onBeforeUnmount, ref, watch } from 'vue'
+  import { useRoute, useRouter } from 'vue-router'
+  import { ApiError, fetchProductList } from '@/api/client'
+  import type { components } from '@/api/schema'
+  import ProductCard from '@/components/ProductCard.vue'
+  import ProductFilterBar from '@/components/ProductFilterBar.vue'
+  import ProductSearchBar from '@/components/ProductSearchBar.vue'
+  import {
+    clearFilterParams,
+    clearInvalidListParams,
+    clearListFilters,
+    hasActiveFilters,
+    hasFilterParams,
+    inspectListParams,
+    isSameListConditions,
+    isSameSerializedQuery,
+    parseListQuery,
+    repairInvalidListParams,
+    serializeListQuery,
+    toApiQuery,
+    withFilterSelection,
+    withKeyword,
+  } from '@/utils/list-query'
+  import type { ListFilterSelection, ListQueryState } from '@/utils/list-query'
 
-  const store = useDemoStore()
+  /** 每页固定 8 件（规格「排序与分页」），不暴露每页条数选择器。 */
+  const PAGE_SIZE = 8
+
+  /** 503 的固定提示：文案由规格「加载、空态与降级」钉死（#13）。 */
+  const SEARCH_UNAVAILABLE_MESSAGE = '搜索服务暂时不可用，请稍后重试。'
+
+  type ProductListItem = components['schemas']['ProductSearchListItem']
+  type ListErrorKind = 'search-unavailable' | 'generic'
+
+  const route = useRoute()
+  const router = useRouter()
+
+  const items = ref<ProductListItem[]>([])
+  const total = ref(0)
+  const totalPages = ref(1)
+  const pending = ref(false)
+  /** 最近一次请求是否成功；无结果空态只看它 + `total`。 */
+  const loaded = ref(false)
+  /** 是否成功渲染过结果：首屏骨架 / 后续进度条的切换依据。 */
+  const hasLoadedOnce = ref(false)
+  /** 请求失败但保留了上一次成功结果，分页暂时停用。 */
+  const showingStale = ref(false)
+  const errorMessage = ref('')
+  const errorKind = ref<ListErrorKind | null>(null)
+
+  /**
+   * URL 是筛选、排序与页码的唯一来源：缺省值即默认值。商品类型 / 价格 / 销量
+   * 任一非法时不按默认值请求（#13）。
+   */
+  const listQuery = computed(() => parseListQuery(route.query))
+  const paramIssue = computed(() => inspectListParams(route.query))
+
+  const currentPage = computed(() => listQuery.value.page)
+  const hasKeyword = computed(() => listQuery.value.keyword !== null)
+  const hasFilters = computed(() => hasActiveFilters(listQuery.value))
+  /**
+   * 原始 URL 里是否存在筛选 key（含非法值 / 无值形态）：非法筛选解析后可能全是
+   * 默认值，只看解析态会把「清除筛选」误禁用（#4）。
+   */
+  const hasRawFilters = computed(() => hasFilterParams(route.query))
+  const canClearFilters = computed(() => hasFilters.value || hasRawFilters.value)
+  const canClearConditions = computed(() => hasKeyword.value || hasFilters.value)
+
+  const searchUnavailable = computed(() => errorKind.value === 'search-unavailable')
+
+  const showSummary = computed(
+    () => loaded.value && errorMessage.value === '' && !paramIssue.value.invalid,
+  )
+
+  /** 首屏（或没有成功结果时重试）：8 张骨架卡。 */
+  const showSkeleton = computed(
+    () => pending.value && !hasLoadedOnce.value && !paramIssue.value.invalid,
+  )
+
+  /** 只有成功响应且 `total = 0` 才是空态；503 与无效参数都不走这里。 */
+  const showEmptyState = computed(
+    () => loaded.value &&
+      !pending.value &&
+      errorMessage.value === '' &&
+      !paramIssue.value.invalid &&
+      total.value === 0,
+  )
+
+  /** 空态隐藏分页；没有旧结果可保留时也不显示分页。 */
+  const showPagination = computed(
+    () => !paramIssue.value.invalid &&
+      items.value.length > 0 &&
+      totalPages.value > 1 &&
+      !(errorMessage.value !== '' && !showingStale.value),
+  )
+
+  /** 有旧结果且请求失败时暂停旧分页（#13）。 */
+  const paginationDisabled = computed(() => showingStale.value)
+
+  /** 只允许最新一次请求落盘：快速切筛选 / 切页时旧响应不会覆盖新结果。 */
+  let latestRequestId = 0
+  /** 在途请求的真实取消入口；与 `latestRequestId` 组成两道闸。 */
+  let inFlight: AbortController | null = null
+
+  async function load(): Promise<void> {
+    const requestId = ++latestRequestId
+
+    // 发新请求前 abort 上一条；`latestRequestId` 兜住「abort 前已 resolve」的竞态。
+    if (inFlight !== null) {
+      inFlight.abort()
+      inFlight = null
+    }
+
+    if (paramIssue.value.invalid) {
+      // 非法参数：暂停请求，不按默认值静默请求；提示与 URL 由模板 / 地址栏保留。
+      pending.value = false
+      loaded.value = false
+      showingStale.value = false
+      errorMessage.value = ''
+      errorKind.value = null
+      items.value = []
+      total.value = 0
+      totalPages.value = 1
+      return
+    }
+
+    const controller = new AbortController()
+    inFlight = controller
+    pending.value = true
+
+    try {
+      const data = await fetchProductList({
+        ...toApiQuery(listQuery.value),
+        pageSize: PAGE_SIZE,
+      }, controller.signal)
+      if (requestId !== latestRequestId || controller.signal.aborted) {
+        return
+      }
+
+      // 页码越界（total > 0 但超过末页）：replace 回末页，不新增历史（#13）。
+      if (data.total > 0 && data.totalPages > 0 && listQuery.value.page > data.totalPages) {
+        total.value = data.total
+        totalPages.value = data.totalPages
+        // 离开列表页后迟到的响应不得再改写 URL（#13）。
+        if (route.name !== 'home') {
+          return
+        }
+        void router.replace({
+          name: 'home',
+          query: serializeListQuery({ ...listQuery.value, page: data.totalPages }),
+        })
+        return
+      }
+
+      items.value = data.items
+      total.value = data.total
+      totalPages.value = data.totalPages
+      loaded.value = true
+      hasLoadedOnce.value = true
+      showingStale.value = false
+      errorMessage.value = ''
+      errorKind.value = null
+    } catch (error) {
+      // 被新请求 abort 的旧请求只是过客：不写错误态、不改当前 pending。
+      if (requestId !== latestRequestId || controller.signal.aborted) {
+        return
+      }
+      const unavailable = isSearchUnavailableError(error)
+      errorKind.value = unavailable ? 'search-unavailable' : 'generic'
+      errorMessage.value = unavailable
+        ? SEARCH_UNAVAILABLE_MESSAGE
+        : describeRequestError(error)
+      loaded.value = false
+      // 有上一次成功结果时保留旧卡片并标注「正在显示上次结果」；
+      // 没有成功结果时为整块错误态。
+      if (hasLoadedOnce.value && items.value.length > 0) {
+        showingStale.value = true
+      } else {
+        items.value = []
+        total.value = 0
+        totalPages.value = 1
+        showingStale.value = false
+      }
+    } finally {
+      if (requestId === latestRequestId) {
+        pending.value = false
+        inFlight = null
+      }
+    }
+  }
+
+  /** 搜索降级只认 503 / `SEARCH_NOT_AVAILABLE`；其它错误走通用错误态。 */
+  function isSearchUnavailableError(error: unknown): boolean {
+    return error instanceof ApiError &&
+      (error.status === 503 || error.error?.error?.code === 'SEARCH_NOT_AVAILABLE')
+  }
+
+  function describeRequestError(error: unknown): string {
+    if (error instanceof ApiError) {
+      return error.message
+    }
+    return '商品列表加载失败，请检查网络后重试。'
+  }
+
+  /** 只写 URL；路由变化再由 `watch` 触发请求，保证 URL 是唯一来源。 */
+  async function pushListQuery(next: ListQueryState): Promise<void> {
+    const nextQuery = serializeListQuery(next)
+    if (isSameSerializedQuery(nextQuery, serializeListQuery(listQuery.value))) {
+      return
+    }
+    await router.push({ name: 'home', query: nextQuery })
+  }
+
+  /**
+   * 筛选 / 排序即时生效：条件没变时不产生历史（即使当前在第 2 页），
+   * 有变化时只 push 一条并回到第 1 页。
+   *
+   * 存在非法参数时只放行「修复对应维度」：重选价格档 / 类型 / 销量会用一次
+   * `replace` 只替换该维度的 key；改排序、改无关筛选一律忽略，URL 与提示不动。
+   */
+  function onFilterChange(selection: ListFilterSelection): void {
+    if (paramIssue.value.invalid) {
+      const repaired = repairInvalidListParams(route.query, selection)
+      if (repaired === null) {
+        return
+      }
+      void router.replace({ name: 'home', query: repaired })
+      return
+    }
+    const current = listQuery.value
+    const next = withFilterSelection(current, selection)
+    if (isSameListConditions(current, next)) {
+      return
+    }
+    void pushListQuery({ ...next, page: 1 })
+  }
+
+  /**
+   * 清除筛选：一次移除商品类型 / 价格两端 / 销量四个 key 与 `page`，保留关键词与排序。
+   *
+   * 基于原始 `route.query` 删除，非法筛选原值与重复 / 无值形态都能清掉，也不会把
+   * 解析后的默认值写回 URL；普通点击用 `push`，只新增一条历史（#4）。
+   */
+  function onClearFilters(): void {
+    if (!canClearFilters.value) {
+      return
+    }
+    void router.push({ name: 'home', query: clearFilterParams(route.query) })
+  }
+
+  /**
+   * 搜索提交（#10）：子组件已完成 `trim` 与 1–100 校验，`null` 表示清除关键词。
+   * 条件有变化时只 `push` URL，请求交给下面的路由 `watch`——即使请求返回 503，
+   * URL 仍保留用户提交的关键词；条件未变时不新增历史、不重复请求。
+   */
+  function onSearchSubmit(keyword: string | null): void {
+    // 存在非法参数时不能把「解析后的状态」写回 URL：那会把非法参数静默删掉。
+    // 保持 URL 与提示不变，等用户点「清除无效条件」或「清除筛选」后再允许提交。
+    if (paramIssue.value.invalid) {
+      return
+    }
+    const current = listQuery.value
+    const next = withKeyword(current, keyword)
+    if (isSameListConditions(current, next)) {
+      return
+    }
+    void pushListQuery(next)
+  }
+
+  /** 503 降级里的「清除关键词」：回到普通浏览；本来就没关键词时按重试处理。 */
+  function onClearKeyword(): void {
+    const current = listQuery.value
+    const next = withKeyword(current, null)
+    if (isSameListConditions(current, next)) {
+      void load()
+      return
+    }
+    void pushListQuery(next)
+  }
+
+  /**
+   * 「清除无效条件」：用 `replace` 只删掉非法的商品类型 / 价格 / 销量参数，
+   * 其余参数原样保留，并触发一次合法请求；不为一条非法 URL 新增历史。
+   */
+  function onClearInvalidParams(): void {
+    void router.replace({
+      name: 'home',
+      query: clearInvalidListParams(route.query),
+    })
+  }
+
+  /** 空态的「清除搜索条件」：关键词与三类筛选一起移除，回到第 1 页。 */
+  function onClearAllConditions(): void {
+    const current = listQuery.value
+    const next = withKeyword(clearListFilters(current), null)
+    if (isSameSerializedQuery(serializeListQuery(current), serializeListQuery(next))) {
+      void load()
+      return
+    }
+    void pushListQuery(next)
+  }
+
+  /**
+   * 选中联想项直达详情（#11）：`push` 到 `/product/{slug}`，不新增列表查询参数。
+   * 浏览器返回后列表条件由 URL 原样恢复；联想请求由子组件在跳转前取消。
+   */
+  function onSuggestionSelect(slug: string): void {
+    void router.push({ name: 'product', params: { slug } })
+  }
+
+  /**
+   * 切页只改 URL；第 1 页是默认值，移除 `page` 而不是写成 `page=1`。
+   * 导航完成后回到列表顶部（规格「排序与分页」）。
+   */
+  async function goToPage(next: number): Promise<void> {
+    if (next === currentPage.value) {
+      return
+    }
+    await pushListQuery({ ...listQuery.value, page: next })
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  /**
+   * 离开列表页（例如选中联想项跳详情）时取消在途请求并让响应序号过期：
+   * 迟到的列表响应不得再写回已卸载页面的状态，更不得触发越页纠正的跳转（#13）。
+   */
+  onBeforeUnmount(() => {
+    latestRequestId += 1
+    if (inFlight !== null) {
+      inFlight.abort()
+      inFlight = null
+    }
+  })
+
+  watch(listQuery, () => { void load() }, { immediate: true })
 </script>
