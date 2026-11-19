@@ -149,6 +149,14 @@ export type RawQuery = Record<string, RawQueryValue>
 /** 写回 URL 的形状：全部是字符串，默认值已被省略。 */
 export type SerializedListQuery = Record<string, string>
 
+/**
+ * 保留原始形态的查询形状：用于「清除无效条件 / 修复单个维度」。
+ *
+ * 与 `SerializedListQuery` 不同，这里不按页面状态重写 URL，而是保留 `route.query`
+ * 里的重复参数（数组）与无值参数（`null`），只增删目标 key。
+ */
+export type ListQueryOutput = Record<string, string | null | (string | null)[]>
+
 /** 价格 / 销量上限直接取后端契约的边界，越界值按默认值兜底。 */
 const PRICE_MAX_CENTS = 9_999_999_999
 const SALES_MAX = 1_000_000
@@ -300,20 +308,21 @@ function isMinSalesParamValid(value: RawQueryValue): boolean {
   return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= SALES_MAX
 }
 
-/** 价格非法时具体要清除哪些 key；`range-reversed` 两端一起清除。 */
+/** 价格非法时具体要清除哪些 key；两端各自非法时都要收集，不能只报一端。 */
 function invalidPriceKeys(raw: RawQuery): string[] {
   const min = readPriceParam(raw.priceMinCents)
   const max = readPriceParam(raw.priceMaxCents)
+  const keys: string[] = []
   if (!min.ok) {
-    return ['priceMinCents']
+    keys.push('priceMinCents')
   }
   if (!max.ok) {
-    return ['priceMaxCents']
+    keys.push('priceMaxCents')
   }
-  if (min.value !== null && max.value !== null && min.value > max.value) {
-    return ['priceMinCents', 'priceMaxCents']
+  if (min.ok && max.ok && min.value !== null && max.value !== null && min.value > max.value) {
+    keys.push('priceMinCents', 'priceMaxCents')
   }
-  return []
+  return keys
 }
 
 /**
@@ -321,8 +330,8 @@ function invalidPriceKeys(raw: RawQuery): string[] {
  *
  * 与 `parseListQuery` 的「非法即按默认值兜底」不同，这里把非法事实带出来，
  * 由列表页暂停请求并提示。**存在非法参数时页面不得用解析后的状态重写 URL**：
- * 提交关键词、清除筛选等操作都必须先让用户点「清除无效条件」，否则非法参数
- * 会被静默删掉（本次修复的核心）。
+ * 提交关键词等操作必须等用户先清除无效条件；「清除筛选」则基于原始查询显式移除
+ * 四个筛选 key（#4），不按解析后的默认值重写。
  *
  * 多条非法时返回第一条提示，但 `invalidKeys` 汇总全部需要清除的 key，
  * 保证一次点击能脱困。
@@ -364,21 +373,195 @@ export function inspectListParams(raw: RawQuery): ListParamInspection {
   }
 }
 
-/**
- * 「清除无效条件」的 URL 形状：只删掉非法 key，其余参数（含合法的原始写法）
- * 原样保留，由页面 `router.replace` 触发一次合法请求（#13）。
- */
-export function clearInvalidListParams(raw: RawQuery): SerializedListQuery {
-  const issues = inspectListParams(raw)
-  const query: SerializedListQuery = {}
+/** 把 `route.query` 的原始值按原形态复制：数组仍是数组，无值参数仍是 `null`。 */
+function preserveRawValue(value: RawQueryValue): string | null | (string | null)[] | undefined {
+  if (Array.isArray(value)) {
+    return value.map(entry => (typeof entry === 'string' ? entry : null))
+  }
+  if (typeof value === 'string' || value === null) {
+    return value
+  }
+  return undefined
+}
+
+/** 复制整份原始查询，保留重复参数与无值参数的形态。 */
+function preserveRawQuery(raw: RawQuery): ListQueryOutput {
+  const query: ListQueryOutput = {}
   for (const [key, value] of Object.entries(raw)) {
-    const first = Array.isArray(value) ? value[0] : value
-    if (typeof first === 'string') {
-      query[key] = first
+    const preserved = preserveRawValue(value)
+    if (preserved !== undefined) {
+      query[key] = preserved
     }
   }
-  for (const key of issues.invalidKeys) {
-    delete query[key]
+  return query
+}
+
+/**
+ * 「清除无效条件」的 URL 形状：只删掉非法 key，其余参数（含重复数组、无值参数、
+ * 页面不认识的参数）保持原样，由页面 `router.replace` 触发一次合法请求（#13）。
+ */
+export function clearInvalidListParams(raw: RawQuery): ListQueryOutput {
+  const issues = inspectListParams(raw)
+  const query: ListQueryOutput = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (issues.invalidKeys.includes(key)) {
+      continue
+    }
+    const preserved = preserveRawValue(value)
+    if (preserved !== undefined) {
+      query[key] = preserved
+    }
+  }
+  return query
+}
+
+/** 「清除筛选」要移除的四个筛选 key；与筛选条的三个维度一一对应（价格两端算一个）。 */
+const FILTER_PARAM_KEYS = ['category', 'priceMinCents', 'priceMaxCents', 'minSales'] as const
+
+/**
+ * 原始查询里是否存在筛选 key（#4）。
+ *
+ * 只看 key 是否存在，不看值是否合法：解析后全是默认值的非法筛选（如
+ * `?priceMinCents=abc`）也算「有筛选可清」，否则按钮会被误禁用。
+ */
+export function hasFilterParams(raw: RawQuery): boolean {
+  return FILTER_PARAM_KEYS.some(key => Object.prototype.hasOwnProperty.call(raw, key))
+}
+
+/**
+ * 「清除筛选」的 URL 形状（#4）：删掉四个筛选 key 与 `page`，
+ * 其余参数（关键词 / 排序 / 重复数组 / 无值参数 / 未知参数）保持原形态。
+ *
+ * 与 `clearListFilters` 的差别是这里基于原始 `route.query`，非法筛选原值也能一次清掉，
+ * 且不会把解析后的默认值写回 URL；页面用 `router.push` 提交，只新增一条历史。
+ */
+export function clearFilterParams(raw: RawQuery): ListQueryOutput {
+  const query: ListQueryOutput = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === 'page' || (FILTER_PARAM_KEYS as readonly string[]).includes(key)) {
+      continue
+    }
+    const preserved = preserveRawValue(value)
+    if (preserved !== undefined) {
+      query[key] = preserved
+    }
+  }
+  return query
+}
+
+/** 筛选条能独立修复的维度；与 `inspectListParams` 的 `invalidKeys` 一一对应。 */
+type FilterDimension = 'category' | 'price' | 'min-sales'
+
+function dimensionsOfInvalidKeys(keys: readonly string[]): Set<FilterDimension> {
+  const dimensions = new Set<FilterDimension>()
+  for (const key of keys) {
+    if (key === 'category') {
+      dimensions.add('category')
+    } else if (key === 'minSales') {
+      dimensions.add('min-sales')
+    } else if (key === 'priceMinCents' || key === 'priceMaxCents') {
+      dimensions.add('price')
+    }
+  }
+  return dimensions
+}
+
+/** 一次筛选提交相对当前解析状态真正改动了哪些维度；改到关键词 / 排序时返回 `null`。 */
+function changedFilterDimensions(
+  current: ListQueryState,
+  next: ListQueryState,
+): FilterDimension[] | null {
+  if (next.keyword !== current.keyword) {
+    return null
+  }
+  if (normalizeSort(next.sort, next.keyword) !== normalizeSort(current.sort, current.keyword)) {
+    return null
+  }
+  const changed: FilterDimension[] = []
+  if (next.category !== current.category) {
+    changed.push('category')
+  }
+  if (next.priceMinCents !== current.priceMinCents || next.priceMaxCents !== current.priceMaxCents) {
+    changed.push('price')
+  }
+  if (next.minSales !== current.minSales) {
+    changed.push('min-sales')
+  }
+  return changed
+}
+
+/**
+ * 修复值必须来自合法选项：不接受非预设的自定义值，避免用新的非法值「修」旧非法值。
+ * 当前解析态对非法维度一律是 `null`，因此没有真正变化的提交不会走到这里。
+ */
+function isRepairableSelection(dimension: FilterDimension, next: ListQueryState): boolean {
+  if (dimension === 'category') {
+    return next.category === null ||
+      (KNOWN_CATEGORY_SLUGS as readonly string[]).includes(next.category)
+  }
+  if (dimension === 'min-sales') {
+    return next.minSales === null || SALES_TIERS.some(tier => tier.minSales === next.minSales)
+  }
+  if (next.priceMinCents === null && next.priceMaxCents === null) {
+    return true
+  }
+  return PRICE_BANDS.some(
+    band => band.minCents === next.priceMinCents && band.maxCents === next.priceMaxCents,
+  )
+}
+
+/**
+ * 非法参数下的「修复对应维度」（#13）。
+ *
+ * 只允许一次提交修复**非法维度**：非法 `price*` 时重选价格档、非法 `category`
+ * 时重选类型、非法 `minSales` 时重选销量。被修复的维度只重写它自己的 key，
+ * 其余原始参数（重复数组、无值参数、关键词 / 排序 / 未知参数）保持原形态；
+ * 改排序、改无关筛选等一律返回 `null`，由页面忽略，不得改写 URL。
+ */
+export function repairInvalidListParams(
+  raw: RawQuery,
+  selection: ListFilterSelection,
+): ListQueryOutput | null {
+  const issues = inspectListParams(raw)
+  if (!issues.invalid) {
+    return null
+  }
+  const current = parseListQuery(raw)
+  const next = withFilterSelection(current, selection)
+  const changed = changedFilterDimensions(current, next)
+  if (changed === null || changed.length === 0) {
+    return null
+  }
+  const invalidDimensions = dimensionsOfInvalidKeys(issues.invalidKeys)
+  if (!changed.every(dimension => invalidDimensions.has(dimension))) {
+    return null
+  }
+  if (!changed.every(dimension => isRepairableSelection(dimension, next))) {
+    return null
+  }
+
+  const query = preserveRawQuery(raw)
+  for (const dimension of changed) {
+    if (dimension === 'category') {
+      delete query.category
+      if (next.category !== null) {
+        query.category = next.category
+      }
+    } else if (dimension === 'min-sales') {
+      delete query.minSales
+      if (next.minSales !== null) {
+        query.minSales = String(next.minSales)
+      }
+    } else {
+      delete query.priceMinCents
+      delete query.priceMaxCents
+      if (next.priceMinCents !== null) {
+        query.priceMinCents = String(next.priceMinCents)
+      }
+      if (next.priceMaxCents !== null) {
+        query.priceMaxCents = String(next.priceMaxCents)
+      }
+    }
   }
   return query
 }
@@ -591,8 +774,8 @@ export function hasActiveFilters(state: ListQueryState): boolean {
 }
 
 /**
- * 「清除筛选」：只移除商品类型、价格档、销量门槛，保留关键词与排序，并回到第 1 页。
- * 是否真的有条件可清由 `hasActiveFilters` 判断，避免空点击产生历史。
+ * 「清除筛选」的状态迁移：只移除商品类型、价格档、销量门槛，保留关键词与排序，并回到第 1 页。
+ * 空态的「清除搜索条件」复用它；筛选条的按钮可用性由页面结合原始 key 与解析态判断（#4）。
  */
 export function clearListFilters(state: ListQueryState): ListQueryState {
   return {

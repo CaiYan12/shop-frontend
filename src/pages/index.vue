@@ -22,6 +22,7 @@
       <!-- 筛选与排序条：URL 是唯一来源，点击即写 URL 并触发请求（#9）。 -->
       <ProductFilterBar
         :state="listQuery"
+        :can-clear="canClearFilters"
         @change="onFilterChange"
         @clear="onClearFilters"
       />
@@ -210,13 +211,16 @@
   import ProductFilterBar from '@/components/ProductFilterBar.vue'
   import ProductSearchBar from '@/components/ProductSearchBar.vue'
   import {
+    clearFilterParams,
     clearInvalidListParams,
     clearListFilters,
     hasActiveFilters,
+    hasFilterParams,
     inspectListParams,
     isSameListConditions,
     isSameSerializedQuery,
     parseListQuery,
+    repairInvalidListParams,
     serializeListQuery,
     toApiQuery,
     withFilterSelection,
@@ -259,6 +263,12 @@
   const currentPage = computed(() => listQuery.value.page)
   const hasKeyword = computed(() => listQuery.value.keyword !== null)
   const hasFilters = computed(() => hasActiveFilters(listQuery.value))
+  /**
+   * 原始 URL 里是否存在筛选 key（含非法值 / 无值形态）：非法筛选解析后可能全是
+   * 默认值，只看解析态会把「清除筛选」误禁用（#4）。
+   */
+  const hasRawFilters = computed(() => hasFilterParams(route.query))
+  const canClearFilters = computed(() => hasFilters.value || hasRawFilters.value)
   const canClearConditions = computed(() => hasKeyword.value || hasFilters.value)
 
   const searchUnavailable = computed(() => errorKind.value === 'search-unavailable')
@@ -409,8 +419,19 @@
   /**
    * 筛选 / 排序即时生效：条件没变时不产生历史（即使当前在第 2 页），
    * 有变化时只 push 一条并回到第 1 页。
+   *
+   * 存在非法参数时只放行「修复对应维度」：重选价格档 / 类型 / 销量会用一次
+   * `replace` 只替换该维度的 key；改排序、改无关筛选一律忽略，URL 与提示不动。
    */
   function onFilterChange(selection: ListFilterSelection): void {
+    if (paramIssue.value.invalid) {
+      const repaired = repairInvalidListParams(route.query, selection)
+      if (repaired === null) {
+        return
+      }
+      void router.replace({ name: 'home', query: repaired })
+      return
+    }
     const current = listQuery.value
     const next = withFilterSelection(current, selection)
     if (isSameListConditions(current, next)) {
@@ -419,13 +440,17 @@
     void pushListQuery({ ...next, page: 1 })
   }
 
-  /** 清除筛选：保留关键词与排序，移除三类条件并回到第 1 页。 */
+  /**
+   * 清除筛选：一次移除商品类型 / 价格两端 / 销量四个 key 与 `page`，保留关键词与排序。
+   *
+   * 基于原始 `route.query` 删除，非法筛选原值与重复 / 无值形态都能清掉，也不会把
+   * 解析后的默认值写回 URL；普通点击用 `push`，只新增一条历史（#4）。
+   */
   function onClearFilters(): void {
-    const current = listQuery.value
-    if (!hasActiveFilters(current)) {
+    if (!canClearFilters.value) {
       return
     }
-    void pushListQuery(clearListFilters(current))
+    void router.push({ name: 'home', query: clearFilterParams(route.query) })
   }
 
   /**
@@ -435,7 +460,7 @@
    */
   function onSearchSubmit(keyword: string | null): void {
     // 存在非法参数时不能把「解析后的状态」写回 URL：那会把非法参数静默删掉。
-    // 保持 URL 与提示不变，等用户点「清除无效条件」后再允许提交。
+    // 保持 URL 与提示不变，等用户点「清除无效条件」或「清除筛选」后再允许提交。
     if (paramIssue.value.invalid) {
       return
     }
