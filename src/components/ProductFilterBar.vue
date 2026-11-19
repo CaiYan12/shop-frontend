@@ -16,7 +16,7 @@
           @change="onChange"
         />
         <v-btn
-          :disabled="!hasFilters"
+          :disabled="!canClear"
           color="primary"
           size="small"
           variant="text"
@@ -47,7 +47,7 @@
         <div class="flex items-center justify-between gap-3 border-b border-outline px-4 py-3">
           <h2 class="text-base font-semibold">筛选</h2>
           <v-btn
-            :disabled="!hasFilters"
+            :disabled="!canClear"
             color="primary"
             size="small"
             variant="text"
@@ -87,7 +87,11 @@
   } from '@/utils/list-query'
   import ProductFilterControls from '@/components/ProductFilterControls.vue'
 
-  const props = defineProps<{ state: ListQueryState }>()
+  /**
+   * `canClear` 由页面给出：解析后的筛选非默认，或原始 URL 里存在筛选 key（含非法值）。
+   * 非法筛选解析后可能全是默认值，只看 `state` 会把「清除筛选」误禁用（#4）。
+   */
+  const props = defineProps<{ state: ListQueryState, canClear: boolean }>()
 
   const emit = defineEmits<{
     change: [selection: ListFilterSelection]

@@ -330,8 +330,8 @@ function invalidPriceKeys(raw: RawQuery): string[] {
  *
  * 与 `parseListQuery` 的「非法即按默认值兜底」不同，这里把非法事实带出来，
  * 由列表页暂停请求并提示。**存在非法参数时页面不得用解析后的状态重写 URL**：
- * 提交关键词、清除筛选等操作都必须先让用户点「清除无效条件」，否则非法参数
- * 会被静默删掉（本次修复的核心）。
+ * 提交关键词等操作必须等用户先清除无效条件；「清除筛选」则基于原始查询显式移除
+ * 四个筛选 key（#4），不按解析后的默认值重写。
  *
  * 多条非法时返回第一条提示，但 `invalidKeys` 汇总全部需要清除的 key，
  * 保证一次点击能脱困。
@@ -405,6 +405,40 @@ export function clearInvalidListParams(raw: RawQuery): ListQueryOutput {
   const query: ListQueryOutput = {}
   for (const [key, value] of Object.entries(raw)) {
     if (issues.invalidKeys.includes(key)) {
+      continue
+    }
+    const preserved = preserveRawValue(value)
+    if (preserved !== undefined) {
+      query[key] = preserved
+    }
+  }
+  return query
+}
+
+/** 「清除筛选」要移除的四个筛选 key；与筛选条的三个维度一一对应（价格两端算一个）。 */
+const FILTER_PARAM_KEYS = ['category', 'priceMinCents', 'priceMaxCents', 'minSales'] as const
+
+/**
+ * 原始查询里是否存在筛选 key（#4）。
+ *
+ * 只看 key 是否存在，不看值是否合法：解析后全是默认值的非法筛选（如
+ * `?priceMinCents=abc`）也算「有筛选可清」，否则按钮会被误禁用。
+ */
+export function hasFilterParams(raw: RawQuery): boolean {
+  return FILTER_PARAM_KEYS.some(key => Object.prototype.hasOwnProperty.call(raw, key))
+}
+
+/**
+ * 「清除筛选」的 URL 形状（#4）：删掉四个筛选 key 与 `page`，
+ * 其余参数（关键词 / 排序 / 重复数组 / 无值参数 / 未知参数）保持原形态。
+ *
+ * 与 `clearListFilters` 的差别是这里基于原始 `route.query`，非法筛选原值也能一次清掉，
+ * 且不会把解析后的默认值写回 URL；页面用 `router.push` 提交，只新增一条历史。
+ */
+export function clearFilterParams(raw: RawQuery): ListQueryOutput {
+  const query: ListQueryOutput = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === 'page' || (FILTER_PARAM_KEYS as readonly string[]).includes(key)) {
       continue
     }
     const preserved = preserveRawValue(value)
@@ -740,8 +774,8 @@ export function hasActiveFilters(state: ListQueryState): boolean {
 }
 
 /**
- * 「清除筛选」：只移除商品类型、价格档、销量门槛，保留关键词与排序，并回到第 1 页。
- * 是否真的有条件可清由 `hasActiveFilters` 判断，避免空点击产生历史。
+ * 「清除筛选」的状态迁移：只移除商品类型、价格档、销量门槛，保留关键词与排序，并回到第 1 页。
+ * 空态的「清除搜索条件」复用它；筛选条的按钮可用性由页面结合原始 key 与解析态判断（#4）。
  */
 export function clearListFilters(state: ListQueryState): ListQueryState {
   return {

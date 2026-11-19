@@ -26,11 +26,13 @@ import type {
   SalesSelection,
   SerializedListQuery,
   SortSelection,
+  clearFilterParams,
   clearInvalidListParams,
   clearListFilters,
   clearPriceRange,
   filterSelectionOf,
   hasActiveFilters,
+  hasFilterParams,
   inspectListParams,
   inspectPriceParams,
   isSameListConditions,
@@ -278,6 +280,12 @@ type _RepairInvalidListParamsArgs = Expect<
   Equal<Parameters<typeof repairInvalidListParams>, [raw: RawQuery, selection: ListFilterSelection]>
 >
 
+// —— 「清除筛选」基于原始查询（#4）：只看筛选 key 是否存在，按原形态删除 key ——
+type _HasFilterParams = Expect<Equal<ReturnType<typeof hasFilterParams>, boolean>>
+type _HasFilterParamsArg = Expect<Equal<Parameters<typeof hasFilterParams>, [raw: RawQuery]>>
+type _ClearFilterParams = Expect<Equal<ReturnType<typeof clearFilterParams>, ListQueryOutput>>
+type _ClearFilterParamsArg = Expect<Equal<Parameters<typeof clearFilterParams>, [raw: RawQuery]>>
+
 // —— 关键词长度按 Unicode 码点计数（#10，与后端 JSON Schema maxLength 一致） ——
 type _KeywordLength = Expect<Equal<ReturnType<typeof keywordLength>, number>>
 type _KeywordLengthArgs = Expect<Equal<Parameters<typeof keywordLength>, [text: string]>>
@@ -346,6 +354,10 @@ export type ListQueryTypeTests =
   | _ClearInvalidListParamsArg
   | _RepairInvalidListParams
   | _RepairInvalidListParamsArgs
+  | _HasFilterParams
+  | _HasFilterParamsArg
+  | _ClearFilterParams
+  | _ClearFilterParamsArg
   | _KeywordLength
   | _KeywordLengthArgs
   | _KeywordMax
