@@ -217,6 +217,7 @@
     isSameListConditions,
     isSameSerializedQuery,
     parseListQuery,
+    repairInvalidListParams,
     serializeListQuery,
     toApiQuery,
     withFilterSelection,
@@ -409,8 +410,19 @@
   /**
    * 筛选 / 排序即时生效：条件没变时不产生历史（即使当前在第 2 页），
    * 有变化时只 push 一条并回到第 1 页。
+   *
+   * 存在非法参数时只放行「修复对应维度」：重选价格档 / 类型 / 销量会用一次
+   * `replace` 只替换该维度的 key；改排序、改无关筛选一律忽略，URL 与提示不动。
    */
   function onFilterChange(selection: ListFilterSelection): void {
+    if (paramIssue.value.invalid) {
+      const repaired = repairInvalidListParams(route.query, selection)
+      if (repaired === null) {
+        return
+      }
+      void router.replace({ name: 'home', query: repaired })
+      return
+    }
     const current = listQuery.value
     const next = withFilterSelection(current, selection)
     if (isSameListConditions(current, next)) {
@@ -421,6 +433,11 @@
 
   /** 清除筛选：保留关键词与排序，移除三类条件并回到第 1 页。 */
   function onClearFilters(): void {
+    // 非法参数只能用「清除无效条件」或重选对应维度脱困：清除筛选会把非法
+    // 参数一起静默删掉，必须在 URL 不变的前提下拦住。
+    if (paramIssue.value.invalid) {
+      return
+    }
     const current = listQuery.value
     if (!hasActiveFilters(current)) {
       return

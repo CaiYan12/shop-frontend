@@ -149,6 +149,14 @@ export type RawQuery = Record<string, RawQueryValue>
 /** 写回 URL 的形状：全部是字符串，默认值已被省略。 */
 export type SerializedListQuery = Record<string, string>
 
+/**
+ * 保留原始形态的查询形状：用于「清除无效条件 / 修复单个维度」。
+ *
+ * 与 `SerializedListQuery` 不同，这里不按页面状态重写 URL，而是保留 `route.query`
+ * 里的重复参数（数组）与无值参数（`null`），只增删目标 key。
+ */
+export type ListQueryOutput = Record<string, string | null | (string | null)[]>
+
 /** 价格 / 销量上限直接取后端契约的边界，越界值按默认值兜底。 */
 const PRICE_MAX_CENTS = 9_999_999_999
 const SALES_MAX = 1_000_000
@@ -300,20 +308,21 @@ function isMinSalesParamValid(value: RawQueryValue): boolean {
   return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= SALES_MAX
 }
 
-/** 价格非法时具体要清除哪些 key；`range-reversed` 两端一起清除。 */
+/** 价格非法时具体要清除哪些 key；两端各自非法时都要收集，不能只报一端。 */
 function invalidPriceKeys(raw: RawQuery): string[] {
   const min = readPriceParam(raw.priceMinCents)
   const max = readPriceParam(raw.priceMaxCents)
+  const keys: string[] = []
   if (!min.ok) {
-    return ['priceMinCents']
+    keys.push('priceMinCents')
   }
   if (!max.ok) {
-    return ['priceMaxCents']
+    keys.push('priceMaxCents')
   }
-  if (min.value !== null && max.value !== null && min.value > max.value) {
-    return ['priceMinCents', 'priceMaxCents']
+  if (min.ok && max.ok && min.value !== null && max.value !== null && min.value > max.value) {
+    keys.push('priceMinCents', 'priceMaxCents')
   }
-  return []
+  return keys
 }
 
 /**
@@ -364,21 +373,161 @@ export function inspectListParams(raw: RawQuery): ListParamInspection {
   }
 }
 
-/**
- * 「清除无效条件」的 URL 形状：只删掉非法 key，其余参数（含合法的原始写法）
- * 原样保留，由页面 `router.replace` 触发一次合法请求（#13）。
- */
-export function clearInvalidListParams(raw: RawQuery): SerializedListQuery {
-  const issues = inspectListParams(raw)
-  const query: SerializedListQuery = {}
+/** 把 `route.query` 的原始值按原形态复制：数组仍是数组，无值参数仍是 `null`。 */
+function preserveRawValue(value: RawQueryValue): string | null | (string | null)[] | undefined {
+  if (Array.isArray(value)) {
+    return value.map(entry => (typeof entry === 'string' ? entry : null))
+  }
+  if (typeof value === 'string' || value === null) {
+    return value
+  }
+  return undefined
+}
+
+/** 复制整份原始查询，保留重复参数与无值参数的形态。 */
+function preserveRawQuery(raw: RawQuery): ListQueryOutput {
+  const query: ListQueryOutput = {}
   for (const [key, value] of Object.entries(raw)) {
-    const first = Array.isArray(value) ? value[0] : value
-    if (typeof first === 'string') {
-      query[key] = first
+    const preserved = preserveRawValue(value)
+    if (preserved !== undefined) {
+      query[key] = preserved
     }
   }
-  for (const key of issues.invalidKeys) {
-    delete query[key]
+  return query
+}
+
+/**
+ * 「清除无效条件」的 URL 形状：只删掉非法 key，其余参数（含重复数组、无值参数、
+ * 页面不认识的参数）保持原样，由页面 `router.replace` 触发一次合法请求（#13）。
+ */
+export function clearInvalidListParams(raw: RawQuery): ListQueryOutput {
+  const issues = inspectListParams(raw)
+  const query: ListQueryOutput = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (issues.invalidKeys.includes(key)) {
+      continue
+    }
+    const preserved = preserveRawValue(value)
+    if (preserved !== undefined) {
+      query[key] = preserved
+    }
+  }
+  return query
+}
+
+/** 筛选条能独立修复的维度；与 `inspectListParams` 的 `invalidKeys` 一一对应。 */
+type FilterDimension = 'category' | 'price' | 'min-sales'
+
+function dimensionsOfInvalidKeys(keys: readonly string[]): Set<FilterDimension> {
+  const dimensions = new Set<FilterDimension>()
+  for (const key of keys) {
+    if (key === 'category') {
+      dimensions.add('category')
+    } else if (key === 'minSales') {
+      dimensions.add('min-sales')
+    } else if (key === 'priceMinCents' || key === 'priceMaxCents') {
+      dimensions.add('price')
+    }
+  }
+  return dimensions
+}
+
+/** 一次筛选提交相对当前解析状态真正改动了哪些维度；改到关键词 / 排序时返回 `null`。 */
+function changedFilterDimensions(
+  current: ListQueryState,
+  next: ListQueryState,
+): FilterDimension[] | null {
+  if (next.keyword !== current.keyword) {
+    return null
+  }
+  if (normalizeSort(next.sort, next.keyword) !== normalizeSort(current.sort, current.keyword)) {
+    return null
+  }
+  const changed: FilterDimension[] = []
+  if (next.category !== current.category) {
+    changed.push('category')
+  }
+  if (next.priceMinCents !== current.priceMinCents || next.priceMaxCents !== current.priceMaxCents) {
+    changed.push('price')
+  }
+  if (next.minSales !== current.minSales) {
+    changed.push('min-sales')
+  }
+  return changed
+}
+
+/**
+ * 修复值必须来自合法选项：不接受非预设的自定义值，避免用新的非法值「修」旧非法值。
+ * 当前解析态对非法维度一律是 `null`，因此没有真正变化的提交不会走到这里。
+ */
+function isRepairableSelection(dimension: FilterDimension, next: ListQueryState): boolean {
+  if (dimension === 'category') {
+    return next.category === null ||
+      (KNOWN_CATEGORY_SLUGS as readonly string[]).includes(next.category)
+  }
+  if (dimension === 'min-sales') {
+    return next.minSales === null || SALES_TIERS.some(tier => tier.minSales === next.minSales)
+  }
+  if (next.priceMinCents === null && next.priceMaxCents === null) {
+    return true
+  }
+  return PRICE_BANDS.some(
+    band => band.minCents === next.priceMinCents && band.maxCents === next.priceMaxCents,
+  )
+}
+
+/**
+ * 非法参数下的「修复对应维度」（#13）。
+ *
+ * 只允许一次提交修复**非法维度**：非法 `price*` 时重选价格档、非法 `category`
+ * 时重选类型、非法 `minSales` 时重选销量。被修复的维度只重写它自己的 key，
+ * 其余原始参数（重复数组、无值参数、关键词 / 排序 / 未知参数）保持原形态；
+ * 改排序、改无关筛选等一律返回 `null`，由页面忽略，不得改写 URL。
+ */
+export function repairInvalidListParams(
+  raw: RawQuery,
+  selection: ListFilterSelection,
+): ListQueryOutput | null {
+  const issues = inspectListParams(raw)
+  if (!issues.invalid) {
+    return null
+  }
+  const current = parseListQuery(raw)
+  const next = withFilterSelection(current, selection)
+  const changed = changedFilterDimensions(current, next)
+  if (changed === null || changed.length === 0) {
+    return null
+  }
+  const invalidDimensions = dimensionsOfInvalidKeys(issues.invalidKeys)
+  if (!changed.every(dimension => invalidDimensions.has(dimension))) {
+    return null
+  }
+  if (!changed.every(dimension => isRepairableSelection(dimension, next))) {
+    return null
+  }
+
+  const query = preserveRawQuery(raw)
+  for (const dimension of changed) {
+    if (dimension === 'category') {
+      delete query.category
+      if (next.category !== null) {
+        query.category = next.category
+      }
+    } else if (dimension === 'min-sales') {
+      delete query.minSales
+      if (next.minSales !== null) {
+        query.minSales = String(next.minSales)
+      }
+    } else {
+      delete query.priceMinCents
+      delete query.priceMaxCents
+      if (next.priceMinCents !== null) {
+        query.priceMinCents = String(next.priceMinCents)
+      }
+      if (next.priceMaxCents !== null) {
+        query.priceMaxCents = String(next.priceMaxCents)
+      }
+    }
   }
   return query
 }
