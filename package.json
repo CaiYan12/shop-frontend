@@ -10,6 +10,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "check:docs": "node scripts/check-docs.mjs",
+    "check:cart": "node --test scripts/phase6/*.test.ts",
     "stack": "node scripts/stack-status.mjs",
     "prepare": "node scripts/install-hooks.mjs"
   },

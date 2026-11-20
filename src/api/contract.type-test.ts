@@ -9,7 +9,14 @@
  * 购买校验 / 错误信封）与 6 个 operation 的请求、响应、错误响应类型。
  */
 import type { components, operations } from './schema'
-import type { ApiError, apiBaseUrl, checkPurchase, fetchProductList } from './client'
+import type {
+  ApiError,
+  apiBaseUrl,
+  checkPurchase,
+  fetchProductList,
+  getProduct,
+  listRecommendations,
+} from './client'
 import type { describePurchaseResult } from './purchase-result'
 
 /** 标准「类型相等」判定：双向条件类型，避免 any / never 的误判。 */
@@ -145,6 +152,13 @@ type _DetailPath = Expect<Equal<operations['getProduct']['parameters']['path'], 
 type _RecommendationPath = Expect<
   Equal<operations['listRecommendations']['parameters']['path'], { slug: string }>
 >
+// —— 详情 / 推荐客户端入口（#17）：标识是字符串，可选中止信号 ——
+type _DetailArg = Expect<Equal<Parameters<typeof getProduct>[0], string>>
+type _DetailSignal = Expect<Equal<Parameters<typeof getProduct>[1], AbortSignal | undefined>>
+type _RecommendationArg = Expect<Equal<Parameters<typeof listRecommendations>[0], string>>
+type _RecommendationSignal = Expect<
+  Equal<Parameters<typeof listRecommendations>[1], AbortSignal | undefined>
+>
 type PurchaseBody = operations['checkPurchase']['requestBody']['content']['application/json']
 type _PurchaseArg = Expect<Equal<Parameters<typeof checkPurchase>[0], PurchaseBody>>
 type _PurchaseBody = Expect<
@@ -176,6 +190,10 @@ type _PurchaseError = Expect<
 
 // —— 客户端按路径调用，返回类型来自 schema.d.ts ——
 type _ListReturn = Expect<Equal<Awaited<ReturnType<typeof fetchProductList>>, ProductListResponse>>
+type _DetailReturn = Expect<Equal<Awaited<ReturnType<typeof getProduct>>, ProductDetailResponse>>
+type _RecommendationReturn = Expect<
+  Equal<Awaited<ReturnType<typeof listRecommendations>>, ProductRecommendationsResponse>
+>
 type _PurchaseReturn = Expect<Equal<Awaited<ReturnType<typeof checkPurchase>>, PurchaseCheckResponse>>
 
 // —— ApiError 携带错误信封，基址是 string ——
@@ -245,6 +263,10 @@ export type ContractTypeTests =
   | _ListKeyword
   | _DetailPath
   | _RecommendationPath
+  | _DetailArg
+  | _DetailSignal
+  | _RecommendationArg
+  | _RecommendationSignal
   | _PurchaseArg
   | _PurchaseBody
   | _ListError
@@ -253,6 +275,8 @@ export type ContractTypeTests =
   | _CategoriesError
   | _PurchaseError
   | _ListReturn
+  | _DetailReturn
+  | _RecommendationReturn
   | _PurchaseReturn
   | _ApiErrorStatus
   | _ApiErrorBody
