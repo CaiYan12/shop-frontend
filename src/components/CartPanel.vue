@@ -199,6 +199,21 @@
     rowErrors.value = {}
   }
 
+  /**
+   * 恢复复核结束（`cart.readonly` 由 true 落回 false）：`completeRecovery` 会用复核后的
+   * 快照整体替换条目，数量可能已被改写，而面板打开期间不重建草稿（#16 B2）。
+   * 只重写仍存在的行，不新增、不删除草稿键；只读期间控件已禁用，不打断进行中的输入。
+   */
+  function syncDraftsAfterRecovery(): void {
+    const next = { ...drafts.value }
+    for (const item of cart.items) {
+      if (item.sku in next) {
+        next[item.sku] = String(item.quantity)
+      }
+    }
+    drafts.value = next
+  }
+
   /** 文本变化：合法就即时写回，非法保持原样，由行内提示解释原因。 */
   function onDraftInput(item: CartItem, value: string): void {
     // 核对期间购物车只读（#23）：控件已禁用，这里再兜一层防御。
@@ -347,6 +362,17 @@
       window.removeEventListener('keydown', onKeydown)
       restoreBodyScroll()
       restoreFocus()
+    },
+  )
+
+  // 恢复复核结束（#23）：只读落回 false 时数量可能已被复核改写，补一次草稿对齐（#16 B2）。
+  watch(
+    () => cart.readonly,
+    (readonly, wasReadonly) => {
+      if (!wasReadonly || readonly) {
+        return
+      }
+      syncDraftsAfterRecovery()
     },
   )
 
