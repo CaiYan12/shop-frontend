@@ -83,6 +83,7 @@
                   :ref="(el) => setSlideButtonRef(index, el)"
                   :aria-label="`放大查看第 ${index + 1} 张图片：${image.alt}`"
                   class="block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  :tabindex="index === activeIndex ? 0 : -1"
                   type="button"
                   @click="openZoom(index)"
                   @keydown="onSlideKeydown"
@@ -454,7 +455,7 @@
   import ProductCard from '@/components/ProductCard.vue'
   import QuantityInput from '@/components/QuantityInput.vue'
   import { useProductRecommendations } from '@/composables/useProductRecommendations'
-  import { CART_QUANTITY_LIMIT, useCartStore } from '@/stores/cart'
+  import { resolveQuantityLimit, useCartStore } from '@/stores/cart'
   import { useCartPanelStore } from '@/stores/cart-panel'
   import { describeAddFailure } from '@/utils/cart-feedback'
   import { formatPriceCents, shouldShowOriginalPrice } from '@/utils/price'
@@ -571,6 +572,9 @@
    * 切换后在新幻灯片按钮上恢复焦点，连续按左右仍然有效。
    */
   function onSlideKeydown(event: KeyboardEvent): void {
+    // 放大浮层打开 / 进场 / 退场期间，焦点可能还留在背景主图按钮上；
+    // 此时方向键归浮层（onZoomKeydown）管，背景轮播不响应（复审二）。
+    if (zoomOpen.value) return
     if (event.defaultPrevented) return
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
@@ -593,12 +597,36 @@
     stepZoom(event.key === 'ArrowLeft' ? -1 : 1)
   }
 
-  /** 关闭动画结束后把焦点还给「打开浮层的那张主图」；该按钮仍可见。 */
+  /** 可见的幻灯片按钮；`offsetParent === null` 说明它还随轮播项隐藏着。 */
+  function visibleSlideButton(index: number | null): HTMLButtonElement | null {
+    if (index === null) return null
+    const button = slideButtons.get(index)
+    return button !== undefined && button.offsetParent !== null ? button : null
+  }
+
+  /**
+   * 关闭动画结束后把焦点还给主图：优先「打开浮层的那张」；若它已因轮播切页
+   * 隐藏（`offsetParent === null`），退回当前 `activeIndex` 的可见按钮，再兜底
+   * 扫一张可见幻灯片 —— 绝不把焦点留在 body（复审二）。
+   */
   function restoreGalleryFocus(): void {
     const opener = zoomOpenerIndex.value
     zoomOpenerIndex.value = null
-    if (opener === null) return
-    slideButtons.get(opener)?.focus({ preventScroll: true })
+    const target =
+      visibleSlideButton(opener) ??
+      visibleSlideButton(activeIndex.value) ??
+      [...slideButtons.values()].find((button) => button.offsetParent !== null) ??
+      null
+    if (target === null) return
+    target.focus({ preventScroll: true })
+    // 退场末尾偶发不可聚焦；下一帧补一次，成功后不再重试。
+    if (document.activeElement !== target) {
+      requestAnimationFrame(() => {
+        if (document.activeElement !== target) {
+          target.focus({ preventScroll: true })
+        }
+      })
+    }
   }
 
   /**
@@ -711,7 +739,7 @@
     if (view === null || view.variant === null) {
       return 0
     }
-    return Math.min(CART_QUANTITY_LIMIT, Math.max(0, Math.floor(view.variant.stock)))
+    return resolveQuantityLimit(view.variant.stock)
   })
 
   /** 无上限（未选齐 / 不可售 / 缺货）或购物车核对中（#23 只读）时都不可用。 */
