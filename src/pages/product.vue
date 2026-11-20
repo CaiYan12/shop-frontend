@@ -658,8 +658,8 @@
     return Math.min(CART_QUANTITY_LIMIT, Math.max(0, Math.floor(view.variant.stock)))
   })
 
-  /** 无上限（未选齐 / 不可售 / 缺货）时数量控件与加购按钮都不可用。 */
-  const quantityDisabled = computed(() => quantityLimit.value < 1)
+  /** 无上限（未选齐 / 不可售 / 缺货）或购物车核对中（#23 只读）时都不可用。 */
+  const quantityDisabled = computed(() => cart.readonly || quantityLimit.value < 1)
 
   /**
    * 加购：先按「数量上限」校验原始文本，不合法时只亮行内提示、不改 store；

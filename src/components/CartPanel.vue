@@ -91,7 +91,8 @@
                 </div>
                 <button
                   :aria-label="`删除 ${item.name}`"
-                  class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border focus-ring border-outline text-muted hover:text-error"
+                  :disabled="cart.readonly"
+                  class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border focus-ring border-outline text-muted hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
                   data-state="cart-panel-remove"
                   type="button"
                   @click="removeItem(item)"
@@ -102,6 +103,7 @@
 
               <div :aria-labelledby="rowNameId(index)" class="flex items-end justify-between gap-3" role="group">
                 <QuantityInput
+                  :disabled="cart.readonly"
                   :limit="limitOf(item)"
                   :model-value="drafts[item.sku] ?? String(item.quantity)"
                   @update:model-value="value => onDraftInput(item, value)"
@@ -199,6 +201,10 @@
 
   /** 文本变化：合法就即时写回，非法保持原样，由行内提示解释原因。 */
   function onDraftInput(item: CartItem, value: string): void {
+    // 核对期间购物车只读（#23）：控件已禁用，这里再兜一层防御。
+    if (cart.readonly) {
+      return
+    }
     drafts.value[item.sku] = value
     const parsed = resolveQuantityInput(value, limitOf(item))
     if (!parsed.valid || parsed.value === null) {
@@ -216,6 +222,10 @@
 
   /** 删除整行；被删按钮若持有焦点，焦点先落到面板容器，避免掉到 body。 */
   function removeItem(item: CartItem): void {
+    // 核对期间购物车只读（#23）。
+    if (cart.readonly) {
+      return
+    }
     cart.remove(item.sku)
     const nextDrafts = { ...drafts.value }
     const nextErrors = { ...rowErrors.value }
