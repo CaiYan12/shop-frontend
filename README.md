@@ -77,7 +77,7 @@ src/
 - `components/`：6 个文件——`AppHeader`、`HighlightedText`、`ProductCard`、`ProductFilterBar`、`ProductFilterControls`、`ProductSearchBar`；不使用自动全局注册，必须显式 import。
 - `composables/`：`useProductSuggestions`（250 ms 防抖 + AbortController 的联想状态机）、`useThemePreference`（页头主题切换的唯一入口）。
 - `utils/`：`list-query`（URL ↔ 列表查询参数的唯一编解码）、`price`（分 → 人民币展示）、`highlight`（命中片段分段解析）。
-- `stores/`：`cart`（购物车内存态与 `localStorage` 存档恢复；纯逻辑运行时检查见 `session-tmp/phase6-cart-check.test.ts`）。
+- `stores/`：`cart`（购物车内存态与 `localStorage` 存档恢复；运行时检查见 `scripts/phase6/cart-runtime-check.test.ts`，运行 `pnpm check:cart`）。
 - `theme/`：`THEME_PALETTE` 是颜色唯一来源，`vuetify-theme` 只做命名转换。
 
 仓库内还有 `tools/openapi/`（契约类型生成器）、`scripts/`（dev / stop / git hooks）、`docs/`（worktree 与 agent 约定）、`public/images/products/`（商品素材）。

@@ -39,6 +39,7 @@ export function describeAddFailure(failure: CartFailure, context: AddFailureCont
     case 'OUT_OF_STOCK':
     case 'INVALID_QUANTITY':
     case 'NOT_IN_CART':
+    case 'READONLY':
       return failure.message
   }
 }
