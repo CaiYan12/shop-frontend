@@ -127,6 +127,15 @@
         正在显示上次结果
       </p>
 
+      <!-- C31：评分 / 销量为契约演示字段，在结果区上方统一标注，不逐张卡片重复。 -->
+      <p
+        v-if="items.length > 0"
+        class="text-xs text-muted"
+        data-state="demo-metrics-note"
+      >
+        评分与销量为演示数据
+      </p>
+
       <!-- 首屏 / 无成功结果时重试：8 张骨架卡，避免白屏（#13）。 -->
       <div
         v-if="showSkeleton"
