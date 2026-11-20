@@ -20,14 +20,40 @@
       </button>
     </div>
 
-    <!-- 恢复结果汇总与存储降级：两者分开表达（#23）。 -->
-    <p
+    <!-- 恢复结果汇总与存储降级：两者分开表达（#23）；条目超过 3 条时可展开完整清单。 -->
+    <div
       v-if="cart.recoveryNotice !== ''"
-      class="max-w-[220px] rounded-lg border border-outline bg-surface px-2.5 py-1 text-right text-xs text-muted"
+      class="flex max-w-[260px] flex-col items-end gap-1 rounded-lg border border-outline bg-surface px-2.5 py-1 text-xs text-muted"
       data-state="cart-recovery-notice"
     >
-      {{ cart.recoveryNotice }}
-    </p>
+      <p
+        v-show="!showsFullNotice"
+        class="text-right"
+        data-state="cart-recovery-notice-short"
+      >
+        {{ cart.recoveryNotice }}
+      </p>
+      <p
+        v-show="showsFullNotice"
+        :id="NOTICE_FULL_ID"
+        class="text-left"
+        data-state="cart-recovery-notice-full"
+      >
+        {{ cart.recoveryNoticeFull }}
+      </p>
+      <button
+        v-if="hasFullNotice"
+        class="self-end text-xs text-primary underline underline-offset-2"
+        :aria-controls="NOTICE_FULL_ID"
+        :aria-expanded="showsFullNotice ? 'true' : 'false'"
+        :data-expanded="showsFullNotice ? 'true' : 'false'"
+        data-state="cart-recovery-notice-toggle"
+        type="button"
+        @click="toggleNotice"
+      >
+        {{ showsFullNotice ? '收起' : '查看全部' }}
+      </button>
+    </div>
     <p
       v-if="cart.storage === 'unavailable'"
       class="max-w-[220px] rounded-lg border border-outline bg-surface px-2.5 py-1 text-right text-xs text-warning"
@@ -98,7 +124,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useDisplay } from 'vuetify'
   import { useCartStore } from '@/stores/cart'
   import { useCartPanelStore } from '@/stores/cart-panel'
@@ -114,6 +140,7 @@
    */
   const MOBILE_BREAKPOINT = 1145
   const PANEL_ID = 'cart-panel'
+  const NOTICE_FULL_ID = 'cart-recovery-notice-full'
 
   const cart = useCartStore()
   const cartPanel = useCartPanelStore()
@@ -121,6 +148,28 @@
 
   const totalQuantity = computed(() => cart.totalQuantity)
   const totalAmountCents = computed(() => cart.totalAmountCents)
+
+  /**
+   * 短提示最多 3 条，完整清单不折叠。两者不同才需要「查看全部 / 收起」；
+   * 收起状态只影响展示，不改变 store 里的提示内容。
+   */
+  const noticeExpanded = ref(false)
+  const hasFullNotice = computed(
+    () => cart.recoveryNoticeFull !== '' && cart.recoveryNoticeFull !== cart.recoveryNotice,
+  )
+  const showsFullNotice = computed(() => noticeExpanded.value && hasFullNotice.value)
+
+  // 复核结果变化时回到短提示，避免新结果沿用上一次的展开状态。
+  watch(
+    () => cart.recoveryNoticeFull,
+    () => {
+      noticeExpanded.value = false
+    },
+  )
+
+  function toggleNotice (): void {
+    noticeExpanded.value = !noticeExpanded.value
+  }
 
   /** 与 Tailwind / Vuetify 的 `lg` 同源：<1145px 用紧凑入口。 */
   const isCompact = computed(() => display.width.value < MOBILE_BREAKPOINT)
