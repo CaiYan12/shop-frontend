@@ -17,6 +17,7 @@ import App from './App.vue'
 import { SITE_NAME } from '@/theme'
 
 // Styles
+import 'overlayscrollbars/overlayscrollbars.css'
 import 'unfonts.css'
 import '@/styles/tailwind.css'
 import '@/styles/vuetify-rounded.css'

@@ -410,14 +410,17 @@
           </div>
 
           <div class="flex min-h-0 flex-1 flex-col gap-2 min-[960px]:flex-row min-[960px]:items-center">
-            <div
-              ref="zoomViewport"
-              aria-label="图片查看区域"
-              class="order-1 min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain rounded-lg bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary min-[960px]:order-2"
-              data-zoom-viewport
-              role="group"
-              tabindex="0"
+            <!--
+              R26 试接：OverlayScrollbars 只替换放大图滚动区，双轴滚动条由组件生成；
+              `role` / `tabindex` / `aria-label` 在 `os-initialized` 时补到生成视口上。
+            -->
+            <OverlayScrollbarsComponent
+              ref="zoomScroll"
+              class="zoom-scroll order-1 min-h-0 min-w-0 flex-1 rounded-lg bg-background min-[960px]:order-2"
+              element="div"
+              :options="zoomScrollOptions"
               :style="{ height: zoomFullscreen ? undefined : ZOOM_IMAGE_HEIGHT }"
+              @osInitialized="onZoomScrollInitialized"
             >
               <img
                 :alt="zoomImage.alt"
@@ -427,7 +430,7 @@
                 draggable="false"
                 :style="zoomImageStyle"
               >
-            </div>
+            </OverlayScrollbarsComponent>
 
             <div class="order-2 flex shrink-0 items-center justify-center gap-2 min-[960px]:contents">
               <v-btn
@@ -483,6 +486,9 @@
   import type { ComponentPublicInstance } from 'vue'
   import { useRoute } from 'vue-router'
   import { useDisplay } from 'vuetify'
+  import type { OverlayScrollbars, PartialOptions } from 'overlayscrollbars'
+  import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
+  import type { OverlayScrollbarsComponentRef } from 'overlayscrollbars-vue'
   import { ApiError, getProduct } from '@/api/client'
   import type { components } from '@/api/schema'
   import ProductCard from '@/components/ProductCard.vue'
@@ -567,8 +573,50 @@
    */
   const zoomScale = ref<1 | 2>(1)
   const zoomViewport = ref<HTMLElement | null>(null)
+  const zoomScroll = ref<OverlayScrollbarsComponentRef | null>(null)
+  /** R26：滚动条主题名与变量在页面 scoped 样式里定义；autoHide 保证 2× 时可见。 */
+  const zoomScrollOptions: PartialOptions = {
+    scrollbars: {
+      theme: 'os-theme-shop',
+      autoHide: 'never',
+      dragScroll: true,
+      // `'instant'` 不依赖 ClickScrollPlugin：点轨道立即跳到对应位置。
+      clickScroll: 'instant',
+    },
+  }
   /** 2× 的像素基准：1× 时容器的布局宽高（此时没有滚动条占位）。 */
   const zoomBase = ref<{ w: number; h: number } | null>(null)
+
+  /** 把 OverlayScrollbars 生成的视口补成原可聚焦滚动区；重复调用安全。 */
+  function prepareZoomViewport(viewport: HTMLElement): void {
+    viewport.tabIndex = 0
+    viewport.setAttribute('role', 'group')
+    viewport.setAttribute('aria-label', '图片查看区域')
+    viewport.setAttribute('data-zoom-viewport', '')
+  }
+
+  /**
+   * 浮层首次挂载时事件可能早于 ref 赋值；以实例 elements.viewport 为准，
+   * 并作为后续滚动 / 尺寸测量的唯一 DOM 入口。
+   */
+  function ensureZoomViewport(): HTMLElement | null {
+    const viewport = zoomScroll.value?.osInstance()?.elements().viewport ?? null
+    if (viewport !== null) {
+      zoomViewport.value = viewport
+      prepareZoomViewport(viewport)
+    }
+    return viewport
+  }
+
+  function resolveZoomViewport(): HTMLElement | null {
+    return ensureZoomViewport()
+  }
+
+  function onZoomScrollInitialized(instance: OverlayScrollbars): void {
+    const viewport = instance.elements().viewport
+    zoomViewport.value = viewport
+    prepareZoomViewport(viewport)
+  }
 
   /**
    * 2× 用显式像素而不是 `200%`：`200%` 按滚动条出现后的内容盒计算，会少一个滚动条宽度。
@@ -590,7 +638,7 @@
 
   /** 放大后把视口滚到图片中心；`nextTick` 保证 200% 宽高已经落盘。 */
   function centerZoomViewport(): void {
-    const viewport = zoomViewport.value
+    const viewport = resolveZoomViewport()
     if (viewport === null) return
     viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2
     viewport.scrollTop = (viewport.scrollHeight - viewport.clientHeight) / 2
@@ -600,7 +648,7 @@
   function resetZoomView(): void {
     zoomScale.value = 1
     zoomBase.value = null
-    const viewport = zoomViewport.value
+    const viewport = resolveZoomViewport()
     if (viewport !== null) {
       viewport.scrollLeft = 0
       viewport.scrollTop = 0
@@ -612,7 +660,7 @@
       resetZoomView()
       return
     }
-    const viewport = zoomViewport.value
+    const viewport = resolveZoomViewport()
     if (viewport === null) return
     // 1× 没有滚动条，offsetWidth/Height 就是不受滚动条占位影响的布局基准。
     zoomBase.value = { w: viewport.offsetWidth, h: viewport.offsetHeight }
@@ -653,6 +701,13 @@
     zoomClosing.value = false
     resetZoomView()
     zoomOpen.value = true
+    // OverlayScrollbars 在子组件挂载后才生成视口；下一帧补齐语义，必要时再补一次。
+    void nextTick(() => {
+      ensureZoomViewport()
+      // OS 初始化可能晚于一帧，并会重写生成视口的 tabindex；两次补写覆盖这段时序。
+      setTimeout(ensureZoomViewport, 100)
+      setTimeout(ensureZoomViewport, 300)
+    })
   }
 
   /**
@@ -735,7 +790,7 @@
    */
   function onZoomKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented) return
-    const viewport = zoomViewport.value
+    const viewport = resolveZoomViewport()
     if (
       zoomScale.value === 2 &&
       viewport !== null &&
@@ -1111,5 +1166,33 @@
     border: 2px solid rgb(var(--v-theme-primary));
     border-radius: calc(0.75rem - 1px);
     pointer-events: none;
+  }
+
+  /*
+   * R26 试接：OverlayScrollbars 的滚动条颜色全部取 Vuetify 主题变量，
+   * 浅暗主题随 `.v-theme--*` 自动切换；autoHide 为 never，2× 时两轴都可见。
+   */
+  .zoom-scroll :deep(.os-theme-shop) {
+    --os-size: 12px;
+    --os-padding-perpendicular: 2px;
+    --os-padding-axis: 2px;
+    --os-track-bg: rgba(var(--v-theme-on-surface), 0.08);
+    --os-track-bg-hover: rgba(var(--v-theme-on-surface), 0.08);
+    --os-track-bg-active: rgba(var(--v-theme-on-surface), 0.08);
+    --os-handle-bg: rgba(var(--v-theme-on-surface), 0.35);
+    --os-handle-bg-hover: rgba(var(--v-theme-on-surface), 0.5);
+    --os-handle-bg-active: rgba(var(--v-theme-on-surface), 0.65);
+    --os-handle-border-radius: 999px;
+    --os-handle-min-size: 24px;
+  }
+
+  .zoom-scroll :deep([data-overlayscrollbars-viewport]) {
+    overscroll-behavior: contain;
+  }
+
+  /* 视口焦点环用内描边，避免被 OverlayScrollbars 的 overflow 裁掉。 */
+  .zoom-scroll :deep([data-overlayscrollbars-viewport]:focus-visible) {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: -2px;
   }
 </style>
