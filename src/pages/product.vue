@@ -192,18 +192,39 @@
               </p>
             </div>
 
-            <!-- #21：数量与加购在此接入；本票只放禁用占位，不做数量与加购行为。 -->
-            <v-btn
-              block
-              color="primary"
-              data-state="add-to-cart-placeholder"
-              disabled
-              size="large"
-              variant="flat"
-            >
-              加入购物车
-            </v-btn>
-            <p class="sr-only">数量与加购将在后续版本接入。</p>
+            <!--
+              数量与加购（#21）：规格选齐且组合有库存后才可用；数量不合法时点击加购
+              不触发写入，行内提示保留用户输入。
+            -->
+            <div class="flex flex-col gap-3" data-state="purchase">
+              <QuantityInput
+                ref="quantityInputRef"
+                v-model="quantityText"
+                :disabled="quantityDisabled"
+                :limit="quantityLimit"
+              />
+
+              <v-btn
+                block
+                color="primary"
+                :disabled="quantityDisabled"
+                data-state="add-to-cart"
+                size="large"
+                variant="flat"
+                @click="addToCart"
+              >
+                加入购物车
+              </v-btn>
+
+              <p
+                v-if="addError !== ''"
+                class="text-sm text-error"
+                data-state="add-error"
+                role="alert"
+              >
+                {{ addError }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -227,6 +248,24 @@
         <p class="text-sm text-muted">相关推荐将在后续版本接入。</p>
       </section>
     </div>
+
+    <!--
+      加购成功提示（#21）：含商品名与「查看购物车」；后者只打开面板状态，
+      面板本身由 #22 渲染。
+    -->
+    <v-snackbar v-model="snackbarOpen" :timeout="5000" data-state="add-success">
+      <span>已加入购物车：{{ addedProductName }}</span>
+      <template #actions>
+        <v-btn
+          color="primary"
+          data-state="snackbar-open-cart"
+          variant="text"
+          @click="openCartPanel"
+        >
+          查看购物车
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -235,6 +274,11 @@
   import { useRoute } from 'vue-router'
   import { ApiError, getProduct } from '@/api/client'
   import type { components } from '@/api/schema'
+  import QuantityInput from '@/components/QuantityInput.vue'
+  import { CART_QUANTITY_LIMIT, useCartStore } from '@/stores/cart'
+  import { useCartPanelStore } from '@/stores/cart-panel'
+  import { describeAddFailure } from '@/utils/cart-feedback'
+  import { formatPriceCents, shouldShowOriginalPrice } from '@/utils/price'
   import {
     createEmptySelection,
     resolveOptionAvailability,
@@ -242,7 +286,7 @@
     toggleSelection,
   } from '@/utils/product-selection'
   import type { ProductSelection } from '@/utils/product-selection'
-  import { formatPriceCents, shouldShowOriginalPrice } from '@/utils/price'
+  import { resolveQuantityInput } from '@/utils/quantity'
 
   type ProductDetail = components['schemas']['ProductDetailResponse']
   type DetailState = 'loading' | 'ready' | 'not-found' | 'error'
@@ -336,6 +380,91 @@
     selection.value = createEmptySelection()
   }
 
+  const cart = useCartStore()
+  const cartPanel = useCartPanelStore()
+
+  /**
+   * 数量与加购（#21）。
+   *
+   * 数量存**原始文本**，允许输入过程为空；上限由所选组合库存推出（`min(999, 库存)`），
+   * 规格未选齐、不可售组合或组合缺货时上限为 0，控件与加购一起禁用。
+   */
+  const quantityText = ref('1')
+  const quantityInputRef = ref<InstanceType<typeof QuantityInput> | null>(null)
+  /** 加购失败的行内提示；按 store 的失败原因给出可行动文案。 */
+  const addError = ref('')
+  /** 加购成功提示（含商品名与「查看购物车」）。 */
+  const snackbarOpen = ref(false)
+  const addedProductName = ref('')
+
+  const quantityLimit = computed(() => {
+    const view = selectionView.value
+    if (view === null || view.variant === null) {
+      return 0
+    }
+    return Math.min(CART_QUANTITY_LIMIT, Math.max(0, Math.floor(view.variant.stock)))
+  })
+
+  /** 无上限（未选齐 / 不可售 / 缺货）时数量控件与加购按钮都不可用。 */
+  const quantityDisabled = computed(() => quantityLimit.value < 1)
+
+  /**
+   * 加购：先按「数量上限」校验原始文本，不合法时只亮行内提示、不改 store；
+   * 合法才把所选组合的快照交给购物车 store，失败时按原因给可行动提示。
+   */
+  function addToCart(): void {
+    addError.value = ''
+
+    const view = selectionView.value
+    const current = product.value
+    if (view === null || view.variant === null || current === null || quantityDisabled.value) {
+      return
+    }
+
+    const quantity = resolveQuantityInput(quantityText.value, quantityLimit.value)
+    if (!quantity.valid || quantity.value === null) {
+      quantityInputRef.value?.validate()
+      return
+    }
+
+    const variant = view.variant
+    const inCartQuantity = cart.items.find((item) => item.sku === variant.sku)?.quantity ?? 0
+    const result = cart.add(
+      {
+        sku: variant.sku,
+        slug: current.slug,
+        name: current.name,
+        unitPriceCents: variant.priceCents,
+        stock: variant.stock,
+      },
+      quantity.value,
+    )
+
+    if (result.ok) {
+      quantityText.value = '1'
+      quantityInputRef.value?.resetError()
+      addedProductName.value = current.name
+      snackbarOpen.value = true
+      return
+    }
+
+    addError.value = describeAddFailure(result, { inCartQuantity })
+  }
+
+  /** 「查看购物车」只打开面板状态；面板本身由 #22 渲染。 */
+  function openCartPanel(): void {
+    cartPanel.openPanel()
+    snackbarOpen.value = false
+  }
+
+  /** 切换商品时清回数量与加购反馈，规格选择由 `resetSelection` 清空。 */
+  function resetPurchaseState(): void {
+    quantityText.value = '1'
+    addError.value = ''
+    snackbarOpen.value = false
+    quantityInputRef.value?.resetError()
+  }
+
   /**
    * 只允许最新一次请求落盘：切商品或重试时旧响应不得写回。
    * `inFlight` 负责真实断流，`latestRequestId` 兜住「abort 前已 resolve」的竞态。
@@ -419,9 +548,15 @@
     errorMessage.value = ''
     state.value = 'loading'
     resetSelection()
+    resetPurchaseState()
     window.scrollTo({ top: 0, behavior: 'auto' })
     void load()
   }
+
+  // 用户改了数量或规格后，上一次的加购失败提示不再适用于新状态。
+  watch([quantityText, selection], () => {
+    addError.value = ''
+  })
 
   onMounted(() => {
     void load()
