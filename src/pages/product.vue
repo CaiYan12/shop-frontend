@@ -555,10 +555,37 @@
     zoomOpen.value = true
   }
 
-  /** 退场开始即置位，直到 `after-leave` 才解除方向键守卫（#18 复审三）。 */
-  watch(zoomOpen, (open, wasOpen) => {
-    if (!open && wasOpen) zoomClosing.value = true
-  })
+  /**
+   * 抑制一次「关闭即退场」监听（复审四）：商品切换 / 组件卸载时浮层随商品一起消失，
+   * `after-leave` 不再触发，这次关闭不能把 `zoomClosing` 置位。
+   */
+  let suppressZoomClosing = false
+
+  /**
+   * 退场开始即置位，直到 `after-leave` 才解除方向键守卫（#18 复审三）。
+   * `flush: 'sync'` 让抑制标记的作用范围严格等于这一次赋值，行为确定、无竞态（复审四）。
+   */
+  watch(
+    zoomOpen,
+    (open, wasOpen) => {
+      if (!open && wasOpen && !suppressZoomClosing) zoomClosing.value = true
+    },
+    { flush: 'sync' },
+  )
+
+  /**
+   * 放大相关状态整体复位（复审四）：商品切换 / 卸载都会让浮层直接消失，
+   * 不会再有 `after-leave` 来清 `zoomClosing`，必须主动清干净，
+   * 否则 `onSlideKeydown` 的守卫会永久拦截主图方向键。
+   */
+  function resetZoomState(): void {
+    suppressZoomClosing = true
+    zoomOpen.value = false
+    suppressZoomClosing = false
+    zoomClosing.value = false
+    zoomIndex.value = 0
+    zoomOpenerIndex.value = null
+  }
 
   /**
    * 主图切页后把焦点搬到新幻灯片按钮：旧按钮随轮播项隐藏，
@@ -905,9 +932,8 @@
     errorMessage.value = ''
     // 换商品时轮播索引与放大查看都回到初始状态，不把上一件的图片带过来（#18）。
     activeIndex.value = 0
-    zoomOpen.value = false
-    zoomIndex.value = 0
-    zoomOpenerIndex.value = null
+    // 浮层随商品卸载、`after-leave` 不再触发：一次性清掉放大三态并抑制这次关闭监听（复审四）。
+    resetZoomState()
     slideButtons.clear()
     failedDetailImages.value.clear()
     state.value = 'loading'
@@ -937,5 +963,7 @@
       inFlight.abort()
       inFlight = null
     }
+    // 防御（复审四）：卸载同样走不完浮层退场，别把 `zoomClosing` 这类标记留在实例上。
+    resetZoomState()
   })
 </script>
