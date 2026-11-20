@@ -229,23 +229,83 @@
         </div>
       </div>
 
-      <!-- #20：图文详情与相关推荐在两栏下方、整宽；本票只留结构位。 -->
+      <!-- 图文详情：按契约顺序渲染文字段落与图片（#20）。 -->
       <section
         aria-labelledby="product-detail-heading"
-        class="flex flex-col gap-3"
-        data-state="detail-slot"
+        class="flex flex-col gap-4"
+        data-state="detail-content"
       >
         <h2 id="product-detail-heading" class="text-xl font-semibold">图文详情</h2>
-        <p class="text-sm text-muted">图文详情内容将在后续版本接入。</p>
+        <div class="flex flex-col gap-4" data-state="detail-blocks">
+          <template v-for="(block, index) in product.detail" :key="index">
+            <p
+              v-if="block.type === 'text'"
+              class="break-words text-base leading-relaxed"
+            >
+              {{ block.text }}
+            </p>
+            <!-- 图片按内容区宽度显示、保留契约替代文本；`v-img` 默认懒加载（不传 eager）。 -->
+            <v-img
+              v-else-if="!failedDetailImages.has(block.path)"
+              :alt="block.alt"
+              :src="block.path"
+              class="block w-full overflow-hidden rounded-xl border border-outline"
+              @error="markDetailImageFailed(block.path)"
+            />
+            <!-- 加载失败：中性占位，保留契约替代文本；详情图不提供放大（#20）。 -->
+            <div
+              v-else
+              class="flex min-h-40 w-full items-center justify-center rounded-xl border border-dashed border-outline bg-surface px-4 py-10 text-center text-sm text-muted"
+              role="img"
+              :aria-label="`${block.alt}（图片暂时无法显示）`"
+            >
+              图片暂时无法显示
+            </div>
+          </template>
+        </div>
       </section>
 
+      <!--
+        相关推荐（#20）：契约最多 4 件，按实际结果渲染；空数组隐藏整块。
+        失败只影响本区块：保留标题与「重试」，只重发推荐请求，主内容照常可用。
+      -->
       <section
+        v-if="showRecommendations"
         aria-labelledby="product-recommendations-heading"
-        class="flex flex-col gap-3"
-        data-state="recommendations-slot"
+        class="flex flex-col gap-4"
+        data-state="recommendations"
       >
         <h2 id="product-recommendations-heading" class="text-xl font-semibold">相关推荐</h2>
-        <p class="text-sm text-muted">相关推荐将在后续版本接入。</p>
+
+        <v-alert
+          v-if="recommendationsState === 'error'"
+          class="rounded-xl"
+          data-state="recommendations-error"
+          type="error"
+          variant="tonal"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <span>{{ recommendationsErrorMessage }}</span>
+            <v-btn size="small" variant="text" @click="retryRecommendations">重试</v-btn>
+          </div>
+        </v-alert>
+
+        <!--
+          列数沿用 Vuetify 同源断点：`sm` = 600px → 2 列，`lg` = 1145px → 4 列，
+          即 600–1144px 两列、≥1145px 四列、<600px 单列（票 #20）。
+          复用列表页卡片组件与既有属性类型（命中高亮为可选，推荐结果不传）。
+        -->
+        <div
+          v-else
+          class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          data-state="recommendations-grid"
+        >
+          <ProductCard
+            v-for="item in recommendationItems"
+            :key="item.slug"
+            :item="item"
+          />
+        </div>
       </section>
     </div>
 
@@ -274,7 +334,9 @@
   import { useRoute } from 'vue-router'
   import { ApiError, getProduct } from '@/api/client'
   import type { components } from '@/api/schema'
+  import ProductCard from '@/components/ProductCard.vue'
   import QuantityInput from '@/components/QuantityInput.vue'
+  import { useProductRecommendations } from '@/composables/useProductRecommendations'
   import { CART_QUANTITY_LIMIT, useCartStore } from '@/stores/cart'
   import { useCartPanelStore } from '@/stores/cart-panel'
   import { describeAddFailure } from '@/utils/cart-feedback'
@@ -317,6 +379,31 @@
   const product = ref<ProductDetail | null>(null)
   const state = ref<DetailState>('loading')
   const errorMessage = ref('')
+
+  /**
+   * 相关推荐是独立区块（#20）：自带请求序号、错误与重试，失败不写主内容状态。
+   * 解构成顶层绑定，模板依赖自动解包即可直接读状态与条目。
+   */
+  const {
+    items: recommendationItems,
+    state: recommendationsState,
+    errorMessage: recommendationsErrorMessage,
+    load: loadRecommendations,
+    retry: retryRecommendations,
+  } = useProductRecommendations()
+
+  /** 图文详情里加载失败的图片路径：只把失败的那几张换成中性占位。 */
+  const failedDetailImages = ref<Set<string>>(new Set())
+
+  function markDetailImageFailed(path: string): void {
+    failedDetailImages.value.add(path)
+  }
+
+  /** 就绪且非空、或本区块失败时才出现；空数组与加载中都不占版面（#20）。 */
+  const showRecommendations = computed(
+    () => recommendationsState.value === 'error' ||
+      (recommendationsState.value === 'ready' && recommendationItems.value.length > 0),
+  )
 
   /**
    * 选择态（#19）：两个规格维度各自选中的选项值，`null` 表示未选。
@@ -514,6 +601,8 @@
       }
       product.value = data
       state.value = 'ready'
+      // 主内容就绪后再拉推荐：404 商品不必白打一次推荐请求，失败也只落在本区块。
+      void loadRecommendations(targetSlug)
     } catch (error) {
       // 被 abort 或已过期的响应只是过客：不写错误态、不改当前页面。
       if (requestId !== latestRequestId || controller.signal.aborted) {
@@ -546,6 +635,7 @@
     }
     product.value = null
     errorMessage.value = ''
+    failedDetailImages.value.clear()
     state.value = 'loading'
     resetSelection()
     resetPurchaseState()
