@@ -144,7 +144,7 @@
   import { useRoute } from 'vue-router'
   import { useDisplay } from 'vuetify'
   import QuantityInput from '@/components/QuantityInput.vue'
-  import { CART_QUANTITY_LIMIT, useCartStore } from '@/stores/cart'
+  import { resolveQuantityLimit, useCartStore } from '@/stores/cart'
   import type { CartItem } from '@/stores/cart'
   import { useCartPanelStore } from '@/stores/cart-panel'
   import { formatPriceCents } from '@/utils/price'
@@ -179,10 +179,9 @@
 
   const isCompact = computed(() => display.width.value < MOBILE_BREAKPOINT)
 
-  /** 与详情页一致：单行上限 = `min(999, 该行库存)`。 */
+  /** 与详情页共用同一口径：`resolveQuantityLimit` = `min(999, 该行库存)`。 */
   function limitOf(item: CartItem): number {
-    const stock = Number.isFinite(item.stock) ? Math.floor(item.stock) : 0
-    return Math.min(CART_QUANTITY_LIMIT, Math.max(0, stock))
+    return resolveQuantityLimit(item.stock)
   }
 
   function rowNameId(index: number): string {
