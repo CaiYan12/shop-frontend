@@ -36,6 +36,8 @@ export interface ProductRecommendations {
   load: (slug: string) => Promise<void>
   /** 只重试本区块：沿用上一次请求的商品标识。 */
   retry: () => void
+  /** 立即中止在途请求并让旧响应过期；切商品时调用，不必等下一次 `load`。 */
+  abort: () => void
 }
 
 function describeRequestError(error: unknown): string {
@@ -110,11 +112,20 @@ export function useProductRecommendations(): ProductRecommendations {
     void load(currentSlug)
   }
 
-  /** 离开详情页：让在途响应过期并断流，迟到的响应不得再写回已卸载页面。 */
-  onBeforeUnmount(() => {
+  /**
+   * 立即中止在途请求（#16 N3）：切商品时推荐不必等下一次 `load` 才断流。
+   * 序号自增让「abort 前已 resolve」的旧响应也不再写回；不改区块状态，
+   * 由随后到来的 `load` 负责清空与刷新。
+   */
+  function abort(): void {
     latestRequestId += 1
     abortInFlight()
+  }
+
+  /** 离开详情页：让在途响应过期并断流，迟到的响应不得再写回已卸载页面。 */
+  onBeforeUnmount(() => {
+    abort()
   })
 
-  return { items, state, errorMessage, load, retry }
+  return { items, state, errorMessage, load, retry, abort }
 }

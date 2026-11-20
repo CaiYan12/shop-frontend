@@ -366,6 +366,7 @@
       -->
       <v-dialog
         v-model="zoomOpen"
+        aria-labelledby="gallery-zoom-heading"
         max-width="90vw"
         width="min(90vw, 1100px)"
         :content-props="{ tabindex: '-1', onKeydown: onGalleryKeydown }"
@@ -556,6 +557,7 @@
     errorMessage: recommendationsErrorMessage,
     load: loadRecommendations,
     retry: retryRecommendations,
+    abort: abortRecommendations,
   } = useProductRecommendations()
 
   /** 图文详情里加载失败的图片路径：只把失败的那几张换成中性占位。 */
@@ -790,7 +792,7 @@
   }
 
   /**
-   * 切换商品标识：中止旧详情请求、重置页面状态、滚动置顶，再加载新商品（#17）。
+   * 切换商品标识：中止旧详情与推荐请求、重置页面状态、滚动置顶，再加载新商品（#17）。
    * 使用同一页面实例（不整页重建），所以这里必须自己把状态清回初始值。
    */
   function onProductSwitch(): void {
@@ -799,6 +801,8 @@
       inFlight.abort()
       inFlight = null
     }
+    // 推荐是独立区块（#20）：切商品时一并断流，旧推荐不必等下一次 load 才中止（#16 N3）。
+    abortRecommendations()
     product.value = null
     errorMessage.value = ''
     // 换商品时轮播索引与放大查看都回到初始状态，不把上一件的图片带过来（#18）。

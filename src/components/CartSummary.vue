@@ -58,7 +58,13 @@
       type="button"
       @click="openPanel"
     >
-      <span v-if="isCompact" class="flex items-baseline gap-1.5 text-sm font-semibold" data-state="cart-summary-figures">
+      <!-- 件数与金额是本入口唯一的动态数字：两种形态都挂 aria-live，加购后被播报（#16 N5）。 -->
+      <span
+        v-if="isCompact"
+        aria-live="polite"
+        class="flex items-baseline gap-1.5 text-sm font-semibold"
+        data-state="cart-summary-figures"
+      >
         <span class="tabular-nums">{{ totalQuantity }} 件</span>
         <span aria-hidden="true" class="text-muted">·</span>
         <span class="tabular-nums">{{ formatPriceCents(totalAmountCents) }}</span>
