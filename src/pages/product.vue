@@ -58,8 +58,8 @@
       </v-btn>
     </v-card>
 
-    <!-- 内容：≥840px 两栏（左轮播位 / 右信息列），<840px 按阅读顺序单列（#17）。 -->
-    <div v-else-if="product" class="flex flex-col gap-10" data-state="detail-ready">
+    <!-- 内容：≥840px 两栏（左轮播位 / 右信息列），<840px 按阅读顺序单列（#17、#19）。 -->
+    <div v-else-if="product && selectionView" class="flex flex-col gap-10" data-state="detail-ready">
       <div class="grid grid-cols-1 gap-8 min-[840px]:grid-cols-2">
         <!--
           轮播主图（#18）：不自动播放，箭头 / 缩略图 / 左右方向键共用同一个索引，
@@ -144,27 +144,199 @@
             <span>销量 {{ product.sales }}</span>
           </p>
 
-          <!-- #19：价格 / 原价 / 库存 / 规格 / 数量 / 加购 在此接入；本票只留位置。 -->
+          <!-- 价格 / 原价 / 库存随选择态联动；选择态只存在内存，不写地址栏（#19）。 -->
+          <div
+            class="flex flex-col gap-1"
+            data-state="price"
+            :data-price-scope="selectionView.variant === null ? 'product' : 'variant'"
+            :data-sold-out="selectionView.soldOut ? 'true' : 'false'"
+            :data-show-from="selectionView.showFromLabel ? 'true' : 'false'"
+          >
+            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span class="text-3xl font-bold text-primary">{{ formatPriceCents(selectionView.priceCents) }}</span>
+              <span v-if="selectionView.showFromLabel" class="text-sm text-muted" data-state="from-label">起</span>
+              <span v-if="showOriginalPrice" class="text-base text-muted line-through">
+                <span class="sr-only">原价 </span>{{ formatPriceCents(selectionView.originalPriceCents) }}
+              </span>
+              <span
+                v-if="selectionView.soldOut"
+                class="rounded-full bg-slate-900/85 px-2.5 py-1 text-xs font-semibold text-white"
+                data-state="sold-out"
+              >售罄</span>
+            </div>
+
+            <p
+              class="text-sm text-muted"
+              data-state="stock"
+              :data-stock-scope="selectionView.stockScope"
+              :data-stock-out="selectionView.stock <= 0 ? 'true' : 'false'"
+            >
+              <template v-if="selectionView.stockScope === 'product'">
+                库存 <span class="font-medium">合计</span> {{ selectionView.stock }} 件
+              </template>
+              <template v-else>
+                库存 {{ selectionView.stock }} 件
+                <v-chip
+                  v-if="selectionView.variantOutOfStock"
+                  class="ml-1"
+                  color="error"
+                  data-state="variant-out-of-stock"
+                  size="x-small"
+                  variant="flat"
+                >缺货</v-chip>
+              </template>
+            </p>
+          </div>
+
+          <!-- 规格选择：两维对称联动，已选项再点一次取消（#19）。 -->
+          <div
+            class="flex flex-col gap-3"
+            data-state="selection"
+            :data-complete="selectionView.complete ? 'true' : 'false'"
+            :data-option-1="selection[0] ?? ''"
+            :data-option-2="selection[1] ?? ''"
+            :data-variant-sku="selectionView.variant?.sku ?? ''"
+            :data-variant-out-of-stock="selectionView.variantOutOfStock ? 'true' : 'false'"
+            :data-unselectable="selectionView.unselectable ? 'true' : 'false'"
+          >
+            <p class="text-sm font-semibold">
+              规格选择
+              <span class="font-normal text-muted">（已选项再点一次可取消）</span>
+            </p>
+
+            <div
+              v-for="dimension in dimensionViews"
+              :key="dimension.name"
+              :aria-labelledby="`product-dimension-${dimension.index}`"
+              class="flex flex-col gap-2"
+              data-state="dimension"
+              :data-dimension-index="dimension.index"
+              :data-dimension-name="dimension.name"
+              role="group"
+            >
+              <p :id="`product-dimension-${dimension.index}`" class="text-sm text-muted">{{ dimension.name }}</p>
+              <div class="flex flex-wrap gap-2">
+                <v-btn
+                  v-for="option in dimension.options"
+                  :key="option.value"
+                  :aria-pressed="option.selected"
+                  :color="option.selected ? 'primary' : undefined"
+                  :data-available="option.available ? 'true' : 'false'"
+                  :data-option-value="option.value"
+                  :data-selected="option.selected ? 'true' : 'false'"
+                  :disabled="!option.available"
+                  :title="option.selected ? '再次点击可取消选择' : option.available ? undefined : '与已选条件没有对应的规格组合，不可售'"
+                  :variant="option.selected ? 'flat' : 'outlined'"
+                  class="normal-case"
+                  data-state="option"
+                  size="small"
+                  @click="selectOption(dimension.index, option.value)"
+                >
+                  {{ option.value }}
+                </v-btn>
+              </div>
+              <p
+                v-if="dimension.hasUnavailable"
+                class="text-xs text-muted"
+                data-state="unavailable-note"
+              >
+                灰显选项与已选条件没有对应的规格组合，不可售。
+              </p>
+            </div>
+
+            <!-- #21：数量与加购在此接入；本票只放禁用占位，不做数量与加购行为。 -->
+            <v-btn
+              block
+              color="primary"
+              data-state="add-to-cart-placeholder"
+              disabled
+              size="large"
+              variant="flat"
+            >
+              加入购物车
+            </v-btn>
+            <p class="sr-only">数量与加购将在后续版本接入。</p>
+          </div>
         </div>
       </div>
 
-      <!-- #20：图文详情与相关推荐在两栏下方、整宽；本票只留结构位。 -->
+      <!-- 图文详情：按契约顺序渲染文字段落与图片（#20）。 -->
       <section
         aria-labelledby="product-detail-heading"
-        class="flex flex-col gap-3"
-        data-state="detail-slot"
+        class="flex flex-col gap-4"
+        data-state="detail-content"
       >
         <h2 id="product-detail-heading" class="text-xl font-semibold">图文详情</h2>
-        <p class="text-sm text-muted">图文详情内容将在后续版本接入。</p>
+        <div class="flex flex-col gap-4" data-state="detail-blocks">
+          <template v-for="(block, index) in product.detail" :key="index">
+            <p
+              v-if="block.type === 'text'"
+              class="break-words text-base leading-relaxed"
+            >
+              {{ block.text }}
+            </p>
+            <!-- 图片按内容区宽度显示、保留契约替代文本；`v-img` 默认懒加载（不传 eager）。 -->
+            <v-img
+              v-else-if="!failedDetailImages.has(block.path)"
+              :alt="block.alt"
+              :src="block.path"
+              class="block w-full overflow-hidden rounded-xl border border-outline"
+              @error="markDetailImageFailed(block.path)"
+            />
+            <!-- 加载失败：中性占位，保留契约替代文本；详情图不提供放大（#20）。 -->
+            <div
+              v-else
+              class="flex min-h-40 w-full items-center justify-center rounded-xl border border-dashed border-outline bg-surface px-4 py-10 text-center text-sm text-muted"
+              role="img"
+              :aria-label="`${block.alt}（图片暂时无法显示）`"
+            >
+              图片暂时无法显示
+            </div>
+          </template>
+        </div>
       </section>
 
+      <!--
+        相关推荐（#20）：契约最多 4 件，按实际结果渲染；空数组隐藏整块。
+        失败只影响本区块：保留标题与「重试」，只重发推荐请求，主内容照常可用。
+      -->
       <section
+        v-if="showRecommendations"
         aria-labelledby="product-recommendations-heading"
-        class="flex flex-col gap-3"
-        data-state="recommendations-slot"
+        class="flex flex-col gap-4"
+        data-state="recommendations"
       >
         <h2 id="product-recommendations-heading" class="text-xl font-semibold">相关推荐</h2>
-        <p class="text-sm text-muted">相关推荐将在后续版本接入。</p>
+
+        <v-alert
+          v-if="recommendationsState === 'error'"
+          class="rounded-xl"
+          data-state="recommendations-error"
+          type="error"
+          variant="tonal"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <span>{{ recommendationsErrorMessage }}</span>
+            <v-btn size="small" variant="text" @click="retryRecommendations">重试</v-btn>
+          </div>
+        </v-alert>
+
+        <!--
+          列数沿用 Vuetify 同源断点：`sm` = 600px → 2 列，`lg` = 1145px → 4 列，
+          即 600–1144px 两列、≥1145px 四列、<600px 单列（票 #20）。
+          复用列表页卡片组件与既有属性类型（命中高亮为可选，推荐结果不传）。
+        -->
+        <div
+          v-else
+          class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          data-state="recommendations-grid"
+        >
+          <ProductCard
+            v-for="item in recommendationItems"
+            :key="item.slug"
+            :item="item"
+          />
+        </div>
       </section>
 
       <!--
@@ -236,9 +408,34 @@
   import { useRoute } from 'vue-router'
   import { ApiError, getProduct } from '@/api/client'
   import type { components } from '@/api/schema'
+  import ProductCard from '@/components/ProductCard.vue'
+  import { useProductRecommendations } from '@/composables/useProductRecommendations'
+  import {
+    createEmptySelection,
+    resolveOptionAvailability,
+    resolveProductSelection,
+    toggleSelection,
+  } from '@/utils/product-selection'
+  import type { ProductSelection } from '@/utils/product-selection'
+  import { formatPriceCents, shouldShowOriginalPrice } from '@/utils/price'
 
   type ProductDetail = components['schemas']['ProductDetailResponse']
   type DetailState = 'loading' | 'ready' | 'not-found' | 'error'
+
+  /** 一个规格选项在页面上需要的派生字段（选中态 + 可售性）。 */
+  interface DimensionOptionView {
+    readonly value: string
+    readonly selected: boolean
+    readonly available: boolean
+  }
+
+  /** 一个规格维度的渲染模型；`index` 与选择态元组的位置一致。 */
+  interface DimensionView {
+    readonly name: string
+    readonly index: 0 | 1
+    readonly hasUnavailable: boolean
+    readonly options: readonly DimensionOptionView[]
+  }
 
   const route = useRoute()
 
@@ -306,6 +503,93 @@
   }
 
   /**
+   * 相关推荐是独立区块（#20）：自带请求序号、错误与重试，失败不写主内容状态。
+   * 解构成顶层绑定，模板依赖自动解包即可直接读状态与条目。
+   */
+  const {
+    items: recommendationItems,
+    state: recommendationsState,
+    errorMessage: recommendationsErrorMessage,
+    load: loadRecommendations,
+    retry: retryRecommendations,
+  } = useProductRecommendations()
+
+  /** 图文详情里加载失败的图片路径：只把失败的那几张换成中性占位。 */
+  const failedDetailImages = ref<Set<string>>(new Set())
+
+  function markDetailImageFailed(path: string): void {
+    failedDetailImages.value.add(path)
+  }
+
+  /** 就绪且非空、或本区块失败时才出现；空数组与加载中都不占版面（#20）。 */
+  const showRecommendations = computed(
+    () => recommendationsState.value === 'error' ||
+      (recommendationsState.value === 'ready' && recommendationItems.value.length > 0),
+  )
+
+  /**
+   * 选择态（#19）：两个规格维度各自选中的选项值，`null` 表示未选。
+   * 只存在页面内存，不写入地址栏；刷新或切换商品由 `resetSelection` 清回未选。
+   */
+  const selection = ref<ProductSelection>(createEmptySelection())
+
+  /**
+   * 由选择态推出的展示口径；`variant` 就是 #21 加购要用的规格组合对象。
+   * 商品未就绪时为 `null`，模板与 `product` 一起收窄。
+   */
+  const selectionView = computed(() =>
+    product.value === null ? null : resolveProductSelection(product.value, selection.value),
+  )
+
+  /** 划线原价沿用 #8 的判定：只有原价严格高于当前展示价才显示。 */
+  const showOriginalPrice = computed(() => {
+    const view = selectionView.value
+    return view === null ? false : shouldShowOriginalPrice(view.priceCents, view.originalPriceCents)
+  })
+
+  /**
+   * 两个规格维度的选项可售性与选中态，两维对称：
+   * 某维的选项是否存在有效组合，取决于另一个维度当前已选的值。
+   * 契约固定两个维度，超出的维度不参与选择态。
+   */
+  const dimensionViews = computed<readonly DimensionView[]>(() => {
+    const current = product.value
+    if (current === null) {
+      return []
+    }
+
+    return current.dimensions.slice(0, 2).map((dimension, index) => {
+      const dimensionIndex = index as 0 | 1
+      const availability = resolveOptionAvailability(
+        dimensionIndex,
+        dimension.options,
+        selection.value,
+        current.variants,
+      )
+      return {
+        name: dimension.name,
+        index: dimensionIndex,
+        hasUnavailable: availability.hasUnavailable,
+        options: dimension.options.map((value) => ({
+          value,
+          selected: selection.value[dimensionIndex] === value,
+          available: availability.byOption[value],
+        })),
+      }
+    })
+  })
+
+  /** 点选规格选项：同一维再点已选值即取消，另一维保持不变。 */
+  function selectOption(dimensionIndex: 0 | 1, optionValue: string): void {
+    selection.value = toggleSelection(selection.value, dimensionIndex, optionValue)
+  }
+
+  /** 父级切换商品时的最小重置接口：清回未选规格（#17 的 watch 逻辑调用，供 #21 续用）。 */
+  function resetSelection(): void {
+    selection.value = createEmptySelection()
+  }
+
+  /**
    * 只允许最新一次请求落盘：切商品或重试时旧响应不得写回。
    * `inFlight` 负责真实断流，`latestRequestId` 兜住「abort 前已 resolve」的竞态。
    */
@@ -354,6 +638,8 @@
       }
       product.value = data
       state.value = 'ready'
+      // 主内容就绪后再拉推荐：404 商品不必白打一次推荐请求，失败也只落在本区块。
+      void loadRecommendations(targetSlug)
     } catch (error) {
       // 被 abort 或已过期的响应只是过客：不写错误态、不改当前页面。
       if (requestId !== latestRequestId || controller.signal.aborted) {
@@ -390,7 +676,9 @@
     activeIndex.value = 0
     zoomOpen.value = false
     slideButtons.clear()
+    failedDetailImages.value.clear()
     state.value = 'loading'
+    resetSelection()
     window.scrollTo({ top: 0, behavior: 'auto' })
     void load()
   }
