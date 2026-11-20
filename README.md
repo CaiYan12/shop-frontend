@@ -50,7 +50,11 @@ Phase 0（项目初始化与对齐）已完成仓库初始化与文档骨架；P
 - 命中高亮（只把成对 `<em>` 渲染为强调）；
 - 购物车 Pinia store 雏形。
 
-商品详情页仍为占位页，随 Phase 6 实现。
+Phase 6（详情页与购物车）已实现：
+
+- 商品详情页：轮播与放大查看（5 图 / 键盘可切）、两维规格选择与组合价/库存联动、数量输入校验、加购提示、图文详情、相关推荐；
+- 右侧固定购物车：摘要（件数与总金额）、抽屉面板（名称 / 单价 / 数量 / 小计 / 删除）、小屏底部抽屉；
+- `localStorage` 单键存档（`shop-frontend:cart:v1`）与启动恢复复核：脏数据丢弃、按商品去重核对、请求失败不改存档、写入失败保留上次值。
 
 ## 目录
 
@@ -59,7 +63,7 @@ src/
 ├── api/          # openapi-fetch 客户端、生成的契约类型、购买结果映射
 ├── components/   # 页头、搜索、筛选、卡片与高亮组件（需显式 import）
 ├── composables/  # 商品联想状态机、主题偏好
-├── pages/        # 列表页 index.vue、详情页占位 product.vue
+├── pages/        # 列表页 index.vue、详情页 product.vue
 ├── plugins/      # Vuetify / Pinia / Router 注册
 ├── router/       # 路由表
 ├── stores/       # Pinia store（购物车雏形与骨架期 demo）
@@ -73,7 +77,7 @@ src/
 - `components/`：6 个文件——`AppHeader`、`HighlightedText`、`ProductCard`、`ProductFilterBar`、`ProductFilterControls`、`ProductSearchBar`；不使用自动全局注册，必须显式 import。
 - `composables/`：`useProductSuggestions`（250 ms 防抖 + AbortController 的联想状态机）、`useThemePreference`（页头主题切换的唯一入口）。
 - `utils/`：`list-query`（URL ↔ 列表查询参数的唯一编解码）、`price`（分 → 人民币展示）、`highlight`（命中片段分段解析）。
-- `stores/`：`cart`（购物车内存态雏形，Phase 6 接持久化、Phase 8 补单测）。
+- `stores/`：`cart`（购物车内存态与 `localStorage` 存档恢复；纯逻辑运行时检查见 `session-tmp/phase6-cart-check.test.ts`）。
 - `theme/`：`THEME_PALETTE` 是颜色唯一来源，`vuetify-theme` 只做命名转换。
 
 仓库内还有 `tools/openapi/`（契约类型生成器）、`scripts/`（dev / stop / git hooks）、`docs/`（worktree 与 agent 约定）、`public/images/products/`（商品素材）。
