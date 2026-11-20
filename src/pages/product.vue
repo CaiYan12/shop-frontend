@@ -62,20 +62,72 @@
     <div v-else-if="product" class="flex flex-col gap-10" data-state="detail-ready">
       <div class="grid grid-cols-1 gap-8 min-[840px]:grid-cols-2">
         <!--
-          轮播占位容器（#18）：这里只放静态封面图占位，后续换成完整轮播主图 +
-          缩略图 + 放大查看，容器本身保持负责左栏位置。
+          轮播主图（#18）：不自动播放，箭头 / 缩略图 / 左右方向键共用同一个索引，
+          序号与缩略图高亮都从 `activeIndex` 派生；主图本身是可聚焦按钮。
         -->
-        <div
-          class="overflow-hidden rounded-xl border border-outline bg-surface"
-          data-state="gallery-slot"
-        >
-          <v-img
-            :alt="product.coverImage.alt"
-            :src="product.coverImage.path"
-            aspect-ratio="1"
-            class="block"
-            cover
-          />
+        <div class="flex flex-col gap-3" data-state="gallery-slot">
+          <div class="overflow-hidden rounded-xl border border-outline bg-surface">
+            <v-carousel
+              v-model="activeIndex"
+              :cycle="false"
+              :show-arrows="true"
+              height="auto"
+              hide-delimiters
+            >
+              <v-window-item
+                v-for="(image, index) in galleryImages"
+                :key="image.path"
+                :value="index"
+              >
+                <button
+                  :ref="(el) => setSlideButtonRef(index, el)"
+                  :aria-label="`放大查看第 ${index + 1} 张图片：${image.alt}`"
+                  class="block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  type="button"
+                  @click="zoomOpen = true"
+                  @keydown="onGalleryKeydown"
+                >
+                  <v-img
+                    :alt="image.alt"
+                    :src="image.path"
+                    aspect-ratio="1"
+                    class="block"
+                    cover
+                  />
+                </button>
+              </v-window-item>
+            </v-carousel>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div aria-label="缩略图" class="flex flex-wrap gap-2" role="group">
+              <button
+                v-for="(image, index) in galleryImages"
+                :key="image.path"
+                :aria-current="index === activeIndex ? 'true' : undefined"
+                :aria-label="`第 ${index + 1} 张图片：${image.alt}`"
+                class="appearance-none overflow-hidden rounded-md border-2 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                :class="index === activeIndex ? 'border-primary' : 'border-outline hover:border-primary'"
+                type="button"
+                @click="activeIndex = index"
+              >
+                <v-img
+                  :alt="image.alt"
+                  :src="image.path"
+                  aspect-ratio="1"
+                  class="block w-14"
+                  cover
+                />
+              </button>
+            </div>
+            <p
+              aria-live="polite"
+              class="text-sm text-muted tabular-nums"
+              data-gallery-counter
+            >
+              {{ activeIndex + 1 }} / {{ galleryImages.length }}
+            </p>
+          </div>
         </div>
 
         <div class="flex flex-col gap-4" data-state="info-column">
@@ -114,12 +166,73 @@
         <h2 id="product-recommendations-heading" class="text-xl font-semibold">相关推荐</h2>
         <p class="text-sm text-muted">相关推荐将在后续版本接入。</p>
       </section>
+
+      <!--
+        放大查看（#18）：只作用于轮播主图。Esc / 关闭按钮 / 点击遮罩都能退出，
+        对话框内可继续切图；关闭动画结束后焦点回到当前主图。
+      -->
+      <v-dialog
+        v-model="zoomOpen"
+        max-width="90vw"
+        width="min(90vw, 1100px)"
+        :content-props="{ tabindex: '-1', onKeydown: onGalleryKeydown }"
+        @after-leave="restoreGalleryFocus"
+      >
+        <div
+          v-if="currentImage"
+          class="flex flex-col gap-3 rounded-xl border border-outline bg-surface p-3"
+          data-state="gallery-zoom"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <p id="gallery-zoom-heading" class="text-sm font-semibold">放大查看</p>
+            <div class="flex items-center gap-1">
+              <p aria-live="polite" class="text-sm text-muted tabular-nums">
+                {{ activeIndex + 1 }} / {{ galleryImages.length }}
+              </p>
+              <v-btn
+                aria-label="关闭放大查看"
+                icon="$close"
+                size="small"
+                variant="text"
+                @click="zoomOpen = false"
+              />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <v-btn
+              aria-label="上一张图片"
+              class="shrink-0"
+              icon="$prev"
+              size="small"
+              variant="tonal"
+              @click="stepGallery(-1)"
+            />
+            <!-- VImg 不用 cover 时即 object-fit: contain，等比完整显示、不裁切。 -->
+            <v-img
+              :alt="currentImage.alt"
+              :height="ZOOM_IMAGE_HEIGHT"
+              :src="currentImage.path"
+              class="min-w-0 flex-1 rounded-lg bg-background"
+            />
+            <v-btn
+              aria-label="下一张图片"
+              class="shrink-0"
+              icon="$next"
+              size="small"
+              variant="tonal"
+              @click="stepGallery(1)"
+            />
+          </div>
+        </div>
+      </v-dialog>
     </div>
   </v-container>
 </template>
 
 <script lang="ts" setup>
   import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+  import type { ComponentPublicInstance } from 'vue'
   import { useRoute } from 'vue-router'
   import { ApiError, getProduct } from '@/api/client'
   import type { components } from '@/api/schema'
@@ -138,6 +251,59 @@
   const product = ref<ProductDetail | null>(null)
   const state = ref<DetailState>('loading')
   const errorMessage = ref('')
+
+  /** 图集（#18）：契约保证每件 4–5 张；空数组时退回封面，不让轮播空白。 */
+  const galleryImages = computed<ProductDetail['images']>(() => {
+    const detail = product.value
+    if (detail === null) return []
+    return detail.images.length > 0 ? detail.images : [detail.coverImage]
+  })
+
+  /** 当前索引是唯一真源：箭头、缩略图、方向键都只改它，序号与高亮从它派生。 */
+  const activeIndex = ref(0)
+  const currentImage = computed<ProductDetail['images'][number] | undefined>(
+    () => galleryImages.value[activeIndex.value],
+  )
+
+  /** 放大查看开关；切换商品时随页面状态一起复位。 */
+  const zoomOpen = ref(false)
+
+  /** 放大图高度：不超过 90vh，并给标题行与切图控件留出空间。 */
+  const ZOOM_IMAGE_HEIGHT = 'max(12rem, calc(90vh - 6rem))'
+
+  /** 每个轮播项的主图按钮；关闭放大查看后把焦点还给「当前」这张的主图。 */
+  const slideButtons = new Map<number, HTMLButtonElement>()
+
+  function setSlideButtonRef(index: number, el: Element | ComponentPublicInstance | null): void {
+    if (el instanceof HTMLButtonElement) {
+      slideButtons.set(index, el)
+    } else {
+      slideButtons.delete(index)
+    }
+  }
+
+  /** 一次调用只前进一步，序号、缩略图高亮与主图因此永远同步。 */
+  function stepGallery(delta: number): void {
+    const total = galleryImages.value.length
+    if (total < 2) return
+    activeIndex.value = (activeIndex.value + delta + total) % total
+  }
+
+  /**
+   * 轮播主图与放大查看共用：只消费左右方向键并阻止默认滚动，
+   * Enter / Space / Esc 仍交回按钮与对话框的原生行为（#18）。
+   */
+  function onGalleryKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    stepGallery(event.key === 'ArrowLeft' ? -1 : 1)
+  }
+
+  /** 关闭动画结束后再移焦点，避免被对话框的焦点陷阱抢回。 */
+  function restoreGalleryFocus(): void {
+    slideButtons.get(activeIndex.value)?.focus({ preventScroll: true })
+  }
 
   /**
    * 只允许最新一次请求落盘：切商品或重试时旧响应不得写回。
@@ -220,6 +386,10 @@
     }
     product.value = null
     errorMessage.value = ''
+    // 换商品时轮播索引与放大查看都回到初始状态，不把上一件的图片带过来（#18）。
+    activeIndex.value = 0
+    zoomOpen.value = false
+    slideButtons.clear()
     state.value = 'loading'
     window.scrollTo({ top: 0, behavior: 'auto' })
     void load()
