@@ -84,8 +84,8 @@
                   :aria-label="`放大查看第 ${index + 1} 张图片：${image.alt}`"
                   class="block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   type="button"
-                  @click="zoomOpen = true"
-                  @keydown="onGalleryKeydown"
+                  @click="openZoom(index)"
+                  @keydown="onSlideKeydown"
                 >
                   <v-img
                     :alt="image.alt"
@@ -143,6 +143,8 @@
             <span>评分 {{ product.rating.toFixed(1) }}</span>
             <span>销量 {{ product.sales }}</span>
           </p>
+          <!-- C31：评分 / 销量为契约演示字段，在本页信息列明确标注，不逐卡重复。 -->
+          <p class="text-xs text-muted" data-state="demo-metrics-note">评分与销量为演示数据</p>
 
           <!-- 价格 / 原价 / 库存随选择态联动；选择态只存在内存，不写地址栏（#19）。 -->
           <div
@@ -362,18 +364,19 @@
 
       <!--
         放大查看（#18）：只作用于轮播主图。Esc / 关闭按钮 / 点击遮罩都能退出，
-        对话框内可继续切图；关闭动画结束后焦点回到当前主图。
+        对话框内用独立的 `zoomIndex` 切图，不回写主图索引；关闭动画结束后
+        焦点回到「打开浮层的那个主图按钮」。
       -->
       <v-dialog
         v-model="zoomOpen"
         aria-labelledby="gallery-zoom-heading"
         max-width="90vw"
         width="min(90vw, 1100px)"
-        :content-props="{ tabindex: '-1', onKeydown: onGalleryKeydown }"
+        :content-props="{ tabindex: '-1', onKeydown: onZoomKeydown }"
         @after-leave="restoreGalleryFocus"
       >
         <div
-          v-if="currentImage"
+          v-if="zoomImage"
           class="flex flex-col gap-3 rounded-xl border border-outline bg-surface p-3"
           data-state="gallery-zoom"
         >
@@ -381,7 +384,7 @@
             <p id="gallery-zoom-heading" class="text-sm font-semibold">放大查看</p>
             <div class="flex items-center gap-1">
               <p aria-live="polite" class="text-sm text-muted tabular-nums">
-                {{ activeIndex + 1 }} / {{ galleryImages.length }}
+                {{ zoomIndex + 1 }} / {{ galleryImages.length }}
               </p>
               <v-btn
                 aria-label="关闭放大查看"
@@ -400,13 +403,13 @@
               icon="$prev"
               size="small"
               variant="tonal"
-              @click="stepGallery(-1)"
+              @click="stepZoom(-1)"
             />
             <!-- VImg 不用 cover 时即 object-fit: contain，等比完整显示、不裁切。 -->
             <v-img
-              :alt="currentImage.alt"
+              :alt="zoomImage.alt"
               :height="ZOOM_IMAGE_HEIGHT"
-              :src="currentImage.path"
+              :src="zoomImage.path"
               class="min-w-0 flex-1 rounded-lg bg-background"
             />
             <v-btn
@@ -415,7 +418,7 @@
               icon="$next"
               size="small"
               variant="tonal"
-              @click="stepGallery(1)"
+              @click="stepZoom(1)"
             />
           </div>
         </div>
@@ -443,7 +446,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+  import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
   import type { ComponentPublicInstance } from 'vue'
   import { useRoute } from 'vue-router'
   import { ApiError, getProduct } from '@/api/client'
@@ -501,19 +504,24 @@
     return detail.images.length > 0 ? detail.images : [detail.coverImage]
   })
 
-  /** 当前索引是唯一真源：箭头、缩略图、方向键都只改它，序号与高亮从它派生。 */
+  /** 主图索引是唯一真源：缩略图、箭头、主图方向键都只改它，序号与高亮从它派生。 */
   const activeIndex = ref(0)
-  const currentImage = computed<ProductDetail['images'][number] | undefined>(
-    () => galleryImages.value[activeIndex.value],
-  )
 
-  /** 放大查看开关；切换商品时随页面状态一起复位。 */
+  /**
+   * 放大查看独立状态（#18）：`zoomIndex` 只服务浮层，浮层内切图不回写主图；
+   * `zoomOpenerIndex` 记住打开浮层的那张，关闭后焦点回到它的主图按钮。
+   */
   const zoomOpen = ref(false)
+  const zoomIndex = ref(0)
+  const zoomOpenerIndex = ref<number | null>(null)
+  const zoomImage = computed<ProductDetail['images'][number] | undefined>(
+    () => galleryImages.value[zoomIndex.value],
+  )
 
   /** 放大图高度：不超过 90vh，并给标题行与切图控件留出空间。 */
   const ZOOM_IMAGE_HEIGHT = 'max(12rem, calc(90vh - 6rem))'
 
-  /** 每个轮播项的主图按钮；关闭放大查看后把焦点还给「当前」这张的主图。 */
+  /** 每个轮播项的主图按钮；关闭放大查看后把焦点还给「打开浮层」的那张。 */
   const slideButtons = new Map<number, HTMLButtonElement>()
 
   function setSlideButtonRef(index: number, el: Element | ComponentPublicInstance | null): void {
@@ -524,27 +532,73 @@
     }
   }
 
-  /** 一次调用只前进一步，序号、缩略图高亮与主图因此永远同步。 */
-  function stepGallery(delta: number): void {
+  /** 浮层内切图只改独立索引，主图与「打开者」保持不动（#18 复审）。 */
+  function stepZoom(delta: number): void {
     const total = galleryImages.value.length
     if (total < 2) return
-    activeIndex.value = (activeIndex.value + delta + total) % total
+    zoomIndex.value = (zoomIndex.value + delta + total) % total
+  }
+
+  /** 打开浮层：记录当前这张与它的按钮，浮层从这张开始看。 */
+  function openZoom(index: number): void {
+    zoomIndex.value = index
+    zoomOpenerIndex.value = index
+    zoomOpen.value = true
   }
 
   /**
-   * 轮播主图与放大查看共用：只消费左右方向键并阻止默认滚动，
-   * Enter / Space / Esc 仍交回按钮与对话框的原生行为（#18）。
+   * 主图切页后把焦点搬到新幻灯片按钮：旧按钮随轮播项隐藏，
+   * 不主动搬运焦点会落回 `body`，之后方向键就失效了（#18 复审）。
    */
-  function onGalleryKeydown(event: KeyboardEvent): void {
+  function focusSlideButton(index: number): void {
+    void nextTick(() => {
+      const button = slideButtons.get(index)
+      if (button === undefined) return
+      button.focus({ preventScroll: true })
+      // 切页过渡中按钮可能还不可聚焦；下一帧再补一次，成功后不再重试。
+      if (document.activeElement !== button) {
+        requestAnimationFrame(() => {
+          if (document.activeElement !== button) {
+            button.focus({ preventScroll: true })
+          }
+        })
+      }
+    })
+  }
+
+  /**
+   * 主图按钮：只消费左右方向键并阻止页面滚动（#18），
+   * 切换后在新幻灯片按钮上恢复焦点，连续按左右仍然有效。
+   */
+  function onSlideKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented) return
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
-    stepGallery(event.key === 'ArrowLeft' ? -1 : 1)
+    const total = galleryImages.value.length
+    if (total < 2) return
+    const delta = event.key === 'ArrowLeft' ? -1 : 1
+    const next = (activeIndex.value + delta + total) % total
+    activeIndex.value = next
+    focusSlideButton(next)
   }
 
-  /** 关闭动画结束后再移焦点，避免被对话框的焦点陷阱抢回。 */
+  /**
+   * 放大浮层内：左右键只改 `zoomIndex`，同样阻止页面滚动；
+   * Enter / Space / Esc 仍交回按钮与对话框的原生行为。
+   */
+  function onZoomKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    stepZoom(event.key === 'ArrowLeft' ? -1 : 1)
+  }
+
+  /** 关闭动画结束后把焦点还给「打开浮层的那张主图」；该按钮仍可见。 */
   function restoreGalleryFocus(): void {
-    slideButtons.get(activeIndex.value)?.focus({ preventScroll: true })
+    const opener = zoomOpenerIndex.value
+    zoomOpenerIndex.value = null
+    if (opener === null) return
+    slideButtons.get(opener)?.focus({ preventScroll: true })
   }
 
   /**
@@ -808,6 +862,8 @@
     // 换商品时轮播索引与放大查看都回到初始状态，不把上一件的图片带过来（#18）。
     activeIndex.value = 0
     zoomOpen.value = false
+    zoomIndex.value = 0
+    zoomOpenerIndex.value = null
     slideButtons.clear()
     failedDetailImages.value.clear()
     state.value = 'loading'
