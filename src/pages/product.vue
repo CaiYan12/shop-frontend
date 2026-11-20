@@ -513,6 +513,12 @@
    * `zoomOpenerIndex` 记住打开浮层的那张，关闭后焦点回到它的主图按钮。
    */
   const zoomOpen = ref(false)
+  /**
+   * 退场中（#18 复审三）：`zoomOpen` 在退场一开始就变 false，但浮层仍在屏幕上，
+   * 焦点也还可能在背景主图按钮上。这段时间方向键仍归浮层管，主图不能切页；
+   * 由 `restoreGalleryFocus`（`after-leave`）清掉。
+   */
+  const zoomClosing = ref(false)
   const zoomIndex = ref(0)
   const zoomOpenerIndex = ref<number | null>(null)
   const zoomImage = computed<ProductDetail['images'][number] | undefined>(
@@ -544,8 +550,15 @@
   function openZoom(index: number): void {
     zoomIndex.value = index
     zoomOpenerIndex.value = index
+    // 连着打开时不能带着上一次的退场标记（复审三）。
+    zoomClosing.value = false
     zoomOpen.value = true
   }
+
+  /** 退场开始即置位，直到 `after-leave` 才解除方向键守卫（#18 复审三）。 */
+  watch(zoomOpen, (open, wasOpen) => {
+    if (!open && wasOpen) zoomClosing.value = true
+  })
 
   /**
    * 主图切页后把焦点搬到新幻灯片按钮：旧按钮随轮播项隐藏，
@@ -573,8 +586,9 @@
    */
   function onSlideKeydown(event: KeyboardEvent): void {
     // 放大浮层打开 / 进场 / 退场期间，焦点可能还留在背景主图按钮上；
-    // 此时方向键归浮层（onZoomKeydown）管，背景轮播不响应（复审二）。
-    if (zoomOpen.value) return
+    // 此时方向键归浮层（onZoomKeydown）管，背景轮播不响应。
+    // 退场时 `zoomOpen` 已是 false，必须靠 `zoomClosing` 守住最后一段（复审三）。
+    if (zoomOpen.value || zoomClosing.value) return
     if (event.defaultPrevented) return
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
@@ -610,6 +624,8 @@
    * 扫一张可见幻灯片 —— 绝不把焦点留在 body（复审二）。
    */
   function restoreGalleryFocus(): void {
+    // 退场结束：方向键守卫先解除，再恢复焦点，二者都发生在同一帧（复审三）。
+    zoomClosing.value = false
     const opener = zoomOpenerIndex.value
     zoomOpenerIndex.value = null
     const target =

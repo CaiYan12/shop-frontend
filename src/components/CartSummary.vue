@@ -20,30 +20,43 @@
       </button>
     </div>
 
-    <!-- 恢复结果汇总与存储降级：两者分开表达（#23）；条目超过 3 条时可展开完整清单。 -->
+    <!--
+      恢复结果汇总与存储降级：两者分开表达（#23）；条目超过 3 条时可展开完整清单。
+      明细区有高度上限并独立滚动（复审三）：390×844 下 40 条失效 SKU 的完整清单
+      接近千像素，不封顶会把面板顶部与「收起」一起顶出视口；上限只封顶，短提示
+      仍按内容收缩，不留空白。按钮在滚动区之外，明细再长也始终可见可点。
+    -->
     <div
       v-if="cart.recoveryNotice !== ''"
-      class="flex max-w-[260px] flex-col items-end gap-1 rounded-lg border border-outline bg-surface px-2.5 py-1 text-xs text-muted"
+      class="flex max-h-[min(60vh,420px)] w-[min(320px,calc(100vw_-_2rem))] flex-col items-stretch gap-1 rounded-lg border border-outline bg-surface px-2.5 py-1 text-xs text-muted"
       data-state="cart-recovery-notice"
     >
-      <p
-        v-show="!showsFullNotice"
-        class="text-right"
-        data-state="cart-recovery-notice-short"
+      <div
+        :tabindex="showsFullNotice ? 0 : -1"
+        aria-label="恢复明细"
+        class="min-h-0 overflow-y-auto break-words"
+        data-state="cart-recovery-notice-body"
+        role="region"
       >
-        {{ cart.recoveryNotice }}
-      </p>
-      <p
-        v-show="showsFullNotice"
-        :id="NOTICE_FULL_ID"
-        class="text-left"
-        data-state="cart-recovery-notice-full"
-      >
-        {{ cart.recoveryNoticeFull }}
-      </p>
+        <p
+          v-show="!showsFullNotice"
+          class="text-right"
+          data-state="cart-recovery-notice-short"
+        >
+          {{ cart.recoveryNotice }}
+        </p>
+        <p
+          v-show="showsFullNotice"
+          :id="NOTICE_FULL_ID"
+          class="text-left"
+          data-state="cart-recovery-notice-full"
+        >
+          {{ cart.recoveryNoticeFull }}
+        </p>
+      </div>
       <button
         v-if="hasFullNotice"
-        class="self-end text-xs text-primary underline underline-offset-2"
+        class="shrink-0 self-end text-xs text-primary underline underline-offset-2"
         :aria-controls="NOTICE_FULL_ID"
         :aria-expanded="showsFullNotice ? 'true' : 'false'"
         :data-expanded="showsFullNotice ? 'true' : 'false'"
