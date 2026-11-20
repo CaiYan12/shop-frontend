@@ -101,7 +101,7 @@ function failInvalidItem(): CartFailure {
 }
 
 function failOutOfStock(): CartFailure {
-  return { ok: false, reason: 'OUT_OF_STOCK', message: '该商品已售罄，无法加入购物车。' }
+  return { ok: false, reason: 'OUT_OF_STOCK', message: '该规格已缺货。' }
 }
 
 function failQuantityLimitExceeded(limit: number): CartFailure {
