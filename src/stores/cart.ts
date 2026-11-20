@@ -16,9 +16,17 @@
  * - 数量归零不通过 `updateQuantity`，调用方应改用 `remove`（与 `updateQuantity` 只收正整数一致）。
  */
 import { defineStore } from 'pinia'
+import type { CartVerificationResult, RecoveryChanges } from '../utils/cart-recovery'
+import { saveCartArchive } from '../utils/cart-storage.ts'
 
 /** 单个商品的数量静态上限；与后端 D68 的 `quantity` 1..999 一致。 */
 export const CART_QUANTITY_LIMIT = 999
+
+/** 恢复复核状态；`checking` 期间购物车只读（#23）。 */
+export type CartRecoveryStatus = 'idle' | 'checking' | 'verified' | 'unverified'
+
+/** 本地存储可用性；`unavailable` 时退回内存购物车且不再尝试写盘。 */
+export type CartStorageStatus = 'unknown' | 'available' | 'unavailable'
 
 /** 购物车条目；同一 `sku` 只保留一行。 */
 export interface CartItem {
@@ -60,6 +68,14 @@ export type CartActionResult = CartSuccess | CartFailure
 /** 购物车 state；`items` 按首次加入的顺序保存。 */
 export interface CartState {
   items: CartItem[]
+  /** 恢复复核状态；启动时由 #23 的编排推进。 */
+  recovery: CartRecoveryStatus
+  /** 本地存储可用性；读写被拒时置为 `unavailable`。 */
+  storage: CartStorageStatus
+  /** 复核发现条目变更时的一条汇总提示；无变更时为空串。 */
+  recoveryNotice: string
+  /** 启动恢复只允许触发一次（App 重复挂载 / HMR 时不重复读盘）。 */
+  recoveryStarted: boolean
 }
 
 /** 正整数判定：`0`、负数、小数、`NaN`、`Infinity` 全部拒绝（D68）。 */
@@ -118,11 +134,29 @@ function failNotInCart(): CartFailure {
 }
 
 /**
- * 内存态购物车。每个 Pinia 实例一份，刷新页面不会恢复（本期明确不持久化）。
+ * 复核汇总文案：移除与调整分别计数，只发一条，不逐行弹提示（#23）。
+ */
+function formatRecoveryNotice(changes: RecoveryChanges): string {
+  const parts: string[] = []
+  if (changes.removed > 0) {
+    parts.push(`已移除 ${changes.removed} 件失效商品`)
+  }
+  if (changes.adjusted > 0) {
+    parts.push(`${changes.adjusted} 件商品数量已按库存上限调整`)
+  }
+  return parts.length === 0 ? '' : `${parts.join('，')}。`
+}
+
+/**
+ * 内存态购物车。每个 Pinia 实例一份；#23 起由启动恢复从存档回填。
  */
 export const useCartStore = defineStore('cart', {
   state: (): CartState => ({
     items: [],
+    recovery: 'idle',
+    storage: 'unknown',
+    recoveryNotice: '',
+    recoveryStarted: false,
   }),
   getters: {
     /** 全部条目的数量之和。 */
@@ -130,6 +164,11 @@ export const useCartStore = defineStore('cart', {
     /** 全部条目的金额之和，单位为「分」（D43）。 */
     totalAmountCents: (state): number =>
       state.items.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0),
+    /**
+     * 核对期间购物车只读：加购、改量、删除与清空都由入口按此禁用（#23）。
+     * 面板（#22）复用同一个标志，不另造状态。
+     */
+    readonly: (state): boolean => state.recovery === 'checking',
   },
   actions: {
     /**
@@ -177,6 +216,7 @@ export const useCartStore = defineStore('cart', {
         })
       }
 
+      this.persist()
       return { ok: true }
     },
 
@@ -191,6 +231,7 @@ export const useCartStore = defineStore('cart', {
       }
 
       this.items.splice(index, 1)
+      this.persist()
       return { ok: true }
     },
 
@@ -220,13 +261,83 @@ export const useCartStore = defineStore('cart', {
       }
 
       this.items[index] = { ...existing, quantity }
+      this.persist()
       return { ok: true }
     },
 
     /** 清空购物车；空车调用也返回成功。 */
     clear (): CartActionResult {
       this.items = []
+      this.persist()
       return { ok: true }
+    },
+
+    /**
+     * 写盘一次（#23）。核对期间不写；存储不可用时静默跳过，保持内存态。
+     * 写入失败时保留上一次成功保存的存档，并把存储标记为不可用，只提示一次。
+     */
+    persist (): void {
+      if (this.storage !== 'available') {
+        return
+      }
+      if (!saveCartArchive(this.items)) {
+        this.storage = 'unavailable'
+      }
+    },
+
+    /** 标记本地存储是否可用；读取被拒时由启动编排调用。 */
+    setStorageAvailable (available: boolean): void {
+      this.storage = available ? 'available' : 'unavailable'
+    },
+
+    /**
+     * 用存档快照回填（不写盘）：启动时先渲染摘要，再进入核对。
+     */
+    hydrate (items: readonly CartItem[]): void {
+      this.items = items.map(item => ({ ...item }))
+    },
+
+    /**
+     * 开始启动恢复；整个应用生命周期只允许一次。
+     * @returns 是否真正开始（已开始过返回 `false`，调用方不得再发请求）。
+     */
+    beginRecovery (): boolean {
+      if (this.recoveryStarted) {
+        return false
+      }
+      this.recoveryStarted = true
+      this.recovery = 'checking'
+      return true
+    },
+
+    /**
+     * 从「未核对」重试：沿用内存里的原存档，不重新读盘。
+     * @returns 是否允许重试（非「未核对」状态返回 `false`）。
+     */
+    beginRetry (): boolean {
+      if (this.recovery !== 'unverified') {
+        return false
+      }
+      this.recovery = 'checking'
+      return true
+    },
+
+    /**
+     * 一次性提交复核结果（#23）。
+     *
+     * `verified` 用复核后的条目整体替换并写盘一次；`unverified` 原样保留存档、
+     * 不写盘，只把状态标为「未核对」，由摘要提供重试。
+     */
+    completeRecovery (result: CartVerificationResult): void {
+      if (result.status === 'unverified') {
+        this.recovery = 'unverified'
+        return
+      }
+
+      this.items = result.items.map(item => ({ ...item }))
+      this.recovery = 'verified'
+      this.recoveryNotice = formatRecoveryNotice(result.changes)
+      this.persist()
     },
   },
 })
