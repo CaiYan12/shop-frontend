@@ -6,12 +6,12 @@
  * 调用方按商品去重后并发请求详情，把「查到的商品快照或 `null`（不存在）」交给
  * 这里逐行核对。规则（spec「持久化与恢复复核」）：
  * - 商品不存在、规格组合不存在、组合缺货 → 移除该行；
- * - 数量超过最新「数量上限」→ 调整到上限，并计入「调整」数；
+ * - 数量超过最新「数量上限」→ 调整到上限，并记入「调整」列表；
  * - 单价保留存档快照，不提示价差；库存快照刷新为最新值，供后续改量使用；
  * - 任一次请求失败由调用方在这一步之前拦下；这里只处理已拿到的快照。
  */
 import type { components } from '@/api/schema'
-import { CART_QUANTITY_LIMIT, type CartItem } from '../stores/cart.ts'
+import { resolveQuantityLimit, type CartItem } from '../stores/cart.ts'
 
 /** 详情接口的返回快照；只依赖 `variants`，其余字段由调用方的契约保证。 */
 export type ProductDetailSnapshot = components['schemas']['ProductDetailResponse']
@@ -19,24 +19,30 @@ export type ProductDetailSnapshot = components['schemas']['ProductDetailResponse
 /** 按 `slug` 查详情；返回 `null` 表示商品不存在（404）。 */
 export type ProductLookup = (slug: string) => Promise<ProductDetailSnapshot | null>
 
-/** 汇总提示里的两个计数，分别对应「移除」与「调整」。 */
-export interface RecoveryChanges {
-  readonly removed: number
-  readonly adjusted: number
+/** 被移除的条目：带名称与标识，汇总提示据此指出具体行。 */
+export interface RecoveryRemovedItem {
+  readonly name: string
+  readonly slug: string
+  readonly sku: string
 }
 
-/** 复核结果：成功给出一次性提交的条目与变更计数；失败表示整份存档原样保留。 */
+/** 被收敛数量的条目：记录调整前后数量。 */
+export interface RecoveryAdjustedItem {
+  readonly name: string
+  readonly from: number
+  readonly to: number
+}
+
+/** 汇总提示的变更列表，分别对应「移除」与「调整」。 */
+export interface RecoveryChanges {
+  readonly removed: readonly RecoveryRemovedItem[]
+  readonly adjusted: readonly RecoveryAdjustedItem[]
+}
+
+/** 复核结果：成功给出一次性提交的条目与变更列表；失败表示整份存档原样保留。 */
 export type CartVerificationResult =
   | { readonly status: 'verified', readonly items: CartItem[], readonly changes: RecoveryChanges }
   | { readonly status: 'unverified' }
-
-/** 组合库存转数量上限：`min(999, 组合库存)`，脏数据按 0（缺货）兜住。 */
-function resolveQuantityLimit(stock: number): number {
-  if (!Number.isFinite(stock) || stock <= 0) {
-    return 0
-  }
-  return Math.min(CART_QUANTITY_LIMIT, Math.floor(stock))
-}
 
 /**
  * 复核购物车条目。
@@ -49,32 +55,32 @@ export function applyRecoverySnapshots(
   products: ReadonlyMap<string, ProductDetailSnapshot | null>,
 ): CartVerificationResult {
   const nextItems: CartItem[] = []
-  let removed = 0
-  let adjusted = 0
+  const removed: RecoveryRemovedItem[] = []
+  const adjusted: RecoveryAdjustedItem[] = []
 
   for (const item of items) {
     const product = products.get(item.slug) ?? null
     if (product === null) {
-      removed += 1
+      removed.push({ name: item.name, slug: item.slug, sku: item.sku })
       continue
     }
 
     const variant = product.variants.find(candidate => candidate.sku === item.sku)
     if (variant === undefined) {
-      removed += 1
+      removed.push({ name: item.name, slug: item.slug, sku: item.sku })
       continue
     }
 
     const stock = Number.isFinite(variant.stock) ? Math.max(0, Math.floor(variant.stock)) : 0
     const limit = resolveQuantityLimit(stock)
     if (limit === 0) {
-      removed += 1
+      removed.push({ name: item.name, slug: item.slug, sku: item.sku })
       continue
     }
 
     const quantity = Math.min(item.quantity, limit)
     if (quantity !== item.quantity) {
-      adjusted += 1
+      adjusted.push({ name: item.name, from: item.quantity, to: quantity })
     }
 
     // 单价保留快照；库存刷新为最新值，数量按最新上限收敛。

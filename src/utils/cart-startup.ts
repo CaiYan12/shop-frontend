@@ -45,7 +45,7 @@ async function lookupProduct(slug: string): Promise<ProductDetailSnapshot | null
 async function runVerification(cart: CartStore): Promise<void> {
   const snapshot: CartItem[] = cart.items.map(item => ({ ...item }))
   if (snapshot.length === 0) {
-    cart.completeRecovery({ status: 'verified', items: [], changes: { removed: 0, adjusted: 0 } })
+    cart.completeRecovery({ status: 'verified', items: [], changes: { removed: [], adjusted: [] } })
     return
   }
 

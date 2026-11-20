@@ -48,6 +48,7 @@ export type CartFailureReason =
   | 'OUT_OF_STOCK'
   | 'QUANTITY_LIMIT_EXCEEDED'
   | 'NOT_IN_CART'
+  | 'READONLY'
 
 /** 成功结果；动作成功后调用方直接读 store 的最新状态。 */
 export interface CartSuccess {
@@ -61,6 +62,7 @@ export type CartFailure =
   | { readonly ok: false, readonly reason: 'OUT_OF_STOCK', readonly message: string }
   | { readonly ok: false, readonly reason: 'QUANTITY_LIMIT_EXCEEDED', readonly message: string, readonly limit: number }
   | { readonly ok: false, readonly reason: 'NOT_IN_CART', readonly message: string }
+  | { readonly ok: false, readonly reason: 'READONLY', readonly message: string }
 
 /** 四个动作统一的返回联合：成功无载荷，失败必带原因。 */
 export type CartActionResult = CartSuccess | CartFailure
@@ -92,12 +94,12 @@ function isNonNegativeInteger(value: number): boolean {
 }
 
 /**
- * 单行上限 = `min(999, stock)`。
+ * 单行上限 = `min(999, stock)`（加购 / 改量与启动复核共用同一口径）。
  *
  * 库存按契约是非负整数（D44）；这里用 `Math.floor` 兜住脏数据，`NaN` / 负数 /
  * 非有限值统一按 0 处理（即缺货），避免比较结果被 `NaN` 静默吞掉。
  */
-function resolveQuantityLimit(stock: number): number {
+export function resolveQuantityLimit(stock: number): number {
   if (!Number.isFinite(stock) || stock <= 0) {
     return 0
   }
@@ -133,18 +135,44 @@ function failNotInCart(): CartFailure {
   return { ok: false, reason: 'NOT_IN_CART', message: '购物车中没有该商品。' }
 }
 
+/** 核对期间所有写动作统一拒绝：入口虽然已禁用，store 层仍必须兜住。 */
+function failReadonly(): CartFailure {
+  return { ok: false, reason: 'READONLY', message: '购物车核对中，请稍候再操作。' }
+}
+
+/** 汇总提示最多列出的条目数；超过时折叠为「等 N 个」（N 为条目总数）。 */
+const RECOVERY_NOTICE_LIST_LIMIT = 3
+
+/** 把条目描述折成「A、B、C」或「A、B、C 等 5 个」。 */
+function formatRecoveryList(entries: readonly string[]): string {
+  if (entries.length <= RECOVERY_NOTICE_LIST_LIMIT) {
+    return entries.join('、')
+  }
+  return `${entries.slice(0, RECOVERY_NOTICE_LIST_LIMIT).join('、')} 等 ${entries.length} 个`
+}
+
 /**
  * 复核汇总文案：移除与调整分别计数，只发一条，不逐行弹提示（#23）。
+ *
+ * 行数用「个商品条目」计，不用「件」——术语里「件数」指数量之和（GLOSSARY）。
+ * 移除项列出名称，调整项同时给出前后数量，让买家能识别被改动的具体条目。
  */
 function formatRecoveryNotice(changes: RecoveryChanges): string {
   const parts: string[] = []
-  if (changes.removed > 0) {
-    parts.push(`已移除 ${changes.removed} 件失效商品`)
+  const { removed, adjusted } = changes
+
+  if (removed.length > 0) {
+    const names = formatRecoveryList(removed.map(change => change.name))
+    parts.push(`已移除 ${removed.length} 个商品条目：${names}`)
   }
-  if (changes.adjusted > 0) {
-    parts.push(`${changes.adjusted} 件商品数量已按库存上限调整`)
+  if (adjusted.length > 0) {
+    const details = formatRecoveryList(
+      adjusted.map(change => `${change.name}（${change.from} → ${change.to}）`),
+    )
+    parts.push(`${adjusted.length} 个商品条目数量已按库存上限调整：${details}`)
   }
-  return parts.length === 0 ? '' : `${parts.join('，')}。`
+
+  return parts.length === 0 ? '' : `${parts.join('；')}。`
 }
 
 /**
@@ -179,6 +207,9 @@ export const useCartStore = defineStore('cart', {
      * 价格与展示字段保持首次加入时的值，价格变化交给购买校验处理（D63）。
      */
     add (input: AddCartItemInput, quantity = 1): CartActionResult {
+      if (this.readonly) {
+        return failReadonly()
+      }
       if (!isPositiveInteger(quantity)) {
         return failInvalidQuantity()
       }
@@ -225,6 +256,9 @@ export const useCartStore = defineStore('cart', {
      * 数量归零也只能走这里（`updateQuantity` 只接受正整数）。
      */
     remove (sku: string): CartActionResult {
+      if (this.readonly) {
+        return failReadonly()
+      }
       const index = this.items.findIndex(item => item.sku === sku)
       if (index === -1) {
         return failNotInCart()
@@ -241,6 +275,9 @@ export const useCartStore = defineStore('cart', {
      * 上限按该行保存的 `stock` 计算；`sku` 不在购物车或数量非法时拒绝，状态不变。
      */
     updateQuantity (sku: string, quantity: number): CartActionResult {
+      if (this.readonly) {
+        return failReadonly()
+      }
       if (!isPositiveInteger(quantity)) {
         return failInvalidQuantity()
       }
@@ -267,6 +304,9 @@ export const useCartStore = defineStore('cart', {
 
     /** 清空购物车；空车调用也返回成功。 */
     clear (): CartActionResult {
+      if (this.readonly) {
+        return failReadonly()
+      }
       this.items = []
       this.persist()
       return { ok: true }
