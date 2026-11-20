@@ -74,8 +74,10 @@ export interface CartState {
   recovery: CartRecoveryStatus
   /** 本地存储可用性；读写被拒时置为 `unavailable`。 */
   storage: CartStorageStatus
-  /** 复核发现条目变更时的一条汇总提示；无变更时为空串。 */
+  /** 复核发现条目变更时的一条汇总提示（最多 3 条 + 「等 N 个」）；无变更时为空串。 */
   recoveryNotice: string
+  /** 与 `recoveryNotice` 同源的完整清单（不折叠）；超过 3 条时供「查看全部」展开。 */
+  recoveryNoticeFull: string
   /** 启动恢复只允许触发一次（App 重复挂载 / HMR 时不重复读盘）。 */
   recoveryStarted: boolean
 }
@@ -143,31 +145,45 @@ function failReadonly(): CartFailure {
 /** 汇总提示最多列出的条目数；超过时折叠为「等 N 个」（N 为条目总数）。 */
 const RECOVERY_NOTICE_LIST_LIMIT = 3
 
-/** 把条目描述折成「A、B、C」或「A、B、C 等 5 个」。 */
-function formatRecoveryList(entries: readonly string[]): string {
-  if (entries.length <= RECOVERY_NOTICE_LIST_LIMIT) {
+/** 把条目描述折成「A、B、C」或「A、B、C 等 5 个」；`folded` 为 false 时完整列出。 */
+function formatRecoveryList(entries: readonly string[], folded: boolean): string {
+  if (!folded || entries.length <= RECOVERY_NOTICE_LIST_LIMIT) {
     return entries.join('、')
   }
   return `${entries.slice(0, RECOVERY_NOTICE_LIST_LIMIT).join('、')} 等 ${entries.length} 个`
 }
 
 /**
+ * 单条展示文本：名称 + SKU。同名不同 SKU 是两条独立条目，只写名称无法区分。
+ */
+function describeRecoveryEntry(name: string, sku: string, detail = ''): string {
+  return detail === '' ? `${name}（SKU：${sku}）` : `${name}（SKU：${sku}，${detail}）`
+}
+
+/**
  * 复核汇总文案：移除与调整分别计数，只发一条，不逐行弹提示（#23）。
  *
  * 行数用「个商品条目」计，不用「件」——术语里「件数」指数量之和（GLOSSARY）。
- * 移除项列出名称，调整项同时给出前后数量，让买家能识别被改动的具体条目。
+ * 移除项列出名称与 SKU，调整项同时给出前后数量，让买家能识别被改动的具体条目。
+ * `folded` 为 true 时最多列 3 条，供短提示；false 时是完整清单，供展开查看。
  */
-function formatRecoveryNotice(changes: RecoveryChanges): string {
+function formatRecoveryNotice(changes: RecoveryChanges, folded: boolean): string {
   const parts: string[] = []
   const { removed, adjusted } = changes
 
   if (removed.length > 0) {
-    const names = formatRecoveryList(removed.map(change => change.name))
+    const names = formatRecoveryList(
+      removed.map(change => describeRecoveryEntry(change.name, change.sku)),
+      folded,
+    )
     parts.push(`已移除 ${removed.length} 个商品条目：${names}`)
   }
   if (adjusted.length > 0) {
     const details = formatRecoveryList(
-      adjusted.map(change => `${change.name}（${change.from} → ${change.to}）`),
+      adjusted.map(change =>
+        describeRecoveryEntry(change.name, change.sku, `${change.from} → ${change.to}`),
+      ),
+      folded,
     )
     parts.push(`${adjusted.length} 个商品条目数量已按库存上限调整：${details}`)
   }
@@ -184,6 +200,7 @@ export const useCartStore = defineStore('cart', {
     recovery: 'idle',
     storage: 'unknown',
     recoveryNotice: '',
+    recoveryNoticeFull: '',
     recoveryStarted: false,
   }),
   getters: {
@@ -315,8 +332,16 @@ export const useCartStore = defineStore('cart', {
     /**
      * 写盘一次（#23）。核对期间不写；存储不可用时静默跳过，保持内存态。
      * 写入失败时保留上一次成功保存的存档，并把存储标记为不可用，只提示一次。
+     *
+     * `readonly` 守卫是「检查期的统一写盘入口」：动作层已各自拒绝，但
+     * `beginRecovery()` + `hydrate()` 之后直接调用公开的 `persist()` 同样会走到
+     * 这里，必须在写盘前拦下，否则 `unverified` 时原存档字节会被改动。
+     * `completeRecovery` 先置 `verified` 再调 `persist()`，正常提交不受影响。
      */
     persist (): void {
+      if (this.readonly) {
+        return
+      }
       if (this.storage !== 'available') {
         return
       }
@@ -376,7 +401,8 @@ export const useCartStore = defineStore('cart', {
 
       this.items = result.items.map(item => ({ ...item }))
       this.recovery = 'verified'
-      this.recoveryNotice = formatRecoveryNotice(result.changes)
+      this.recoveryNotice = formatRecoveryNotice(result.changes, true)
+      this.recoveryNoticeFull = formatRecoveryNotice(result.changes, false)
       this.persist()
     },
   },

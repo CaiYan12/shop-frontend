@@ -147,6 +147,62 @@ test('存储：读取被拒退回内存，标记不可用且为空车', () => {
   assert.equal(state.setCalls, 0)
 })
 
+test('加购：正常加入一行，只写盘一次且存档含该行', () => {
+  const state = installFakeStorage(null)
+  const cart = useCartStore()
+  cart.setStorageAvailable(true)
+
+  const result = cart.add(
+    { sku: 's1', slug: 'p1', name: '商品一', unitPriceCents: 1000, stock: 5 },
+    2,
+  )
+
+  assert.deepEqual(result, { ok: true })
+  assert.deepEqual(cart.items, [item()])
+  assert.equal(state.setCalls, 1, '一次加购只写盘一次')
+  assert.deepEqual(parseCartArchive(state.value), [item()])
+  assert.equal(state.value?.includes('"sku":"s1"'), true, '存档字节包含该行')
+})
+
+test('加购：同 SKU 合并为一行，数量累加且存档同步', () => {
+  const state = installFakeStorage(null)
+  const cart = useCartStore()
+  cart.setStorageAvailable(true)
+  const input = { sku: 's1', slug: 'p1', name: '商品一', unitPriceCents: 1000, stock: 5 }
+
+  assert.deepEqual(cart.add(input, 2), { ok: true })
+  assert.deepEqual(cart.add(input, 1), { ok: true })
+
+  assert.equal(cart.items.length, 1, '同 SKU 只保留一行')
+  assert.equal(cart.items[0]?.quantity, 3)
+  assert.equal(state.setCalls, 2, '每次成功加购各写盘一次')
+  assert.deepEqual(parseCartArchive(state.value), [item({ quantity: 3 })])
+})
+
+test('加购：累计超限拒绝，条目与存档字节不变且不写盘', () => {
+  const state = installFakeStorage(null)
+  const cart = useCartStore()
+  cart.setStorageAvailable(true)
+  const input = { sku: 's1', slug: 'p1', name: '商品一', unitPriceCents: 1000, stock: 3 }
+
+  assert.deepEqual(cart.add(input, 2), { ok: true })
+  const itemsBefore = cart.items.map(entry => ({ ...entry }))
+  const rawBefore = state.value
+  const callsBefore = state.setCalls
+
+  const result = cart.add(input, 2)
+
+  assert.equal(result.ok, false, '累计数量超上限必须拒绝')
+  if (result.ok) {
+    return
+  }
+  assert.equal(result.reason, 'QUANTITY_LIMIT_EXCEEDED')
+  assert.equal(result.reason === 'QUANTITY_LIMIT_EXCEEDED' ? result.limit : null, 3)
+  assert.deepEqual(cart.items, itemsBefore, '拒绝时条目不变')
+  assert.equal(state.value, rawBefore, '拒绝时存档字节不变')
+  assert.equal(state.setCalls, callsBefore, '拒绝时不再写盘')
+})
+
 test('复核：不存在 / 组合不存在 / 缺货移除，超上限收敛并保留快照价', async () => {
   const items = [
     item({ sku: 's1', slug: 'p1', name: '甲', quantity: 9, stock: 5, unitPriceCents: 1000 }),
@@ -205,7 +261,7 @@ test('复核：不存在 / 组合不存在 / 缺货移除，超上限收敛并�
   }
   assert.deepEqual(result.changes.removed.map(change => change.name), ['乙', '丙', '丁'])
   assert.deepEqual(result.changes.removed[0], { name: '乙', slug: 'p2', sku: 's2' })
-  assert.deepEqual(result.changes.adjusted, [{ name: '甲', from: 9, to: 1 }])
+  assert.deepEqual(result.changes.adjusted, [{ name: '甲', sku: 's1', from: 9, to: 1 }])
   assert.equal(result.items.length, 2)
   assert.deepEqual(
     result.items[0],
@@ -265,6 +321,29 @@ test('未核对：completeRecovery 不写盘，条目与存档原样保留', () 
   assert.equal(state.value, rawBefore, '失败时原存档必须原样保留')
   assert.equal(state.setCalls, 0, '未核对不得写盘')
   assert.equal(cart.recoveryNotice, '')
+  assert.equal(cart.recoveryNoticeFull, '')
+})
+
+test('只读：检查期直接调用 persist 被拦截，未核对后存档字节不变', () => {
+  const existing = item()
+  const state = installFakeStorage([existing])
+  const rawBefore = state.value
+  const cart = useCartStore()
+  cart.setStorageAvailable(true)
+  cart.hydrate([existing])
+  assert.equal(cart.beginRecovery(), true)
+  assert.equal(cart.readonly, true)
+
+  cart.persist()
+
+  assert.equal(state.setCalls, 0, '检查期 persist 不得写盘')
+  assert.equal(state.value, rawBefore, '检查期 persist 不得改动存档字节')
+
+  cart.completeRecovery({ status: 'unverified' })
+
+  assert.equal(cart.recovery, 'unverified')
+  assert.equal(state.setCalls, 0, '未核对不得补写盘')
+  assert.equal(state.value, rawBefore, '未核对后原存档字节不变')
 })
 
 test('未核对：lookup 抛错返回 unverified，且没有任何写入', async () => {
@@ -277,7 +356,7 @@ test('未核对：lookup 抛错返回 unverified，且没有任何写入', async
   assert.equal(loadCartArchive().items.length, 1)
 })
 
-test('提示：列出被移除条目与调整前后数量，不再用「件」计行数', () => {
+test('提示：列出被移除条目与调整前后数量，用 SKU 与名称一起标识', () => {
   const state = installFakeStorage([item()])
   const cart = useCartStore()
   cart.setStorageAvailable(true)
@@ -292,19 +371,39 @@ test('提示：列出被移除条目与调整前后数量，不再用「件」�
         { name: '商品二', slug: 'p2', sku: 's2' },
         { name: '商品三', slug: 'p3', sku: 's3' },
       ],
-      adjusted: [{ name: '商品一', from: 202, to: 200 }],
+      adjusted: [{ name: '商品一', sku: 's1', from: 202, to: 200 }],
     },
   })
 
   assert.equal(
     cart.recoveryNotice,
-    '已移除 2 个商品条目：商品二、商品三；1 个商品条目数量已按库存上限调整：商品一（202 → 200）。',
+    '已移除 2 个商品条目：商品二（SKU：s2）、商品三（SKU：s3）；1 个商品条目数量已按库存上限调整：商品一（SKU：s1，202 → 200）。',
   )
   assert.equal(cart.recoveryNotice.includes('件'), false)
+  assert.equal(cart.recoveryNoticeFull, cart.recoveryNotice, '不超过 3 条时短提示即完整清单')
   assert.equal(state.setCalls, 1, '核对成功后只写盘一次')
 })
 
-test('提示：超过 3 个条目折叠为「等 N 个」', () => {
+test('提示：同名不同 SKU 的一条被移除、一条被调整时分别出现且可区分', () => {
+  const cart = useCartStore()
+  cart.completeRecovery({
+    status: 'verified',
+    items: [],
+    changes: {
+      removed: [{ name: 'Earpods', slug: 'p1', sku: 'EARPODS-LTN-BOX' }],
+      adjusted: [{ name: 'Earpods', sku: 'EARPODS-BLK-BOX', from: 9, to: 3 }],
+    },
+  })
+
+  assert.equal(
+    cart.recoveryNotice,
+    '已移除 1 个商品条目：Earpods（SKU：EARPODS-LTN-BOX）；1 个商品条目数量已按库存上限调整：Earpods（SKU：EARPODS-BLK-BOX，9 → 3）。',
+  )
+  assert.equal(cart.recoveryNotice.includes('SKU：EARPODS-LTN-BOX'), true, '被移除的 SKU 可见')
+  assert.equal(cart.recoveryNotice.includes('SKU：EARPODS-BLK-BOX'), true, '被调整的 SKU 可见')
+})
+
+test('提示：超过 3 个条目时短提示折叠，完整清单保留第 4 条', () => {
   const cart = useCartStore()
   cart.completeRecovery({
     status: 'verified',
@@ -319,5 +418,13 @@ test('提示：超过 3 个条目折叠为「等 N 个」', () => {
       adjusted: [],
     },
   })
-  assert.equal(cart.recoveryNotice, '已移除 4 个商品条目：甲、乙、丙 等 4 个。')
+  assert.equal(
+    cart.recoveryNotice,
+    '已移除 4 个商品条目：甲（SKU：s1）、乙（SKU：s2）、丙（SKU：s3） 等 4 个。',
+  )
+  assert.equal(cart.recoveryNotice.includes('丁'), false, '短提示折叠第 4 条')
+  assert.equal(
+    cart.recoveryNoticeFull,
+    '已移除 4 个商品条目：甲（SKU：s1）、乙（SKU：s2）、丙（SKU：s3）、丁（SKU：s4）。',
+  )
 })

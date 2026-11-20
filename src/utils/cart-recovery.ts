@@ -26,9 +26,10 @@ export interface RecoveryRemovedItem {
   readonly sku: string
 }
 
-/** 被收敛数量的条目：记录调整前后数量。 */
+/** 被收敛数量的条目：带名称与标识，并记录调整前后数量。 */
 export interface RecoveryAdjustedItem {
   readonly name: string
+  readonly sku: string
   readonly from: number
   readonly to: number
 }
@@ -80,7 +81,7 @@ export function applyRecoverySnapshots(
 
     const quantity = Math.min(item.quantity, limit)
     if (quantity !== item.quantity) {
-      adjusted.push({ name: item.name, from: item.quantity, to: quantity })
+      adjusted.push({ name: item.name, sku: item.sku, from: item.quantity, to: quantity })
     }
 
     // 单价保留快照；库存刷新为最新值，数量按最新上限收敛。
