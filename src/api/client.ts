@@ -25,6 +25,8 @@ type ProductListQuery = NonNullable<operations['listProducts']['parameters']['qu
 type ProductListResponse = components['schemas']['ProductListResponse']
 type ProductSuggestionQuery = NonNullable<operations['listSuggestions']['parameters']['query']>
 type ProductSuggestionsResponse = components['schemas']['ProductSuggestionsResponse']
+type ProductDetailResponse = components['schemas']['ProductDetailResponse']
+type ProductRecommendationsResponse = components['schemas']['ProductRecommendationsResponse']
 type PurchaseCheckRequest = operations['checkPurchase']['requestBody']['content']['application/json']
 type PurchaseCheckResponse = components['schemas']['PurchaseCheckResponse']
 
@@ -50,7 +52,7 @@ export class ApiError extends Error {
   }
 }
 
-/** 两个端点共用的「解包 + 判空 + 抛错」，避免重复实现。 */
+/** 各端点共用的「解包 + 判空 + 抛错」，避免重复实现。 */
 function unwrap<T>(result: ApiResult<T>, label: string): T {
   if (result.data) {
     return result.data
@@ -91,6 +93,41 @@ export async function fetchProductSuggestions(
   return unwrap(
     await client.GET('/api/products/suggestions', { params: { query }, signal }),
     '商品联想',
+  )
+}
+
+/**
+ * GET /api/products/{slug} —— 商品详情（#17）。
+ *
+ * `signal` 交给 openapi-fetch 的 `RequestInit`：切换商品或离开页面时由调用方
+ * abort，配合页面里的请求序号保证旧响应不写回。
+ */
+export async function getProduct(
+  slug: string,
+  signal?: AbortSignal,
+): Promise<ProductDetailResponse> {
+  return unwrap(
+    await client.GET('/api/products/{slug}', { params: { path: { slug } }, signal }),
+    '商品详情',
+  )
+}
+
+/**
+ * GET /api/products/{slug}/recommendations —— 相关推荐（#17）。
+ *
+ * 契约上限为 4 件；返回空数组表示没有推荐。请求失败只影响推荐区，由调用方
+ * （#20）决定局部重试，不影响主内容。
+ */
+export async function listRecommendations(
+  slug: string,
+  signal?: AbortSignal,
+): Promise<ProductRecommendationsResponse> {
+  return unwrap(
+    await client.GET('/api/products/{slug}/recommendations', {
+      params: { path: { slug } },
+      signal,
+    }),
+    '相关推荐',
   )
 }
 
