@@ -61,21 +61,29 @@
           条目只展示名称与品牌；命中片段由 `HighlightedText` 解析（#12），
           `role="option"` 与 `aria-selected` 让 ↑↓ 高亮对辅助技术可见。
         -->
-        <ul
+        <!--
+          窄屏（<640px）搜索按钮在输入框下方，弹层要越过按钮再展开，否则会盖住提交入口；
+          `top-[calc(100%+3.5rem)]` = 12px 行间距 + 44px 大按钮高度，`sm:` 起恢复贴输入框。
+        -->
+        <v-list
           v-if="isOpen"
           :id="SUGGESTION_LISTBOX_ID"
           aria-label="商品联想"
-          class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-outline bg-surface py-1 shadow-lg"
+          class="absolute left-0 right-0 top-[calc(100%+3.5rem)] z-50 mt-1 overflow-hidden rounded-xl border border-outline bg-surface py-1 shadow-lg sm:top-full"
+          density="compact"
           role="listbox"
+          tabindex="-1"
         >
-          <li
+          <v-list-item
             v-for="(item, index) in items"
             :id="optionId(index)"
             :key="item.slug"
             :aria-selected="index === activeIndex ? 'true' : 'false'"
-            class="cursor-pointer px-4 py-2 text-sm"
             :class="index === activeIndex ? 'bg-primary/10 text-primary' : ''"
+            class="cursor-pointer text-sm"
+            density="compact"
             role="option"
+            tabindex="-1"
             @click="onSelectSuggestion(item)"
             @mousedown.prevent
           >
@@ -85,8 +93,8 @@
             <span class="ml-2 opacity-70">
               <HighlightedText :fallback="item.brand" :fragments="item.highlight?.brand" />
             </span>
-          </li>
-        </ul>
+          </v-list-item>
+        </v-list>
       </div>
 
       <v-btn

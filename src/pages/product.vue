@@ -82,7 +82,7 @@
                 <button
                   :ref="(el) => setSlideButtonRef(index, el)"
                   :aria-label="`放大查看第 ${index + 1} 张图片：${image.alt}`"
-                  class="block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  class="gallery-slide block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 focus-visible:outline-none"
                   :tabindex="index === activeIndex ? 0 : -1"
                   type="button"
                   @click="openZoom(index)"
@@ -370,15 +370,17 @@
       -->
       <v-dialog
         v-model="zoomOpen"
+        :fullscreen="zoomFullscreen"
         aria-labelledby="gallery-zoom-heading"
-        max-width="90vw"
-        width="min(90vw, 1100px)"
+        :max-width="zoomFullscreen ? undefined : '90vw'"
+        :width="zoomFullscreen ? undefined : 'min(90vw, 1100px)'"
         :content-props="{ tabindex: '-1', onKeydown: onZoomKeydown }"
         @after-leave="restoreGalleryFocus"
       >
         <div
           v-if="zoomImage"
-          class="flex flex-col gap-3 rounded-xl border border-outline bg-surface p-3"
+          class="flex flex-col gap-3 bg-surface p-3"
+          :class="zoomFullscreen ? 'h-full w-full' : 'rounded-xl border border-outline'"
           data-state="gallery-zoom"
         >
           <div class="flex items-center justify-between gap-3">
@@ -387,6 +389,16 @@
               <p aria-live="polite" class="text-sm text-muted tabular-nums">
                 {{ zoomIndex + 1 }} / {{ galleryImages.length }}
               </p>
+              <v-btn
+                aria-label="2× 放大"
+                :aria-pressed="zoomScale === 2"
+                class="text-xs font-semibold tabular-nums"
+                size="small"
+                variant="tonal"
+                @click="toggleZoom"
+              >
+                2×
+              </v-btn>
               <v-btn
                 aria-label="关闭放大查看"
                 icon="$close"
@@ -397,30 +409,44 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
-            <v-btn
-              aria-label="上一张图片"
-              class="shrink-0"
-              icon="$prev"
-              size="small"
-              variant="tonal"
-              @click="stepZoom(-1)"
-            />
-            <!-- VImg 不用 cover 时即 object-fit: contain，等比完整显示、不裁切。 -->
-            <v-img
-              :alt="zoomImage.alt"
-              :height="ZOOM_IMAGE_HEIGHT"
-              :src="zoomImage.path"
-              class="min-w-0 flex-1 rounded-lg bg-background"
-            />
-            <v-btn
-              aria-label="下一张图片"
-              class="shrink-0"
-              icon="$next"
-              size="small"
-              variant="tonal"
-              @click="stepZoom(1)"
-            />
+          <div class="flex min-h-0 flex-1 flex-col gap-2 min-[960px]:flex-row min-[960px]:items-center">
+            <div
+              ref="zoomViewport"
+              aria-label="图片查看区域"
+              class="order-1 min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain rounded-lg bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary min-[960px]:order-2"
+              data-zoom-viewport
+              role="group"
+              tabindex="0"
+              :style="{ height: zoomFullscreen ? undefined : ZOOM_IMAGE_HEIGHT }"
+            >
+              <img
+                :alt="zoomImage.alt"
+                :src="zoomImage.path"
+                class="block object-contain"
+                data-zoom-image
+                draggable="false"
+                :style="zoomImageStyle"
+              >
+            </div>
+
+            <div class="order-2 flex shrink-0 items-center justify-center gap-2 min-[960px]:contents">
+              <v-btn
+                aria-label="上一张图片"
+                class="shrink-0 min-[960px]:order-1"
+                icon="$prev"
+                size="small"
+                variant="tonal"
+                @click="stepZoom(-1)"
+              />
+              <v-btn
+                aria-label="下一张图片"
+                class="shrink-0 min-[960px]:order-3"
+                icon="$next"
+                size="small"
+                variant="tonal"
+                @click="stepZoom(1)"
+              />
+            </div>
           </div>
         </div>
       </v-dialog>
@@ -428,9 +454,15 @@
 
     <!--
       加购成功提示（#21）：含商品名与「查看购物车」；后者只打开面板状态，
-      面板本身由 #22 渲染。
+      面板本身由 #22 渲染。底部留出摘要 / 面板合计的高度，避免提示盖住购物车入口。
     -->
-    <v-snackbar v-model="snackbarOpen" :timeout="5000" data-state="add-success">
+    <v-snackbar
+      v-model="snackbarOpen"
+      :style="{ marginBottom: '7rem' }"
+      :timeout="5000"
+      data-state="add-success"
+      location="bottom center"
+    >
       <span>已加入购物车：{{ addedProductName }}</span>
       <template #actions>
         <v-btn
@@ -450,6 +482,7 @@
   import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
   import type { ComponentPublicInstance } from 'vue'
   import { useRoute } from 'vue-router'
+  import { useDisplay } from 'vuetify'
   import { ApiError, getProduct } from '@/api/client'
   import type { components } from '@/api/schema'
   import ProductCard from '@/components/ProductCard.vue'
@@ -488,6 +521,8 @@
 
   const route = useRoute()
 
+  const { width: viewportWidth, height: viewportHeight } = useDisplay()
+
   /** 详情路由参数是 `slug`（后端起主键）；数组形态取第一项。 */
   const slug = computed(() => {
     const value = route.params.slug
@@ -525,8 +560,71 @@
     () => galleryImages.value[zoomIndex.value],
   )
 
+  /**
+   * 2× 放大（本轮视觉验收）：1 = 适应容器，2 = 以适应态实际绘制尺寸为基准放大一倍。
+   * img 元素宽高取容器的 200%，`object-fit: contain` 后的绘制尺寸正好是适应态的 2 倍；
+   * 容器 `overflow: auto` 负责平移，不引入手势依赖。
+   */
+  const zoomScale = ref<1 | 2>(1)
+  const zoomViewport = ref<HTMLElement | null>(null)
+  /** 2× 的像素基准：1× 时容器的布局宽高（此时没有滚动条占位）。 */
+  const zoomBase = ref<{ w: number; h: number } | null>(null)
+
+  /**
+   * 2× 用显式像素而不是 `200%`：`200%` 按滚动条出现后的内容盒计算，会少一个滚动条宽度。
+   * 基准在 1×（无滚动条）时记录，两档都按它算 2 倍。
+   */
+  const zoomImageStyle = computed(() => {
+    const base = zoomBase.value
+    if (zoomScale.value === 2 && base !== null) {
+      return { width: `${base.w * 2}px`, height: `${base.h * 2}px` }
+    }
+    return { width: '100%', height: '100%' }
+  })
+
   /** 放大图高度：不超过 90vh，并给标题行与切图控件留出空间。 */
   const ZOOM_IMAGE_HEIGHT = 'max(12rem, calc(90vh - 6rem))'
+
+  /** 960px 只决定浮层布局：窄屏全屏并把切图按钮移到图片下方，桌面沿用原布局。 */
+  const zoomFullscreen = computed(() => viewportWidth.value < 960)
+
+  /** 放大后把视口滚到图片中心；`nextTick` 保证 200% 宽高已经落盘。 */
+  function centerZoomViewport(): void {
+    const viewport = zoomViewport.value
+    if (viewport === null) return
+    viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2
+    viewport.scrollTop = (viewport.scrollHeight - viewport.clientHeight) / 2
+  }
+
+  /** 复位到适应态并清滚动位置：切图、还原、关闭、换商品都走这里。 */
+  function resetZoomView(): void {
+    zoomScale.value = 1
+    zoomBase.value = null
+    const viewport = zoomViewport.value
+    if (viewport !== null) {
+      viewport.scrollLeft = 0
+      viewport.scrollTop = 0
+    }
+  }
+
+  function toggleZoom(): void {
+    if (zoomScale.value === 2) {
+      resetZoomView()
+      return
+    }
+    const viewport = zoomViewport.value
+    if (viewport === null) return
+    // 1× 没有滚动条，offsetWidth/Height 就是不受滚动条占位影响的布局基准。
+    zoomBase.value = { w: viewport.offsetWidth, h: viewport.offsetHeight }
+    zoomScale.value = 2
+    void nextTick(centerZoomViewport)
+  }
+
+  // 窗口尺寸变化后旧的像素基准作废，直接回适应态，避免 2× 按过期尺寸绘制。
+  // 宽度与高度都要监听：只改高度时图片的适应态尺寸同样会变（如 1365×900 → 1365×600）。
+  watch([viewportWidth, viewportHeight], () => {
+    if (zoomScale.value === 2) resetZoomView()
+  })
 
   /** 每个轮播项的主图按钮；关闭放大查看后把焦点还给「打开浮层」的那张。 */
   const slideButtons = new Map<number, HTMLButtonElement>()
@@ -539,19 +637,21 @@
     }
   }
 
-  /** 浮层内切图只改独立索引，主图与「打开者」保持不动（#18 复审）。 */
+  /** 浮层内切图只改独立索引，主图与「打开者」保持不动（#18 复审）；每次先复位 2×。 */
   function stepZoom(delta: number): void {
     const total = galleryImages.value.length
     if (total < 2) return
+    resetZoomView()
     zoomIndex.value = (zoomIndex.value + delta + total) % total
   }
 
-  /** 打开浮层：记录当前这张与它的按钮，浮层从这张开始看。 */
+  /** 打开浮层：记录当前这张与它的按钮，浮层从这张开始看，并按适应态复位。 */
   function openZoom(index: number): void {
     zoomIndex.value = index
     zoomOpenerIndex.value = index
     // 连着打开时不能带着上一次的退场标记（复审三）。
     zoomClosing.value = false
+    resetZoomView()
     zoomOpen.value = true
   }
 
@@ -585,6 +685,7 @@
     zoomClosing.value = false
     zoomIndex.value = 0
     zoomOpenerIndex.value = null
+    resetZoomView()
   }
 
   /**
@@ -628,11 +729,28 @@
   }
 
   /**
-   * 放大浮层内：左右键只改 `zoomIndex`，同样阻止页面滚动；
+   * 放大浮层内：2× 且焦点在图片滚动区时，方向键平移看细节；
+   * 其余情况左右键只改 `zoomIndex`，同样阻止页面滚动；
    * Enter / Space / Esc 仍交回按钮与对话框的原生行为。
    */
   function onZoomKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented) return
+    const viewport = zoomViewport.value
+    if (
+      zoomScale.value === 2 &&
+      viewport !== null &&
+      event.target instanceof Node &&
+      viewport.contains(event.target) &&
+      ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)
+    ) {
+      event.preventDefault()
+      const step = 48
+      if (event.key === 'ArrowLeft') viewport.scrollLeft -= step
+      if (event.key === 'ArrowRight') viewport.scrollLeft += step
+      if (event.key === 'ArrowUp') viewport.scrollTop -= step
+      if (event.key === 'ArrowDown') viewport.scrollTop += step
+      return
+    }
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
     stepZoom(event.key === 'ArrowLeft' ? -1 : 1)
@@ -651,8 +769,9 @@
    * 扫一张可见幻灯片 —— 绝不把焦点留在 body（复审二）。
    */
   function restoreGalleryFocus(): void {
-    // 退场结束：方向键守卫先解除，再恢复焦点，二者都发生在同一帧（复审三）。
+    // 退场结束：方向键守卫先解除、缩放复位，再恢复焦点，三者都发生在同一帧（复审三）。
     zoomClosing.value = false
+    resetZoomView()
     const opener = zoomOpenerIndex.value
     zoomOpenerIndex.value = null
     const target =
@@ -776,6 +895,12 @@
   /** 加购成功提示（含商品名与「查看购物车」）。 */
   const snackbarOpen = ref(false)
   const addedProductName = ref('')
+
+  // 任一入口（摘要点击 / 键盘 / 「查看购物车」）打开面板时都收起提示，
+  // 避免提示留在面板上方盖住底部合计；摘要入口不经过 openCartPanel，必须在这里兜住。
+  watch(() => cartPanel.panelOpen, (open) => {
+    if (open) snackbarOpen.value = false
+  })
 
   const quantityLimit = computed(() => {
     const view = selectionView.value
@@ -967,3 +1092,24 @@
     resetZoomState()
   })
 </script>
+
+<style scoped>
+  /*
+   * 主图焦点环（#16 视觉验收）：外描边会被轮播容器的 overflow 裁掉，
+   * 内描边又会被 v-img 盖住；改由伪元素覆盖在图片之上，形成可见的内描边。
+   * 只作用于主图按钮；缩略图与购物车等不裁切的位置保持原有焦点环。
+   */
+  .gallery-slide {
+    position: relative;
+  }
+
+  .gallery-slide:focus-visible::after {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    content: '';
+    border: 2px solid rgb(var(--v-theme-primary));
+    border-radius: calc(0.75rem - 1px);
+    pointer-events: none;
+  }
+</style>
