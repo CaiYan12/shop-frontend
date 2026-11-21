@@ -303,6 +303,19 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
   await sleep(250)
   await shot(page, ['p7-nav', '1365-light', 'expanded-search.png'], screenshots)
 
+  // 搜索框内 Esc：只收起联想，不收起岛，焦点留在输入框（独立复审 Spec 2）。
+  await page.key('Escape', 'Escape', 27)
+  await sleep(320)
+  const searchEsc = await page.eval(`(() => {
+    const nav = document.querySelector('[data-state="floating-nav"]')
+    const input = document.querySelector('input[role="combobox"]')
+    return {
+      listbox: Boolean(document.querySelector('[role="listbox"]')),
+      navPanel: Boolean(nav && nav.querySelector('[data-state="nav-panel"]')),
+      focusInInput: document.activeElement === input,
+    }
+  })()`)
+
   let cartPanelOpened = false
   try {
     await clickPoint(page, '#cart-summary-trigger')
@@ -434,11 +447,14 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
   mark(checks, failures, 'darkBackdrop', /blur\(/.test(dark.backdrop), '玻璃模糊未生效（computed backdropFilter 不是 blur）')
   mark(checks, failures, 'expandFocusesFirstItem', expanded.activeIsHome === true, '展开后焦点没有落在第一个导航项')
   mark(checks, failures, 'lightBackdrop', /blur\(/.test(expanded.backdrop ?? ''), '浅色下玻璃模糊未生效')
+  mark(checks, failures, 'searchEscClosesListbox', searchEsc.listbox === false, '搜索框 Esc 未收起联想')
+  mark(checks, failures, 'searchEscKeepsNavOpen', searchEsc.navPanel === true, '搜索框 Esc 把导航一起收起了')
+  mark(checks, failures, 'searchEscKeepsFocus', searchEsc.focusInInput === true, '搜索框 Esc 后焦点离开了输入框')
   mark(checks, failures, 'darkBackgroundOpaque', /rgba?\(/.test(dark.background) && !/, 0\)$/.test(dark.background), '暗色下岛背景完全透明')
 
   return {
     checks,
-    measurements: { collapsed, expanded, geometry, afterEsc, reversed, narrow, dark },
+    measurements: { collapsed, expanded, geometry, searchEsc, afterEsc, reversed, narrow, dark },
     screenshots,
     failureReason: failures.length > 0 ? failures.join('; ') : null,
   }
