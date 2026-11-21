@@ -1,6 +1,7 @@
 // Phase 7 验收用例（P7-NAV / P7-PURCHASE / P7-MOTION）。
 // 只服务 check-ui.mjs：零依赖 CDP，真实按钮操作 + 可控响应模拟购买三分支。
 import { sleep } from './lib.mjs'
+import { formatCents, resolvePurchaseFixture } from './fixtures.mjs'
 
 function mark (checks, failures, key, condition, reason) {
   checks[key] = Boolean(condition)
@@ -252,10 +253,8 @@ async function dialogSnapshot (page, mock) {
 }
 
 // ---------- P7-NAV：灵动岛职责、避让与可访问性 ----------
-export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
-  const screenshots = []
-  const checks = {}
-  const failures = []
+export async function caseP7Nav (page, baseUrl, { shot, reverse, state }) {
+  const { checks, failures, screenshots, measurements } = state
 
   await resetPage(page, baseUrl, { width: 1365, height: 900 })
   const collapsed = await page.eval(`(() => {
@@ -271,6 +270,7 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
       top: Math.round(rect.top),
     }
   })()`)
+  measurements.collapsed = collapsed
   await shot(page, ['p7-nav', '1365-light', 'collapsed.png'], screenshots)
 
   await clickPoint(page, '[data-state="nav-toggle"]')
@@ -314,6 +314,8 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
       inputCenterHitsInput: Boolean(hit && inputNode && (hit === inputNode || inputNode.contains(hit))),
     }
   })()`)
+  measurements.expanded = expanded
+  measurements.geometry = geometry
   await shot(page, ['p7-nav', '1365-light', 'expanded.png'], screenshots)
 
   await setNativeValue(page, 'input[role="combobox"]', 'sony')
@@ -338,6 +340,8 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
     }
   })()`)
 
+  measurements.searchEsc = searchEsc
+
   let cartPanelOpened = false
   try {
     await clickPoint(page, '#cart-summary-trigger')
@@ -361,6 +365,8 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
     }
   })()`)
 
+  measurements.afterEsc = afterEsc
+
   if (reverse === 'island') {
     await page.eval(`(() => {
       const style = document.createElement('style')
@@ -381,6 +387,8 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
     return { overlaps, summaryCenterHitsNav: Boolean(hit && hit.closest('[data-state="floating-nav"]')) }
   })()`)
 
+  measurements.reversed = reversed
+
   await resetPage(page, baseUrl, { width: 390, height: 844 })
   await clickPoint(page, '[data-state="nav-toggle"]')
   await page.waitFor(`document.querySelector('[data-state="nav-panel"]') !== null`, 6000)
@@ -398,6 +406,8 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
     }
   })()`)
   await shot(page, ['p7-nav', '390-light', 'expanded.png'], screenshots)
+
+  measurements.narrow = narrow
 
   await resetPage(page, baseUrl, { width: 1365, height: 900, dark: true })
   await clickPoint(page, '[data-state="nav-toggle"]')
@@ -422,6 +432,8 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
     }
   })()`)
   await shot(page, ['p7-nav', '1365-dark', 'expanded.png'], screenshots)
+
+  measurements.dark = dark
 
   const fallback = await page.eval(`(() => {
     const style = document.createElement('style')
@@ -474,41 +486,35 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
   mark(checks, failures, 'searchEscKeepsFocus', searchEsc.focusInInput === true, '搜索框 Esc 后焦点离开了输入框')
   mark(checks, failures, 'darkBackgroundOpaque', /rgba?\(/.test(dark.background) && !/, 0\)$/.test(dark.background), '暗色下岛背景完全透明')
 
-  return {
-    checks,
-    measurements: { collapsed, expanded, geometry, searchEsc, afterEsc, reversed, narrow, dark },
-    screenshots,
-    failureReason: failures.length > 0 ? failures.join('; ') : null,
-  }
 }
 
 // ---------- P7-PURCHASE：购买三分支、二次确认与前端拦截 ----------
-export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
-  const screenshots = []
-  const checks = {}
-  const failures = []
+export async function caseP7Purchase (page, baseUrl, { shot, reverse, state }) {
+  const { checks, failures, screenshots, measurements } = state
+  const fixture = await resolvePurchaseFixture(baseUrl)
 
   await resetPage(page, baseUrl, { width: 1365, height: 900 })
   await page.goto(baseUrl + '/product/apple-earpods')
   await page.waitFor(`document.querySelector('[data-state="purchase"]') !== null`, 20000)
   await sleep(400)
-  await clickText(page, '[data-state="option"]', 'Lightning')
+  await clickText(page, '[data-state="option"]', fixture.option1Value)
   await sleep(150)
-  await clickText(page, '[data-state="option"]', '盒装')
+  await clickText(page, '[data-state="option"]', fixture.option2Value)
   await sleep(200)
   await page.eval('(() => { const input = document.querySelector(\'[data-state="quantity-input"]\'); if (!input) return false; input.scrollIntoView({ block: "center" }); return true })()')
   await sleep(200)
-  await setNativeValue(page, '[data-state="quantity-input"]', '2')
+  await setNativeValue(page, '[data-state="quantity-input"]', String(fixture.quantity))
   await sleep(150)
   const archiveBefore = await page.eval('localStorage.getItem("shop-frontend:cart:v1")')
+  measurements.archiveBefore = archiveBefore
 
   let mock = await installPurchaseMock(page, {
     sequence: ['price-changed', 'price-changed', 'purchasable'],
-    prices: [14900, 13500, 13900],
+    prices: [fixture.pagePriceCents, fixture.newPriceCents, fixture.finalPriceCents],
     stock: 200,
     // `purchase-price`：保留真实变价流程，只把第二次请求记录的期望价改回旧价，
     // 用来验证 `secondRequestCarriesConfirmedPrice` 能抓到「重发旧价」这类缺陷。
-    ...(reverse === 'purchase-price' ? { rewriteExpectedFromIndex: 1, rewriteExpectedTo: 14900 } : {}),
+    ...(reverse === 'purchase-price' ? { rewriteExpectedFromIndex: 1, rewriteExpectedTo: fixture.pagePriceCents } : {}),
   })
 
   await page.eval(`(() => { const button = document.querySelector('[data-state="buy-now"]'); if (button) button.scrollIntoView({ block: 'center' }); return true })()`)
@@ -525,11 +531,13 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     await page.eval(`fetch('/api/purchase-check', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-p7-injected': '1' },
-      body: JSON.stringify({ slug: 'apple-earpods', sku: 'EARPODS-LTN-BOX', quantity: 2, expectedUnitPriceCents: 13500 }),
+      body: JSON.stringify({ slug: fixture.slug, sku: fixture.sku, quantity: fixture.quantity, expectedUnitPriceCents: fixture.newPriceCents }),
     }).then((response) => response.status)`)
     await sleep(250)
   }
   const first = await dialogSnapshot(page, mock)
+  measurements.first = first
+  measurements.firstRequestPrice = firstRequestPrice
   await shot(page, ['p7-purchase', '1365-light', 'price-changed-1.png'], screenshots)
   const dialogA11y = await page.eval(`(() => {
     const dialog = document.querySelector('[role="dialog"]')
@@ -566,6 +574,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     await waitForRequests(mock, beforeSecond + 1)
     await waitForSettledPhase(page)
     second = await dialogSnapshot(page, mock)
+    measurements.second = second
     await shot(page, ['p7-purchase', '1365-light', 'price-changed-2.png'], screenshots)
 
     if (second.confirmVisible) {
@@ -577,6 +586,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
         await page.waitFor(`document.querySelector('[data-phase="purchasable"]') !== null`, 8000)
         await sleep(200)
         third = await dialogSnapshot(page, mock)
+        measurements.third = third
         await shot(page, ['p7-purchase', '1365-light', 'purchasable.png'], screenshots)
         await clickPoint(page, '[data-state="purchase-done"]')
         await page.waitFor(`document.querySelector('[data-state="purchase-dialog"]') === null`, 8000)
@@ -595,9 +605,11 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     }
   }
 
+  measurements.flowDebug = flowDebug
+
   // 已确认新价 → 500 → 重试必须重发新价（复审 Spec 1 回归）。
   await closeDialogIfOpen(page)
-  mock = await installPurchaseMock(page, { sequence: ['price-changed', 'price-changed', 'purchasable'], prices: [14900, 13500, 13900], stock: 200, failAtIndices: [1] })
+  mock = await installPurchaseMock(page, { sequence: ['price-changed', 'price-changed', 'purchasable'], prices: [fixture.pagePriceCents, fixture.newPriceCents, fixture.finalPriceCents], stock: 200, failAtIndices: [1] })
   await clickPoint(page, '[data-state="buy-now"]')
   await waitForSettledPhase(page)
   await requireConfirmButton(page, mock)
@@ -616,6 +628,8 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   }
   await closeDialogIfOpen(page)
 
+  measurements.retry = retry
+
   // 校验中与关闭后迟到响应（D103 / D110）：响应延迟 900ms，先看禁用主操作，再关闭。
   await closeDialogIfOpen(page)
   const purchaseNet = { ids: new Set(), failed: [] }
@@ -630,7 +644,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
       purchaseNet.failed.push({ canceled: params.canceled === true, errorText: params.errorText ?? null })
     }
   })
-  mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [14900, 14900], stock: 200, delayMs: 900 })
+  mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [fixture.pagePriceCents, fixture.pagePriceCents], stock: 200, delayMs: 900 })
   const beforeChecking = mock.requests.length
   await clickPoint(page, '[data-state="buy-now"]')
   await page.waitFor(`document.querySelector('[data-phase="checking"]') !== null`, 5000)
@@ -652,7 +666,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   checking.canceled = purchaseNet.failed.some((item) => item.canceled === true)
 
   // 关闭后立即开始新一轮：上一轮的响应不得改写新对话框。
-  mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [13900, 13900], stock: 200, delayMs: 300 })
+  mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [fixture.finalPriceCents, fixture.finalPriceCents], stock: 200, delayMs: 300 })
   await clickPoint(page, '[data-state="buy-now"]')
   await page.waitFor(`document.querySelector('[data-phase="purchasable"]') !== null`, 8000)
   await sleep(700)
@@ -669,7 +683,9 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   const beforeInsufficient = mock.requests.length
   await page.eval(`(() => { const button = document.querySelector('[data-state="buy-now"]'); if (button) button.scrollIntoView({ block: 'center' }); return true })()`)
   await sleep(250)
-  mock = await installPurchaseMock(page, { sequence: ['insufficient'], prices: [14900], stock: 2 })
+  measurements.checking = checking
+
+  mock = await installPurchaseMock(page, { sequence: ['insufficient'], prices: [fixture.pagePriceCents], stock: 2 })
   await setNativeValue(page, '[data-state="quantity-input"]', '5')
   await sleep(150)
   const clickInfo = await page.eval(`(() => {
@@ -720,8 +736,14 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     }
   }
 
+  measurements.insufficientDebug = insufficientDebug
+
   let adjusted = null
   if (insufficient !== null) {
+    measurements.insufficient = insufficient
+    measurements.dialogA11y = dialogA11y
+    measurements.islandHit = islandHit
+
     await clickPoint(page, '[data-state="purchase-adjust-quantity"]')
     await page.waitFor(`document.querySelector('[data-state="purchase-dialog"]') === null`, 8000)
     await sleep(300)
@@ -735,6 +757,8 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     })()`)
   }
 
+  measurements.adjusted = adjusted
+
   const beforeOversize = mock.requests.length
   await page.eval(`(() => { const button = document.querySelector('[data-state="buy-now"]'); if (button) button.scrollIntoView({ block: 'center' }); return true })()`)
   await setNativeValue(page, '[data-state="quantity-input"]', '99999')
@@ -746,17 +770,18 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     dialogOpen: Boolean(document.querySelector('[data-state="purchase-dialog"]')),
   }))()`)
   oversize.requestCount = mock.requests.length
+  measurements.oversize = oversize
 
   await page.viewport(390, 844, true)
   await page.eval('(() => { localStorage.setItem("shop-frontend:theme", "dark"); return true })()')
   await page.goto(baseUrl + '/product/apple-earpods')
   await page.waitFor(`document.querySelector('[data-state="purchase"]') !== null`, 20000)
   await sleep(400)
-  await clickText(page, '[data-state="option"]', 'Lightning')
+  await clickText(page, '[data-state="option"]', fixture.option1Value)
   await sleep(120)
-  await clickText(page, '[data-state="option"]', '盒装')
+  await clickText(page, '[data-state="option"]', fixture.option2Value)
   await sleep(150)
-  mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [14900, 14900], stock: 200 })
+  mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [fixture.pagePriceCents, fixture.pagePriceCents], stock: 200 })
   await page.eval(`(() => { const button = document.querySelector('[data-state="buy-now"]'); if (button) button.scrollIntoView({ block: 'center' }); return true })()`)
   await sleep(250)
   let narrowDark = null
@@ -823,11 +848,11 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     await page.goto(baseUrl + '/product/apple-earpods')
     await page.waitFor(`document.querySelector('[data-state="purchase"]') !== null`, 20000)
     await sleep(350)
-    await clickText(page, '[data-state="option"]', 'Lightning')
+    await clickText(page, '[data-state="option"]', fixture.option1Value)
     await sleep(120)
-    await clickText(page, '[data-state="option"]', '盒装')
+    await clickText(page, '[data-state="option"]', fixture.option2Value)
     await sleep(150)
-    mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [14900, 14900], stock: 200 })
+    mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [fixture.pagePriceCents, fixture.pagePriceCents], stock: 200 })
     await clickPoint(page, '[data-state="buy-now"]')
     await page.waitFor(`document.querySelector('[data-phase="purchasable"]') !== null`, 8000)
     await sleep(200)
@@ -840,11 +865,11 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     await page.goto(baseUrl + '/product/apple-earpods')
     await page.waitFor(`document.querySelector('[data-state="purchase"]') !== null`, 20000)
     await sleep(350)
-    await clickText(page, '[data-state="option"]', 'Lightning')
+    await clickText(page, '[data-state="option"]', fixture.option1Value)
     await sleep(120)
-    await clickText(page, '[data-state="option"]', '盒装')
+    await clickText(page, '[data-state="option"]', fixture.option2Value)
     await sleep(150)
-    mock = await installPurchaseMock(page, { sequence: ['price-changed'], prices: [14900, 13500], stock: 200 })
+    mock = await installPurchaseMock(page, { sequence: ['price-changed'], prices: [fixture.pagePriceCents, fixture.newPriceCents], stock: 200 })
     await clickPoint(page, '[data-state="buy-now"]')
     await page.waitFor(`document.querySelector('[data-phase="price-changed"]') !== null`, 8000)
     await sleep(200)
@@ -852,16 +877,21 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     await shot(page, ['p7-purchase', '1365-dark', 'price-changed.png'], screenshots)
   } catch {}
 
+  measurements.narrowDark = narrowDark
+  measurements.extra390Light = extra390Light
+  measurements.extra1365Dark = extra1365Dark
+
   const archiveAfter = await page.eval('localStorage.getItem("shop-frontend:cart:v1")')
+  measurements.archiveAfter = archiveAfter
 
   mark(checks, failures, 'firstResponseIsPriceChanged', first.phase === 'price-changed', '首次校验未停在价格变化分支')
-  mark(checks, failures, 'firstRequestCarriesPagePrice', firstRequestPrice === 14900, '首次请求的 expectedUnitPriceCents 不是页面展示价')
-  mark(checks, failures, 'firstShowsOldAndNewPrice', first.oldPrice === '¥149.00' && first.newPrice === '¥135.00', '价格变化未并列展示原价与当前价')
+  mark(checks, failures, 'firstRequestCarriesPagePrice', firstRequestPrice === fixture.pagePriceCents, '首次请求的 expectedUnitPriceCents 不是页面展示价')
+  mark(checks, failures, 'firstShowsOldAndNewPrice', first.oldPrice === formatCents(fixture.pagePriceCents) && first.newPrice === formatCents(fixture.newPriceCents), '价格变化未并列展示原价与当前价')
   mark(checks, failures, 'confirmationRequired', first.requestCount === 1 && first.confirmVisible === true, '价格变化后未经确认就发出了第二次请求')
-  mark(checks, failures, 'secondRequestCarriesConfirmedPrice', second !== null && second.lastExpected === 13500, '确认后未按用户确认的新价重新校验')
-  mark(checks, failures, 'secondStillPriceChanged', second !== null && second.phase === 'price-changed' && second.newPrice === '¥139.00', '连续变价未再次停在确认分支')
-  mark(checks, failures, 'thirdRequestCarriesNewPrice', third !== null && third.lastExpected === 13900, '第三次请求未携带刚确认的价格')
-  mark(checks, failures, 'successSubtotal', third !== null && third.subtotal === '¥278.00', '成功态小计不是 ¥278.00')
+  mark(checks, failures, 'secondRequestCarriesConfirmedPrice', second !== null && second.lastExpected === fixture.newPriceCents, '确认后未按用户确认的新价重新校验')
+  mark(checks, failures, 'secondStillPriceChanged', second !== null && second.phase === 'price-changed' && second.newPrice === formatCents(fixture.finalPriceCents), '连续变价未再次停在确认分支')
+  mark(checks, failures, 'thirdRequestCarriesNewPrice', third !== null && third.lastExpected === fixture.finalPriceCents, '第三次请求未携带刚确认的价格')
+  mark(checks, failures, 'successSubtotal', third !== null && third.subtotal === formatCents(fixture.finalPriceCents * fixture.quantity), '成功态小计不是 ¥278.00')
   mark(checks, failures, 'successNotice', Boolean(third && third.notice && third.notice.includes('不会生成订单')), '成功态未说明不会生成订单')
   mark(checks, failures, 'insufficientShowsStock', insufficient !== null && insufficient.phase === 'insufficient' && insufficient.stock === '2', '库存不足未按响应库存展示')
   mark(checks, failures, 'insufficientOffersAdjust', insufficient !== null && insufficient.adjustVisible === true, '库存不足未提供调整数量入口')
@@ -876,25 +906,19 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   mark(checks, failures, 'islandBlockedByDialog', islandHit !== null && islandHit.blocked === true, '购买对话框打开时背景灵动岛仍可交互')
   mark(checks, failures, 'cartArchiveUnchanged', archiveAfter === archiveBefore, '购买校验改动了购物车存档')
   mark(checks, failures, 'fourScreenshotGroups', extra390Light === true && extra1365Dark === true, '购买关键状态截图不足四组')
-  mark(checks, failures, 'retryKeepsConfirmedPrice', retry.errorPhase === 'error' && retry.secondExpected === 13500 && retry.retryExpected === 13500, '重试没有复用刚确认的新价')
+  mark(checks, failures, 'retryKeepsConfirmedPrice', retry.errorPhase === 'error' && retry.secondExpected === fixture.newPriceCents && retry.retryExpected === fixture.newPriceCents, '重试没有复用刚确认的新价')
   mark(checks, failures, 'retryRecovers', retry.phase === 'purchasable', '重试后未回到可购买')
   mark(checks, failures, 'dialogAccessibleName', dialogA11y.hasLabelledBy === true && dialogA11y.titleText === '模拟购买校验', '购买对话框缺少可访问名称')
   mark(checks, failures, 'lateResponseCanceled', checking.canceled === true, '关闭在途校验后没有观察到请求取消')
-  mark(checks, failures, 'reopenIsolation', checking.reopenPhase === 'purchasable' && checking.reopenSubtotal === '¥278.00', '关闭后立即重开时旧响应改写了新对话框')
+  mark(checks, failures, 'reopenIsolation', checking.reopenPhase === 'purchasable' && checking.reopenSubtotal === formatCents(fixture.finalPriceCents * fixture.quantity), '关闭后立即重开时旧响应改写了新对话框')
 
-  return {
-    checks,
-    measurements: { first, firstRequestPrice, second, third, retry, flowDebug, checking, dialogA11y, islandHit, archiveBefore, archiveAfter, insufficient, insufficientDebug, adjusted, oversize, narrowDark, extra390Light, extra1365Dark, consoleErrors: page.consoleErrors.slice(-5) },
-    screenshots,
-    failureReason: failures.length > 0 ? failures.join('; ') : null,
-  }
+  measurements.consoleErrors = page.consoleErrors.slice(-5)
 }
 
 // ---------- P7-MOTION：三处动效与 reduced-motion ----------
-export async function caseP7Motion (page, baseUrl, { shot }) {
-  const screenshots = []
-  const checks = {}
-  const failures = []
+export async function caseP7Motion (page, baseUrl, { shot, state }) {
+  const { checks, failures, screenshots, measurements } = state
+  const fixture = await resolvePurchaseFixture(baseUrl)
 
   await page.send('Emulation.setEmulatedMedia', { media: '', features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
   await resetPage(page, baseUrl, { width: 1365, height: 900 })
@@ -906,6 +930,7 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   const enterShot = shot(page, ['p7-motion', '1365-light', 'nav-enter-mid.png'], screenshots)
   const enterSamples = await sampleStyles(page, '[data-state="nav-panel"]', 420)
   const enterIntermediate = hasIntermediate(enterSamples)
+  measurements.enterSamples = enterSamples.length
   await enterShot
   await sleep(250)
   await shot(page, ['p7-motion', '1365-light', 'nav-enter-final.png'], screenshots)
@@ -914,6 +939,7 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   const leaveShot = shot(page, ['p7-motion', '1365-light', 'nav-leave-mid.png'], screenshots)
   const leaveSamples = await sampleStyles(page, '[data-state="nav-panel"]', 260)
   const leaveIntermediate = hasIntermediate(leaveSamples)
+  measurements.leaveSamples = leaveSamples.length
   await leaveShot
 
   const listSamplesPromise = sampleStyles(page, '[role="listbox"]', 900)
@@ -931,13 +957,15 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   const searchShot = shot(page, ['p7-motion', '1365-light', 'search-enter-mid.png'], screenshots)
   const listSamples = await listSamplesPromise
   const listIntermediate = hasIntermediate(listSamples)
+  measurements.listSamples = listSamples.length
   await searchShot
   await shot(page, ['p7-motion', '1365-light', 'search-enter.png'], screenshots)
 
-  await clearCartThenAdd(page, baseUrl)
+  await clearCartThenAdd(page, baseUrl, fixture)
   const pulseShot = shot(page, ['p7-motion', '1365-light', 'summary-pulse-mid.png'], screenshots)
   const pulseSamples = await sampleStyles(page, '[data-state="cart-summary-figures"]', 320)
   const pulseSeen = pulseSamples.some((sample) => !isIdentity(sample.transform))
+  measurements.pulseSamples = pulseSamples.length
   await pulseShot
   await shot(page, ['p7-motion', '1365-light', 'summary-pulse.png'], screenshots)
 
@@ -953,13 +981,14 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   })()`)
   const reducedEnter = await sampleStyles(page, '[data-state="nav-panel"]', 260)
   const reducedInstant = reducedEnter.length > 0 && reducedEnter.every((sample) => sample.opacity === '1' && isIdentity(sample.transform))
+  measurements.reducedEnter = reducedEnter.length
   await shot(page, ['p7-motion', '1365-reduced', 'nav-enter.png'], screenshots)
 
   await setNativeValue(page, 'input[role="combobox"]', 'sony')
   const reducedList = await sampleStyles(page, '[role="listbox"]', 900)
   const reducedListInstant = reducedList.length > 0 && reducedList.every((sample) => sample.opacity === '1' && isIdentity(sample.transform))
 
-  await clearCartThenAdd(page, baseUrl)
+  await clearCartThenAdd(page, baseUrl, fixture)
   const reducedPulse = await sampleStyles(page, '[data-state="cart-summary-figures"]', 320)
   const reducedPulseSeen = reducedPulse.some((sample) => !isIdentity(sample.transform))
   const reducedFunctional = await page.eval(`(() => ({
@@ -979,31 +1008,19 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   mark(checks, failures, 'reducedFunctional', /1 件/.test(reducedFunctional.cartQuantity), 'reduced-motion 下加购功能未照常生效')
   mark(checks, failures, 'reducedFocusFirstItem', reducedFocus.activeIsHome === true, 'reduced-motion 下展开后焦点没有落在第一个导航项')
 
-  return {
-    checks,
-    measurements: {
-      enterSamples: enterSamples.length,
-      leaveSamples: leaveSamples.length,
-      listSamples: listSamples.length,
-      pulseSamples: pulseSamples.length,
-      reducedEnter: reducedEnter.length,
-      reducedList: reducedList.length,
-      reducedPulse: reducedPulse.length,
-      reducedFunctional,
-    },
-    screenshots,
-    failureReason: failures.length > 0 ? failures.join('; ') : null,
-  }
+  measurements.reducedList = reducedList.length
+  measurements.reducedPulse = reducedPulse.length
+  measurements.reducedFunctional = reducedFunctional
 }
 
 /** 在详情页选规格并加购一次，用于摘要强调测量。 */
-async function clearCartThenAdd (page, baseUrl) {
+async function clearCartThenAdd (page, baseUrl, fixture) {
   await page.goto(baseUrl + '/product/apple-earpods')
   await page.waitFor(`document.querySelector('[data-state="add-to-cart"]') !== null`, 20000)
   await sleep(400)
-  await clickText(page, '[data-state="option"]', 'Lightning')
+  await clickText(page, '[data-state="option"]', fixture.option1Value)
   await sleep(150)
-  await clickText(page, '[data-state="option"]', '盒装')
+  await clickText(page, '[data-state="option"]', fixture.option2Value)
   await sleep(200)
   await clickPoint(page, '[data-state="add-to-cart"]')
 }

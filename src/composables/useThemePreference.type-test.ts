@@ -13,12 +13,12 @@ import { useThemePreference } from '@/composables/useThemePreference'
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false
 type Expect<T extends true> = T
 
-type _Preference = ReturnType<typeof useThemePreference>
+export type _Preference = ReturnType<typeof useThemePreference>
 
 /** 当前主题是只读计算值，组件不能直接改它，只能走 toggle。 */
-type _Current = Expect<Equal<_Preference['current'], ComputedRef<ThemeName>>>
+export type _Current = Expect<Equal<_Preference['current'], ComputedRef<ThemeName>>>
 
 /** 切换：无参数、无返回值。 */
-type _Toggle = Expect<Equal<_Preference['toggle'], () => void>>
+export type _Toggle = Expect<Equal<_Preference['toggle'], () => void>>
 
 export type _Summary = _Current | _Toggle

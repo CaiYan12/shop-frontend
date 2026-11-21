@@ -33,23 +33,23 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ?
 type Expect<T extends true> = T
 
 // —— 选择态：两个维度、每格 string | null ——
-type _Selection = Expect<Equal<ProductSelection, readonly [string | null, string | null]>>
-type _EmptySelection = Expect<Equal<ReturnType<typeof createEmptySelection>, ProductSelection>>
-type _ToggleParameters = Expect<
+export type _Selection = Expect<Equal<ProductSelection, readonly [string | null, string | null]>>
+export type _EmptySelection = Expect<Equal<ReturnType<typeof createEmptySelection>, ProductSelection>>
+export type _ToggleParameters = Expect<
   Equal<
     Parameters<typeof toggleSelection>,
     [selection: ProductSelection, dimensionIndex: 0 | 1, optionValue: string]
   >
 >
-type _ToggleReturn = Expect<Equal<ReturnType<typeof toggleSelection>, ProductSelection>>
+export type _ToggleReturn = Expect<Equal<ReturnType<typeof toggleSelection>, ProductSelection>>
 
 // —— 可售性：每个选项一个布尔，另带「是否有不可售选项」的聚合标记 ——
-type _AvailabilityFields = Expect<Equal<keyof OptionAvailability, 'byOption' | 'hasUnavailable'>>
-type _AvailabilityByOption = Expect<
+export type _AvailabilityFields = Expect<Equal<keyof OptionAvailability, 'byOption' | 'hasUnavailable'>>
+export type _AvailabilityByOption = Expect<
   Equal<OptionAvailability['byOption'], Readonly<Record<string, boolean>>>
 >
-type _AvailabilityFlag = Expect<Equal<OptionAvailability['hasUnavailable'], boolean>>
-type _AvailabilityParameters = Expect<
+export type _AvailabilityFlag = Expect<Equal<OptionAvailability['hasUnavailable'], boolean>>
+export type _AvailabilityParameters = Expect<
   Equal<
     Parameters<typeof resolveOptionAvailability>,
     [
@@ -62,7 +62,7 @@ type _AvailabilityParameters = Expect<
 >
 
 // —— 推导结果：十项展示口径，#21 需要的组合对象就是 `variant` ——
-type _ViewFields = Expect<
+export type _ViewFields = Expect<
   Equal<
     keyof ProductSelectionView,
     | 'complete'
@@ -77,8 +77,8 @@ type _ViewFields = Expect<
     | 'unselectable'
   >
 >
-type _ViewVariant = Expect<Equal<ProductSelectionView['variant'], ProductVariant | null>>
-type _ViewNumbers = Expect<
+export type _ViewVariant = Expect<Equal<ProductSelectionView['variant'], ProductVariant | null>>
+export type _ViewNumbers = Expect<
   Equal<
     Pick<ProductSelectionView, 'priceCents' | 'originalPriceCents' | 'stock'>,
     {
@@ -88,8 +88,8 @@ type _ViewNumbers = Expect<
     }
   >
 >
-type _ViewScope = Expect<Equal<ProductSelectionView['stockScope'], 'product' | 'variant'>>
-type _ViewFlags = Expect<
+export type _ViewScope = Expect<Equal<ProductSelectionView['stockScope'], 'product' | 'variant'>>
+export type _ViewFlags = Expect<
   Equal<
     {
       [K in 'complete' | 'showFromLabel' | 'soldOut' | 'variantOutOfStock' | 'unselectable']: ProductSelectionView[K]
@@ -100,17 +100,17 @@ type _ViewFlags = Expect<
     >
   >
 >
-type _VariantSku = Expect<Equal<Extract<ProductSelectionView['variant'], { sku: string }>['sku'], string>>
+export type _VariantSku = Expect<Equal<Extract<ProductSelectionView['variant'], { sku: string }>['sku'], string>>
 
 // —— 推导输入：详情契约可直接作为输入，字段恰好五个 ——
-type _DetailIsSource = Expect<Equal<ProductDetail extends ProductSelectionSource ? true : false, true>>
-type _SourceFields = Expect<
+export type _DetailIsSource = Expect<Equal<ProductDetail extends ProductSelectionSource ? true : false, true>>
+export type _SourceFields = Expect<
   Equal<
     keyof ProductSelectionSource,
     'displayPriceCents' | 'displayOriginalPriceCents' | 'soldOut' | 'stock' | 'variants'
   >
 >
-type _SourceParameters = Expect<
+export type _SourceParameters = Expect<
   Equal<
     Parameters<typeof resolveProductSelection>,
     [source: ProductSelectionSource, selection: ProductSelection]

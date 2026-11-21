@@ -66,7 +66,7 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ?
 type Expect<T extends true> = T
 
 // —— 默认值：全部 null + page 1。`serializeListQuery` 以它为「省略」的唯一依据 ——
-type _Defaults = Expect<
+export type _Defaults = Expect<
   Equal<
     typeof LIST_QUERY_DEFAULTS,
     {
@@ -82,7 +82,7 @@ type _Defaults = Expect<
 >
 
 // —— 状态形状：可选条件统一用 null，页码是 number ——
-type _State = Expect<
+export type _State = Expect<
   Equal<
     ListQueryState,
     {
@@ -96,11 +96,11 @@ type _State = Expect<
     }
   >
 >
-type _ProductSort = Expect<Equal<ProductSort, 'price_asc' | 'price_desc' | 'sales_desc'>>
-type _ProductSorts = Expect<Equal<typeof PRODUCT_SORTS, readonly ['price_asc', 'price_desc', 'sales_desc']>>
+export type _ProductSort = Expect<Equal<ProductSort, 'price_asc' | 'price_desc' | 'sales_desc'>>
+export type _ProductSorts = Expect<Equal<typeof PRODUCT_SORTS, readonly ['price_asc', 'price_desc', 'sales_desc']>>
 
 // —— 商品类型：五项（含全部），slug 是契约原值 ——
-type _Categories = Expect<
+export type _Categories = Expect<
   Equal<
     typeof CATEGORY_OPTIONS,
     readonly [
@@ -112,15 +112,15 @@ type _Categories = Expect<
     ]
   >
 >
-type _KnownCategories = Expect<
+export type _KnownCategories = Expect<
   Equal<typeof KNOWN_CATEGORY_SLUGS, readonly ['audio', 'peripherals', 'displays', 'wearables']>
 >
-type _CategorySelection = Expect<
+export type _CategorySelection = Expect<
   Equal<CategorySelection, 'all' | 'audio' | 'peripherals' | 'displays' | 'wearables'>
 >
 
 // —— 价格六档：逐档钉死边界，首档只有上限 19999（明确排除 ¥200） ——
-type _PriceBands = Expect<
+export type _PriceBands = Expect<
   Equal<
     typeof PRICE_BANDS,
     readonly [
@@ -143,24 +143,24 @@ type _PriceBands = Expect<
     ]
   >
 >
-type _Under200Max = Expect<Equal<typeof PRICE_BANDS[0]['maxCents'], 19999>>
-type _Band200Min = Expect<Equal<typeof PRICE_BANDS[1]['minCents'], 20000>>
-type _Band200Max = Expect<Equal<typeof PRICE_BANDS[1]['maxCents'], 49999>>
-type _Band500Min = Expect<Equal<typeof PRICE_BANDS[2]['minCents'], 50000>>
-type _Band500Max = Expect<Equal<typeof PRICE_BANDS[2]['maxCents'], 99999>>
-type _Band1000Min = Expect<Equal<typeof PRICE_BANDS[3]['minCents'], 100000>>
-type _Band1000Max = Expect<Equal<typeof PRICE_BANDS[3]['maxCents'], 199999>>
-type _Band2000Min = Expect<Equal<typeof PRICE_BANDS[4]['minCents'], 200000>>
-type _Band2000Max = Expect<Equal<typeof PRICE_BANDS[4]['maxCents'], 299999>>
-type _Band3000Min = Expect<Equal<typeof PRICE_BANDS[5]['minCents'], 300000>>
-type _Band3000Max = Expect<Equal<typeof PRICE_BANDS[5]['maxCents'], null>>
-type _PriceBandId = Expect<
+export type _Under200Max = Expect<Equal<typeof PRICE_BANDS[0]['maxCents'], 19999>>
+export type _Band200Min = Expect<Equal<typeof PRICE_BANDS[1]['minCents'], 20000>>
+export type _Band200Max = Expect<Equal<typeof PRICE_BANDS[1]['maxCents'], 49999>>
+export type _Band500Min = Expect<Equal<typeof PRICE_BANDS[2]['minCents'], 50000>>
+export type _Band500Max = Expect<Equal<typeof PRICE_BANDS[2]['maxCents'], 99999>>
+export type _Band1000Min = Expect<Equal<typeof PRICE_BANDS[3]['minCents'], 100000>>
+export type _Band1000Max = Expect<Equal<typeof PRICE_BANDS[3]['maxCents'], 199999>>
+export type _Band2000Min = Expect<Equal<typeof PRICE_BANDS[4]['minCents'], 200000>>
+export type _Band2000Max = Expect<Equal<typeof PRICE_BANDS[4]['maxCents'], 299999>>
+export type _Band3000Min = Expect<Equal<typeof PRICE_BANDS[5]['minCents'], 300000>>
+export type _Band3000Max = Expect<Equal<typeof PRICE_BANDS[5]['maxCents'], null>>
+export type _PriceBandId = Expect<
   Equal<PriceBandId, 'under-200' | '200-499' | '500-999' | '1000-1999' | '2000-2999' | '3000-plus'>
 >
-type _PriceSelection = Expect<Equal<PriceSelection, PriceBandId | 'all' | 'custom'>>
+export type _PriceSelection = Expect<Equal<PriceSelection, PriceBandId | 'all' | 'custom'>>
 
 // —— 销量三档 + 不限 ——
-type _SalesTiers = Expect<
+export type _SalesTiers = Expect<
   Equal<
     typeof SALES_TIERS,
     readonly [
@@ -171,10 +171,10 @@ type _SalesTiers = Expect<
     ]
   >
 >
-type _SalesSelection = Expect<Equal<SalesSelection, 'all' | 'gte-500' | 'gte-1000' | 'gte-2000' | 'custom'>>
+export type _SalesSelection = Expect<Equal<SalesSelection, 'all' | 'gte-500' | 'gte-1000' | 'gte-2000' | 'custom'>>
 
 // —— 排序：无关键词三项、「default」= 销量降序；有关键词四项、「default」= 相关性 ——
-type _BrowseSorts = Expect<
+export type _BrowseSorts = Expect<
   Equal<
     typeof BROWSE_SORT_OPTIONS,
     readonly [
@@ -184,7 +184,7 @@ type _BrowseSorts = Expect<
     ]
   >
 >
-type _SearchSorts = Expect<
+export type _SearchSorts = Expect<
   Equal<
     typeof SEARCH_SORT_OPTIONS,
     readonly [
@@ -195,28 +195,28 @@ type _SearchSorts = Expect<
     ]
   >
 >
-type _SortSelection = Expect<Equal<SortSelection, 'default' | ProductSort>>
-type _SortOptions = Expect<
+export type _SortSelection = Expect<Equal<SortSelection, 'default' | ProductSort>>
+export type _SortOptions = Expect<
   Equal<ReturnType<typeof sortOptionsFor>, typeof BROWSE_SORT_OPTIONS | typeof SEARCH_SORT_OPTIONS>
 >
-type _DefaultSort = Expect<Equal<typeof LIST_QUERY_DEFAULTS['sort'], null>>
+export type _DefaultSort = Expect<Equal<typeof LIST_QUERY_DEFAULTS['sort'], null>>
 
 // —— 编解码函数的外部形状 ——
-type _SerializeReturn = Expect<Equal<ReturnType<typeof serializeListQuery>, SerializedListQuery>>
-type _SerializedKeys = Expect<
+export type _SerializeReturn = Expect<Equal<ReturnType<typeof serializeListQuery>, SerializedListQuery>>
+export type _SerializedKeys = Expect<
   Equal<SerializedListQuery, Record<string, string>>
 >
-type _ParseReturn = Expect<Equal<ReturnType<typeof parseListQuery>, ListQueryState>>
-type _ParseArg = Expect<Equal<Parameters<typeof parseListQuery>, [raw: RawQuery]>>
-type _ApiReturn = Expect<Equal<ReturnType<typeof toApiQuery>, ProductListQuery>>
-type _SameSerialized = Expect<Equal<ReturnType<typeof isSameSerializedQuery>, boolean>>
-type _NormalizeReturn = Expect<Equal<ReturnType<typeof normalizeSort>, ProductSort | null>>
-type _PriceRead = Expect<Equal<ReturnType<typeof readPriceSelection>, PriceSelection>>
-type _SalesRead = Expect<Equal<ReturnType<typeof readSalesSelection>, SalesSelection>>
-type _SortRead = Expect<Equal<ReturnType<typeof readSortSelection>, SortSelection>>
+export type _ParseReturn = Expect<Equal<ReturnType<typeof parseListQuery>, ListQueryState>>
+export type _ParseArg = Expect<Equal<Parameters<typeof parseListQuery>, [raw: RawQuery]>>
+export type _ApiReturn = Expect<Equal<ReturnType<typeof toApiQuery>, ProductListQuery>>
+export type _SameSerialized = Expect<Equal<ReturnType<typeof isSameSerializedQuery>, boolean>>
+export type _NormalizeReturn = Expect<Equal<ReturnType<typeof normalizeSort>, ProductSort | null>>
+export type _PriceRead = Expect<Equal<ReturnType<typeof readPriceSelection>, PriceSelection>>
+export type _SalesRead = Expect<Equal<ReturnType<typeof readSalesSelection>, SalesSelection>>
+export type _SortRead = Expect<Equal<ReturnType<typeof readSortSelection>, SortSelection>>
 
 // —— 状态变化函数：合并、比较、清除、判断 ——
-type _FilterSelection = Expect<
+export type _FilterSelection = Expect<
   Equal<
     ListFilterSelection,
     {
@@ -228,17 +228,17 @@ type _FilterSelection = Expect<
     }
   >
 >
-type _FilterSelectionOf = Expect<Equal<ReturnType<typeof filterSelectionOf>, ListFilterSelection>>
-type _WithSelection = Expect<Equal<ReturnType<typeof withFilterSelection>, ListQueryState>>
-type _SameConditions = Expect<Equal<ReturnType<typeof isSameListConditions>, boolean>>
-type _HasFilters = Expect<Equal<ReturnType<typeof hasActiveFilters>, boolean>>
-type _Clear = Expect<Equal<ReturnType<typeof clearListFilters>, ListQueryState>>
+export type _FilterSelectionOf = Expect<Equal<ReturnType<typeof filterSelectionOf>, ListFilterSelection>>
+export type _WithSelection = Expect<Equal<ReturnType<typeof withFilterSelection>, ListQueryState>>
+export type _SameConditions = Expect<Equal<ReturnType<typeof isSameListConditions>, boolean>>
+export type _HasFilters = Expect<Equal<ReturnType<typeof hasActiveFilters>, boolean>>
+export type _Clear = Expect<Equal<ReturnType<typeof clearListFilters>, ListQueryState>>
 
 // —— 非法价格参数（#13）：检查结果形状、入参形状与清除入口 ——
-type _PriceIssueKind = Expect<
+export type _PriceIssueKind = Expect<
   Equal<PriceParamIssueKind, 'duplicate' | 'not-integer' | 'out-of-range' | 'range-reversed'>
 >
-type _PriceInspection = Expect<
+export type _PriceInspection = Expect<
   Equal<
     ReturnType<typeof inspectPriceParams>,
     {
@@ -250,14 +250,14 @@ type _PriceInspection = Expect<
     }
   >
 >
-type _PriceInspectionArg = Expect<Equal<Parameters<typeof inspectPriceParams>, [raw: RawQuery]>>
-type _ClearPriceRange = Expect<Equal<ReturnType<typeof clearPriceRange>, ListQueryState>>
+export type _PriceInspectionArg = Expect<Equal<Parameters<typeof inspectPriceParams>, [raw: RawQuery]>>
+export type _ClearPriceRange = Expect<Equal<ReturnType<typeof clearPriceRange>, ListQueryState>>
 
 // —— 全部列表参数（#13）：商品类型 / 价格 / 销量统一检查，非法时页面暂停请求 ——
-type _ListParamIssueKind = Expect<
+export type _ListParamIssueKind = Expect<
   Equal<ListParamIssueKind, PriceParamIssueKind | 'category' | 'min-sales'>
 >
-type _ListParamInspection = Expect<
+export type _ListParamInspection = Expect<
   Equal<
     ListParamInspection,
     {
@@ -268,32 +268,32 @@ type _ListParamInspection = Expect<
     }
   >
 >
-type _InspectListParams = Expect<Equal<ReturnType<typeof inspectListParams>, ListParamInspection>>
-type _ClearInvalidListParams = Expect<Equal<ReturnType<typeof clearInvalidListParams>, ListQueryOutput>>
-type _ClearInvalidListParamsArg = Expect<
+export type _InspectListParams = Expect<Equal<ReturnType<typeof inspectListParams>, ListParamInspection>>
+export type _ClearInvalidListParams = Expect<Equal<ReturnType<typeof clearInvalidListParams>, ListQueryOutput>>
+export type _ClearInvalidListParamsArg = Expect<
   Equal<Parameters<typeof clearInvalidListParams>, [raw: RawQuery]>
 >
-type _RepairInvalidListParams = Expect<
+export type _RepairInvalidListParams = Expect<
   Equal<ReturnType<typeof repairInvalidListParams>, ListQueryOutput | null>
 >
-type _RepairInvalidListParamsArgs = Expect<
+export type _RepairInvalidListParamsArgs = Expect<
   Equal<Parameters<typeof repairInvalidListParams>, [raw: RawQuery, selection: ListFilterSelection]>
 >
 
 // —— 「清除筛选」基于原始查询（#4）：只看筛选 key 是否存在，按原形态删除 key ——
-type _HasFilterParams = Expect<Equal<ReturnType<typeof hasFilterParams>, boolean>>
-type _HasFilterParamsArg = Expect<Equal<Parameters<typeof hasFilterParams>, [raw: RawQuery]>>
-type _ClearFilterParams = Expect<Equal<ReturnType<typeof clearFilterParams>, ListQueryOutput>>
-type _ClearFilterParamsArg = Expect<Equal<Parameters<typeof clearFilterParams>, [raw: RawQuery]>>
+export type _HasFilterParams = Expect<Equal<ReturnType<typeof hasFilterParams>, boolean>>
+export type _HasFilterParamsArg = Expect<Equal<Parameters<typeof hasFilterParams>, [raw: RawQuery]>>
+export type _ClearFilterParams = Expect<Equal<ReturnType<typeof clearFilterParams>, ListQueryOutput>>
+export type _ClearFilterParamsArg = Expect<Equal<Parameters<typeof clearFilterParams>, [raw: RawQuery]>>
 
 // —— 关键词长度按 Unicode 码点计数（#10，与后端 JSON Schema maxLength 一致） ——
-type _KeywordLength = Expect<Equal<ReturnType<typeof keywordLength>, number>>
-type _KeywordLengthArgs = Expect<Equal<Parameters<typeof keywordLength>, [text: string]>>
+export type _KeywordLength = Expect<Equal<ReturnType<typeof keywordLength>, number>>
+export type _KeywordLengthArgs = Expect<Equal<Parameters<typeof keywordLength>, [text: string]>>
 
 // —— 关键词生命周期（#10）：长度上限与提交后的状态迁移 ——
-type _KeywordMax = Expect<Equal<typeof KEYWORD_MAX_LENGTH, 100>>
-type _WithKeyword = Expect<Equal<ReturnType<typeof withKeyword>, ListQueryState>>
-type _WithKeywordArgs = Expect<
+export type _KeywordMax = Expect<Equal<typeof KEYWORD_MAX_LENGTH, 100>>
+export type _WithKeyword = Expect<Equal<ReturnType<typeof withKeyword>, ListQueryState>>
+export type _WithKeywordArgs = Expect<
   Equal<Parameters<typeof withKeyword>, [state: ListQueryState, keyword: string | null]>
 >
 

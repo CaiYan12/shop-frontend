@@ -19,21 +19,21 @@ type RecommendationItem = components['schemas']['ProductListItem']
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false
 type Expect<T extends true> = T
 
-type _Recommendations = ReturnType<typeof useProductRecommendations>
+export type _Recommendations = ReturnType<typeof useProductRecommendations>
 
 /** 条目类型来自契约的 `ProductListItem`（推荐接口不含命中高亮）。 */
-type _Items = Expect<Equal<_Recommendations['items'], Ref<RecommendationItem[]>>>
+export type _Items = Expect<Equal<_Recommendations['items'], Ref<RecommendationItem[]>>>
 
 /** 区块状态：加载中 / 就绪 / 失败，页面据此决定隐藏、渲染还是给重试。 */
-type _State = Expect<Equal<_Recommendations['state'], Ref<RecommendationsState>>>
+export type _State = Expect<Equal<_Recommendations['state'], Ref<RecommendationsState>>>
 
 /** 加载：按商品标识取推荐，无返回值。 */
-type _Load = Expect<Equal<_Recommendations['load'], (slug: string) => Promise<void>>>
+export type _Load = Expect<Equal<_Recommendations['load'], (slug: string) => Promise<void>>>
 
 /** 只重试本区块：不接收参数，不改主内容。 */
-type _Retry = Expect<Equal<_Recommendations['retry'], () => void>>
+export type _Retry = Expect<Equal<_Recommendations['retry'], () => void>>
 
 /** 契约上限为 4 件。 */
-type _Limit = Expect<Equal<typeof MAX_RECOMMENDATIONS, 4>>
+export type _Limit = Expect<Equal<typeof MAX_RECOMMENDATIONS, 4>>
 
 export type _Summary = _Items | _State | _Load | _Retry | _Limit

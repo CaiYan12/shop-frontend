@@ -33,6 +33,18 @@ const valueOf = (name, fallback = null) => {
 const skipBuild = hasFlag('--skip-build')
 const headed = hasFlag('--headed')
 const reverse = valueOf('--reverse')
+const onlyRaw = valueOf('--only')
+const CASE_IDS = ['F1', 'R26', 'R27', 'P7-NAV', 'P7-PURCHASE', 'P7-MOTION']
+const onlySet = onlyRaw === null
+  ? null
+  : new Set(onlyRaw.split(',').map((item) => item.trim()).filter(Boolean))
+if (onlySet !== null) {
+  const unknown = [...onlySet].filter((id) => !CASE_IDS.includes(id))
+  if (unknown.length > 0) {
+    throw new Error(`未知用例：${unknown.join(', ')}；支持 ${CASE_IDS.join('|')}`)
+  }
+}
+const shouldRun = (id) => onlySet === null || onlySet.has(id)
 const REVERSE_MODES = new Set(['f1', 'island', 'purchase', 'purchase-price'])
 if (reverse && !REVERSE_MODES.has(reverse)) {
   throw new Error(`未知反向验证：${reverse}；支持 --reverse=f1|island|purchase|purchase-price`)
@@ -54,6 +66,7 @@ const manifest = {
     build: skipBuild ? 'skipped' : 'clean-build',
     browser: headed ? 'headed' : 'headless',
     reverse: reverse ?? null,
+    only: onlySet === null ? null : [...onlySet],
   },
   baseUrl: null,
   preflight: null,
@@ -193,30 +206,34 @@ async function withPage(browser, baseUrl, fn) {
 }
 
 async function runCase(browser, baseUrl, definition, fn) {
+  // 证据容器由 runCase 持有并传给用例：用例抛错时，已采集的断言 / 测量 / 截图仍然留在 manifest 里。
+  const state = { checks: {}, measurements: {}, screenshots: [], failures: [] }
   const result = {
     id: definition.id,
     title: definition.title,
     viewport: definition.viewport,
     theme: definition.theme,
     status: 'fail',
-    checks: {},
-    measurements: {},
-    screenshots: [],
+    checks: state.checks,
+    measurements: state.measurements,
+    screenshots: state.screenshots,
     failureReason: null,
   }
+  let thrown = null
   try {
-    const data = await withPage(browser, baseUrl, fn)
-    Object.assign(result, data)
-    const failedChecks = Object.entries(result.checks)
-      .filter(([, value]) => value !== true)
-      .map(([key]) => key)
-    result.status = failedChecks.length === 0 && !data.failureReason ? 'pass' : 'fail'
-    result.failureReason = failedChecks.length > 0
-      ? `失败断言：${failedChecks.join(', ')}`
-      : (data.failureReason ?? null)
+    await withPage(browser, baseUrl, (page) => fn(page, state))
   } catch (error) {
-    result.status = 'fail'
-    result.failureReason = error instanceof Error ? error.message : String(error)
+    thrown = error instanceof Error ? error.message : String(error)
+    state.failures.push(thrown)
+  }
+  const failedChecks = Object.entries(state.checks)
+    .filter(([, value]) => value !== true)
+    .map(([key]) => key)
+  result.status = failedChecks.length === 0 && state.failures.length === 0 ? 'pass' : 'fail'
+  if (failedChecks.length > 0) {
+    result.failureReason = `失败断言：${failedChecks.join(', ')}`
+  } else if (state.failures.length > 0) {
+    result.failureReason = state.failures.join('; ')
   }
   manifest.cases.push(result)
   console.log(`[ui] ${result.status.toUpperCase()} ${result.id} ${result.failureReason ?? ''}`.trim())
@@ -224,10 +241,8 @@ async function runCase(browser, baseUrl, definition, fn) {
 }
 
 // ---------- F1：390px 搜索按钮中心与真实点击 ----------
-async function caseF1(page, baseUrl) {
-  const screenshots = []
-  const checks = {}
-  const failures = []
+async function caseF1(page, baseUrl, state) {
+  const { checks, failures, screenshots, measurements } = state
   await page.viewport(390, 844, true)
   await page.goto(`${baseUrl}/`)
   await page.waitFor(`document.querySelector('input[role="combobox"]') !== null`, 20000)
@@ -311,19 +326,12 @@ async function caseF1(page, baseUrl) {
   markChecks(checks, failures, 'keywordSubmitted', after?.keyword === 'sony', '点击后 URL 未提交 keyword=sony')
   markChecks(checks, failures, 'suggestionsClosed', after?.listbox === false, '点击提交后联想列表未关闭')
 
-  return {
-    checks,
-    measurements: { before, after },
-    screenshots,
-    failureReason: failures.length > 0 ? failures.join('; ') : null,
-  }
+  Object.assign(measurements, { before, after })
 }
 
 // ---------- R26：放大图双轴实际溢出 + 轨道空白点击 ----------
-async function caseR26(page, baseUrl) {
-  const screenshots = []
-  const checks = {}
-  const failures = []
+async function caseR26(page, baseUrl, state) {
+  const { checks, failures, screenshots, measurements } = state
   await page.viewport(1365, 900, false)
   await page.goto(`${baseUrl}/product/apple-earpods`)
   await page.waitFor(`document.querySelector('[data-state="detail-ready"]') !== null`, 25000)
@@ -375,12 +383,7 @@ async function caseR26(page, baseUrl) {
     Boolean(horizontal?.info?.point && horizontal.info.top.insideBar && !horizontal.info.top.onHandle && horizontal.after?.left > horizontal.before?.left),
     '横向轨道点击没有命中轨道或没有向右移动')
 
-  return {
-    checks,
-    measurements: { dimensions, vertical, horizontal },
-    screenshots,
-    failureReason: failures.length > 0 ? failures.join('; ') : null,
-  }
+  Object.assign(measurements, { dimensions, vertical, horizontal })
 }
 
 async function clickTrack(page, axis) {
@@ -433,10 +436,8 @@ async function scrollPosition(page) {
 }
 
 // ---------- R27：购物车 / 筛选实际溢出 + 原生滚动条像素对比度 ----------
-async function caseR27(page, baseUrl) {
-  const screenshots = []
-  const checks = {}
-  const failures = []
+async function caseR27(page, baseUrl, state) {
+  const { checks, failures, screenshots, measurements } = state
   const samples = {}
 
   const seedCartAndTheme = async (theme) => {
@@ -519,12 +520,7 @@ async function caseR27(page, baseUrl) {
     if (sample.failureReason) failures.push(`${name}: ${sample.failureReason}`)
   }
 
-  return {
-    checks,
-    measurements: { samples },
-    screenshots,
-    failureReason: failures.length > 0 ? failures.join('; ') : null,
-  }
+  Object.assign(measurements, { samples })
 }
 
 // ---------- 主流程 ----------
@@ -552,41 +548,41 @@ try {
   browser = await launchBrowser({ headed })
   console.log('[ui] browser ->', basename(browser.executable), `port ${browser.port}`)
 
-  await runCase(
+  if (shouldRun('F1')) await runCase(
     browser,
     preview.baseUrl,
     { id: 'F1', title: '390px 搜索按钮真实点击', viewport: '390x844', theme: 'light' },
-    (page) => caseF1(page, preview.baseUrl),
+    (page, state) => caseF1(page, preview.baseUrl, state),
   )
-  await runCase(
+  if (shouldRun('R26')) await runCase(
     browser,
     preview.baseUrl,
     { id: 'R26', title: '放大区双轴轨道点击', viewport: '1365x900', theme: 'light' },
-    (page) => caseR26(page, preview.baseUrl),
+    (page, state) => caseR26(page, preview.baseUrl, state),
   )
-  await runCase(
+  if (shouldRun('R27')) await runCase(
     browser,
     preview.baseUrl,
     { id: 'R27', title: '购物车/筛选滚动条对比度', viewport: '1365x900 + 390x360', theme: 'light + dark' },
-    (page) => caseR27(page, preview.baseUrl),
+    (page, state) => caseR27(page, preview.baseUrl, state),
   )
-  await runCase(
+  if (shouldRun('P7-NAV')) await runCase(
     browser,
     preview.baseUrl,
     { id: 'P7-NAV', title: '灵动岛职责、避让与可访问性', viewport: '1365x900 + 390x844', theme: 'light + dark' },
-    (page) => caseP7Nav(page, preview.baseUrl, { shot, reverse }),
+    (page, state) => caseP7Nav(page, preview.baseUrl, { shot, reverse, state }),
   )
-  await runCase(
+  if (shouldRun('P7-PURCHASE')) await runCase(
     browser,
     preview.baseUrl,
     { id: 'P7-PURCHASE', title: '购买三分支、价格二次确认与前端拦截', viewport: '1365x900 + 390x844', theme: 'light + dark' },
-    (page) => caseP7Purchase(page, preview.baseUrl, { shot, reverse }),
+    (page, state) => caseP7Purchase(page, preview.baseUrl, { shot, reverse, state }),
   )
-  await runCase(
+  if (shouldRun('P7-MOTION')) await runCase(
     browser,
     preview.baseUrl,
     { id: 'P7-MOTION', title: '岛 / 搜索 / 摘要动效与 reduced-motion', viewport: '1365x900', theme: 'light + reduced' },
-    (page) => caseP7Motion(page, preview.baseUrl, { shot }),
+    (page, state) => caseP7Motion(page, preview.baseUrl, { shot, state }),
   )
 } catch (error) {
   fatal = error instanceof Error ? error.message : String(error)

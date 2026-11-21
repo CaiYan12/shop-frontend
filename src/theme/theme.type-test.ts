@@ -27,41 +27,41 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ?
 type Expect<T extends true> = T
 
 // 站名与页面 `<title>` 同名，两处都从 SITE_NAME 取值。
-type _SiteName = Expect<Equal<typeof SITE_NAME, '数码优选'>>
+export type _SiteName = Expect<Equal<typeof SITE_NAME, '数码优选'>>
 
 // 首次访问默认浅色；主题名只有两支。
-type _ThemeName = Expect<Equal<ThemeNameContract, 'light' | 'dark'>>
-type _DefaultTheme = Expect<Equal<typeof DEFAULT_THEME, 'light'>>
+export type _ThemeName = Expect<Equal<ThemeNameContract, 'light' | 'dark'>>
+export type _DefaultTheme = Expect<Equal<typeof DEFAULT_THEME, 'light'>>
 
 // 存储键是稳定字面量，供 localStorage 读写共用。
-type _StorageKey = Expect<Equal<typeof THEME_STORAGE_KEY, 'shop-frontend:theme'>>
+export type _StorageKey = Expect<Equal<typeof THEME_STORAGE_KEY, 'shop-frontend:theme'>>
 
 // 两套主题都存在，每套都有主色 / 主色前景 / 背景 / 表面 / 弱化文字 / 警告文字六个槽位。
-type _PaletteThemes = Expect<Equal<keyof typeof THEME_PALETTE, 'light' | 'dark'>>
-type _PaletteKeys = Expect<
+export type _PaletteThemes = Expect<Equal<keyof typeof THEME_PALETTE, 'light' | 'dark'>>
+export type _PaletteKeys = Expect<
   Equal<keyof (typeof THEME_PALETTE)['light'], 'primary' | 'onPrimary' | 'background' | 'surface' | 'muted' | 'warningInk'>
 >
 
 // 规格「主题与视觉」逐字取值：浅色 primary #0071E3 / background #F5F5F7 / surface #FFFFFF；
 // 暗色 primary #0A84FF / background #000000 / surface #1D1D1F。
-type _LightPrimary = Expect<Equal<(typeof THEME_PALETTE)['light']['primary'], '#0071E3'>>
-type _LightBackground = Expect<Equal<(typeof THEME_PALETTE)['light']['background'], '#F5F5F7'>>
-type _LightSurface = Expect<Equal<(typeof THEME_PALETTE)['light']['surface'], '#FFFFFF'>>
-type _DarkPrimary = Expect<Equal<(typeof THEME_PALETTE)['dark']['primary'], '#0A84FF'>>
-type _DarkBackground = Expect<Equal<(typeof THEME_PALETTE)['dark']['background'], '#000000'>>
-type _DarkSurface = Expect<Equal<(typeof THEME_PALETTE)['dark']['surface'], '#1D1D1F'>>
+export type _LightPrimary = Expect<Equal<(typeof THEME_PALETTE)['light']['primary'], '#0071E3'>>
+export type _LightBackground = Expect<Equal<(typeof THEME_PALETTE)['light']['background'], '#F5F5F7'>>
+export type _LightSurface = Expect<Equal<(typeof THEME_PALETTE)['light']['surface'], '#FFFFFF'>>
+export type _DarkPrimary = Expect<Equal<(typeof THEME_PALETTE)['dark']['primary'], '#0A84FF'>>
+export type _DarkBackground = Expect<Equal<(typeof THEME_PALETTE)['dark']['background'], '#000000'>>
+export type _DarkSurface = Expect<Equal<(typeof THEME_PALETTE)['dark']['surface'], '#1D1D1F'>>
 
 // 弱化文字色：两套主题各自的取值（暗色不再复用浅色固定色）。
-type _LightMuted = Expect<Equal<(typeof THEME_PALETTE)['light']['muted'], '#475569'>>
-type _DarkMuted = Expect<Equal<(typeof THEME_PALETTE)['dark']['muted'], '#A1A1A6'>>
-type _LightWarningInk = Expect<Equal<(typeof THEME_PALETTE)['light']['warningInk'], '#B45309'>>
-type _DarkWarningInk = Expect<Equal<(typeof THEME_PALETTE)['dark']['warningInk'], '#FFB74D'>>
+export type _LightMuted = Expect<Equal<(typeof THEME_PALETTE)['light']['muted'], '#475569'>>
+export type _DarkMuted = Expect<Equal<(typeof THEME_PALETTE)['dark']['muted'], '#A1A1A6'>>
+export type _LightWarningInk = Expect<Equal<(typeof THEME_PALETTE)['light']['warningInk'], '#B45309'>>
+export type _DarkWarningInk = Expect<Equal<(typeof THEME_PALETTE)['dark']['warningInk'], '#FFB74D'>>
 
 // 读写与切换函数的外部形状：调用方只依赖这些签名。
-type _IsThemeName = Expect<Equal<ReturnType<typeof isThemeName>, boolean>>
-type _ReadStoredTheme = Expect<Equal<ReturnType<typeof readStoredTheme>, ThemeNameContract>>
-type _StoreTheme = Expect<Equal<ReturnType<typeof storeTheme>, void>>
-type _OtherTheme = Expect<Equal<ReturnType<typeof otherTheme>, ThemeNameContract>>
+export type _IsThemeName = Expect<Equal<ReturnType<typeof isThemeName>, boolean>>
+export type _ReadStoredTheme = Expect<Equal<ReturnType<typeof readStoredTheme>, ThemeNameContract>>
+export type _StoreTheme = Expect<Equal<ReturnType<typeof storeTheme>, void>>
+export type _OtherTheme = Expect<Equal<ReturnType<typeof otherTheme>, ThemeNameContract>>
 
 export type _Summary =
   | _SiteName

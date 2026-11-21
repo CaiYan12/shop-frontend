@@ -30,7 +30,7 @@ type Expect<T extends true> = T
 type CartStore = ReturnType<typeof useCartStore>
 
 // —— 条目形状：恰好六个只读字段，`quantity` 由 store 维护 ——
-type _CartItem = Expect<
+export type _CartItem = Expect<
   Equal<
     CartItem,
     {
@@ -43,20 +43,20 @@ type _CartItem = Expect<
     }
   >
 >
-type _CartItemFields = Expect<
+export type _CartItemFields = Expect<
   Equal<keyof CartItem, 'sku' | 'slug' | 'name' | 'unitPriceCents' | 'quantity' | 'stock'>
 >
-type _AddInputFields = Expect<
+export type _AddInputFields = Expect<
   Equal<keyof AddCartItemInput, 'sku' | 'slug' | 'name' | 'unitPriceCents' | 'stock'>
 >
-type _AddInputOmitsQuantity = Expect<Equal<'quantity' extends keyof AddCartItemInput ? true : false, false>>
+export type _AddInputOmitsQuantity = Expect<Equal<'quantity' extends keyof AddCartItemInput ? true : false, false>>
 
 // —— 返回值：成功无载荷，失败必带原因；整体不是 void ——
-type _Success = Expect<Equal<CartSuccess, { readonly ok: true }>>
-type _ResultIsUnion = Expect<Equal<CartActionResult, CartSuccess | CartFailure>>
-type _FailureReason = Expect<Equal<CartFailure['reason'], CartFailureReason>>
-type _FailureHasMessage = Expect<Equal<CartFailure['message'], string>>
-type _ReasonUnion = Expect<
+export type _Success = Expect<Equal<CartSuccess, { readonly ok: true }>>
+export type _ResultIsUnion = Expect<Equal<CartActionResult, CartSuccess | CartFailure>>
+export type _FailureReason = Expect<Equal<CartFailure['reason'], CartFailureReason>>
+export type _FailureHasMessage = Expect<Equal<CartFailure['message'], string>>
+export type _ReasonUnion = Expect<
   Equal<
     CartFailureReason,
     | 'INVALID_QUANTITY'
@@ -67,40 +67,40 @@ type _ReasonUnion = Expect<
     | 'READONLY'
   >
 >
-type _ReadonlyHasNoLimit = Expect<
+export type _ReadonlyHasNoLimit = Expect<
   Equal<'limit' extends keyof Extract<CartFailure, { reason: 'READONLY' }> ? true : false, false>
 >
-type _LimitOnlyOnOverflow = Expect<
+export type _LimitOnlyOnOverflow = Expect<
   Equal<Extract<CartFailure, { reason: 'QUANTITY_LIMIT_EXCEEDED' }>['limit'], number>
 >
-type _NoLimitOnInvalidItem = Expect<
+export type _NoLimitOnInvalidItem = Expect<
   Equal<'limit' extends keyof Extract<CartFailure, { reason: 'INVALID_ITEM' }> ? true : false, false>
 >
-type _NoLimitOnInvalid = Expect<
+export type _NoLimitOnInvalid = Expect<
   Equal<'limit' extends keyof Extract<CartFailure, { reason: 'INVALID_QUANTITY' }> ? true : false, false>
 >
 
 // —— 四个动作的返回类型：一律 CartActionResult，绝不是 void ——
-type _AddReturn = Expect<Equal<ReturnType<CartStore['add']>, CartActionResult>>
-type _RemoveReturn = Expect<Equal<ReturnType<CartStore['remove']>, CartActionResult>>
-type _UpdateReturn = Expect<Equal<ReturnType<CartStore['updateQuantity']>, CartActionResult>>
-type _ClearReturn = Expect<Equal<ReturnType<CartStore['clear']>, CartActionResult>>
-type _NotVoid = Expect<Equal<CartActionResult extends void ? true : false, false>>
-type _NotUndefined = Expect<Equal<undefined extends CartActionResult ? true : false, false>>
+export type _AddReturn = Expect<Equal<ReturnType<CartStore['add']>, CartActionResult>>
+export type _RemoveReturn = Expect<Equal<ReturnType<CartStore['remove']>, CartActionResult>>
+export type _UpdateReturn = Expect<Equal<ReturnType<CartStore['updateQuantity']>, CartActionResult>>
+export type _ClearReturn = Expect<Equal<ReturnType<CartStore['clear']>, CartActionResult>>
+export type _NotVoid = Expect<Equal<CartActionResult extends void ? true : false, false>>
+export type _NotUndefined = Expect<Equal<undefined extends CartActionResult ? true : false, false>>
 
 // —— 参数：add 收条目快照 + 可选数量；updateQuantity 收 sku + 绝对数量 ——
-type _AddFirst = Expect<Equal<Parameters<CartStore['add']>[0], AddCartItemInput>>
-type _AddSecond = Expect<Equal<Parameters<CartStore['add']>[1], number | undefined>>
-type _RemoveParameter = Expect<Equal<Parameters<CartStore['remove']>[0], string>>
-type _UpdateParameters = Expect<
+export type _AddFirst = Expect<Equal<Parameters<CartStore['add']>[0], AddCartItemInput>>
+export type _AddSecond = Expect<Equal<Parameters<CartStore['add']>[1], number | undefined>>
+export type _RemoveParameter = Expect<Equal<Parameters<CartStore['remove']>[0], string>>
+export type _UpdateParameters = Expect<
   Equal<Parameters<CartStore['updateQuantity']>, [sku: string, quantity: number]>
 >
-type _ClearParameters = Expect<Equal<Parameters<CartStore['clear']>, []>>
+export type _ClearParameters = Expect<Equal<Parameters<CartStore['clear']>, []>>
 
 // —— getters 与 state：数字汇总、条目数组 ——
-type _TotalQuantity = Expect<Equal<CartStore['totalQuantity'], number>>
-type _TotalAmountCents = Expect<Equal<CartStore['totalAmountCents'], number>>
-type _Items = Expect<Equal<CartStore['items'], CartItem[]>>
+export type _TotalQuantity = Expect<Equal<CartStore['totalQuantity'], number>>
+export type _TotalAmountCents = Expect<Equal<CartStore['totalAmountCents'], number>>
+export type _Items = Expect<Equal<CartStore['items'], CartItem[]>>
 
 // —— 静态上限与后端口径一致 ——
-type _Limit = Expect<Equal<typeof CART_QUANTITY_LIMIT, 999>>
+export type _Limit = Expect<Equal<typeof CART_QUANTITY_LIMIT, 999>>

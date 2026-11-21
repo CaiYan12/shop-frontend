@@ -15,31 +15,31 @@ type Expect<T extends true> = T
 type Themes = typeof vuetifyThemes
 
 /** 只有两套主题，且 `dark` 标记与主题名一致（Vuetify 靠它切换 color-scheme）。 */
-type _Themes = Expect<Equal<keyof Themes, ThemeName>>
-type _LightFlag = Expect<Equal<Themes['light']['dark'], false>>
-type _DarkFlag = Expect<Equal<Themes['dark']['dark'], true>>
+export type _Themes = Expect<Equal<keyof Themes, ThemeName>>
+export type _LightFlag = Expect<Equal<Themes['light']['dark'], false>>
+export type _DarkFlag = Expect<Equal<Themes['dark']['dark'], true>>
 
 /** Vuetify 的 ThemeDefinition 兼容（`as const satisfies` 的另一半保证）。 */
-type _LightIsTheme = Expect<Equal<Themes['light'] extends ThemeDefinition ? true : false, true>>
-type _DarkIsTheme = Expect<Equal<Themes['dark'] extends ThemeDefinition ? true : false, true>>
+export type _LightIsTheme = Expect<Equal<Themes['light'] extends ThemeDefinition ? true : false, true>>
+export type _DarkIsTheme = Expect<Equal<Themes['dark'] extends ThemeDefinition ? true : false, true>>
 
 /** 规格取值：主色、前景色、背景、表面。 */
-type _LightPrimary = Expect<Equal<Themes['light']['colors']['primary'], '#0071E3'>>
-type _LightOnPrimary = Expect<Equal<Themes['light']['colors']['on-primary'], '#FFFFFF'>>
-type _LightBackground = Expect<Equal<Themes['light']['colors']['background'], '#F5F5F7'>>
-type _LightSurface = Expect<Equal<Themes['light']['colors']['surface'], '#FFFFFF'>>
-type _LightMuted = Expect<Equal<Themes['light']['colors']['on-surface-muted'], '#475569'>>
-type _LightWarningInk = Expect<Equal<Themes['light']['colors']['warning-ink'], '#B45309'>>
+export type _LightPrimary = Expect<Equal<Themes['light']['colors']['primary'], '#0071E3'>>
+export type _LightOnPrimary = Expect<Equal<Themes['light']['colors']['on-primary'], '#FFFFFF'>>
+export type _LightBackground = Expect<Equal<Themes['light']['colors']['background'], '#F5F5F7'>>
+export type _LightSurface = Expect<Equal<Themes['light']['colors']['surface'], '#FFFFFF'>>
+export type _LightMuted = Expect<Equal<Themes['light']['colors']['on-surface-muted'], '#475569'>>
+export type _LightWarningInk = Expect<Equal<Themes['light']['colors']['warning-ink'], '#B45309'>>
 
-type _DarkPrimary = Expect<Equal<Themes['dark']['colors']['primary'], '#0A84FF'>>
-type _DarkBackground = Expect<Equal<Themes['dark']['colors']['background'], '#000000'>>
-type _DarkSurface = Expect<Equal<Themes['dark']['colors']['surface'], '#1D1D1F'>>
-type _DarkMuted = Expect<Equal<Themes['dark']['colors']['on-surface-muted'], '#A1A1A6'>>
-type _DarkWarningInk = Expect<Equal<Themes['dark']['colors']['warning-ink'], '#FFB74D'>>
+export type _DarkPrimary = Expect<Equal<Themes['dark']['colors']['primary'], '#0A84FF'>>
+export type _DarkBackground = Expect<Equal<Themes['dark']['colors']['background'], '#000000'>>
+export type _DarkSurface = Expect<Equal<Themes['dark']['colors']['surface'], '#1D1D1F'>>
+export type _DarkMuted = Expect<Equal<Themes['dark']['colors']['on-surface-muted'], '#A1A1A6'>>
+export type _DarkWarningInk = Expect<Equal<Themes['dark']['colors']['warning-ink'], '#FFB74D'>>
 
 /** 暗色前景色不得是白色：这是「白字 3.65:1 不采用」的编译期闸门。 */
 type IsWhite<T> = Equal<T, '#FFFFFF'>
-type _DarkOnPrimaryIsNotWhite = Expect<Equal<IsWhite<Themes['dark']['colors']['on-primary']>, false>>
+export type _DarkOnPrimaryIsNotWhite = Expect<Equal<IsWhite<Themes['dark']['colors']['on-primary']>, false>>
 
 export type _Summary =
   | _Themes

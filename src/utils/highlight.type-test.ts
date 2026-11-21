@@ -17,26 +17,26 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ?
 type Expect<T extends true> = T
 
 // —— 分段形状：判别联合，字段只读 ——
-type _TextSegment = Expect<Equal<Extract<HighlightSegment, { kind: 'text' }>, { readonly kind: 'text'; readonly text: string }>>
-type _EmSegment = Expect<Equal<Extract<HighlightSegment, { kind: 'em' }>, { readonly kind: 'em'; readonly text: string }>>
-type _SegmentUnion = Expect<
+export type _TextSegment = Expect<Equal<Extract<HighlightSegment, { kind: 'text' }>, { readonly kind: 'text'; readonly text: string }>>
+export type _EmSegment = Expect<Equal<Extract<HighlightSegment, { kind: 'em' }>, { readonly kind: 'em'; readonly text: string }>>
+export type _SegmentUnion = Expect<
   Equal<
     HighlightSegment,
     | { readonly kind: 'text'; readonly text: string }
     | { readonly kind: 'em'; readonly text: string }
   >
 >
-type _Kind = Expect<Equal<HighlightSegment['kind'], 'text' | 'em'>>
+export type _Kind = Expect<Equal<HighlightSegment['kind'], 'text' | 'em'>>
 
 // —— 参数：片段可选（缺失即回退），也接受普通 `string[]` ——
-type _Parameters = Expect<
+export type _Parameters = Expect<
   Equal<Parameters<typeof parseHighlight>, [fragments: readonly string[] | undefined, fallback: string]>
 >
-type _AcceptsPlainArray = Expect<Equal<string[] extends Parameters<typeof parseHighlight>[0] ? true : false, true>>
-type _AcceptsUndefined = Expect<Equal<undefined extends Parameters<typeof parseHighlight>[0] ? true : false, true>>
+export type _AcceptsPlainArray = Expect<Equal<string[] extends Parameters<typeof parseHighlight>[0] ? true : false, true>>
+export type _AcceptsUndefined = Expect<Equal<undefined extends Parameters<typeof parseHighlight>[0] ? true : false, true>>
 
 // —— 回退语义：返回值恒为分段数组，不含 `undefined` / 空联合 ——
-type _Return = Expect<Equal<ReturnType<typeof parseHighlight>, HighlightSegment[]>>
-type _NeverUndefined = Expect<Equal<ReturnType<typeof parseHighlight> extends readonly HighlightSegment[] ? true : false, true>>
-type _NoNull = Expect<Equal<null extends ReturnType<typeof parseHighlight> ? true : false, false>>
-type _NoUndefinedReturn = Expect<Equal<undefined extends ReturnType<typeof parseHighlight> ? true : false, false>>
+export type _Return = Expect<Equal<ReturnType<typeof parseHighlight>, HighlightSegment[]>>
+export type _NeverUndefined = Expect<Equal<ReturnType<typeof parseHighlight> extends readonly HighlightSegment[] ? true : false, true>>
+export type _NoNull = Expect<Equal<null extends ReturnType<typeof parseHighlight> ? true : false, false>>
+export type _NoUndefinedReturn = Expect<Equal<undefined extends ReturnType<typeof parseHighlight> ? true : false, false>>

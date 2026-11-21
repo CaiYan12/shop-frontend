@@ -22,6 +22,7 @@ pnpm check:ui                    # 干净构建 + 预览 + 六组验收（F1 / R
 pnpm check:ui:unit               # 对比度门槛边界单测（27/27/27 vs 102/102/102）
 pnpm check:ui -- --skip-build    # 复用现有 dist，迭代脚本时用
 pnpm check:ui -- --headed        # 有头浏览器，便于人工观察
+pnpm check:ui -- --only=P7-PURCHASE[,P7-MOTION]   # 只跑指定用例（默认仍是全量）
 ```
 
 受控反向验证（只用于确认断言能变红）：
@@ -34,6 +35,8 @@ pnpm check:ui -- --skip-build --reverse=purchase-price   # 保留真实变价流
 ```
 
 反向模式只用于确认断言能变红，不会修改仓库源码；验证完再跑一次正常命令即可。
+
+用例抛错时，manifest 会保留抛错前已采集的 `checks` / `measurements` / `screenshots`；`--only` 只用于调试单组用例，正式验收仍跑全量。
 
 可选环境变量：
 
@@ -72,6 +75,8 @@ pnpm check:ui -- --skip-build --reverse=purchase-price   # 保留真实变价流
 ### P7-PURCHASE：购买三分支、价格二次确认与前端拦截
 
 - `1365×900`：用 CDP `Fetch` 拦截 `/api/purchase-check` 返回可控响应，连续两次 `PRICE_CHANGED` 后 `purchasable`；断言首请求携带页面展示价、确认后请求携带刚确认的新价、成功态小计与「不会生成订单」。
+- 商品 / 规格 / 价格从详情接口解析（`fixtures.mjs`），不在断言里写死种子值；价格变化用固定相对增量，断言按实际值格式化。
+- 断言只读「事件发生时保存的快照」；mock 被重装后不要回读旧句柄，也不要在用例末尾读已被替换的 `mock`。
 - 库存不足分支按响应库存展示并给「调整数量」，关闭后回焦数量输入且保留原输入。
 - 页面已知的超库存数量必须被前端拦截，且不发出购买校验请求。
 - 已确认新价后第一次请求返回 500：点「重试」仍携带刚确认的 13500，不回到旧价。
