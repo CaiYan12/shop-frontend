@@ -516,6 +516,9 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   await clickPoint(page, '[data-state="buy-now"]')
   await page.waitFor(`document.querySelector('[data-state="purchase-dialog"]') !== null`, 8000)
   await waitForSettledPhase(page)
+  // 首次请求完成后立刻快照：后面的反向注入与截图场景会替换 `mock`，
+  // 末尾断言不能再去读 `mock.requests[0]`（独立复审 P3）。
+  const firstRequestPrice = mock.requests.length > 0 ? mock.requests[0].expectedUnitPriceCents : null
   if (reverse === 'purchase') {
     // 反向：首次 PRICE_CHANGED 仍保留，但模拟页面在用户确认前就发出第二次校验请求
     // （期望价直接带新价），让 `confirmationRequired` 抓到「未确认即放行」。
@@ -852,7 +855,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   const archiveAfter = await page.eval('localStorage.getItem("shop-frontend:cart:v1")')
 
   mark(checks, failures, 'firstResponseIsPriceChanged', first.phase === 'price-changed', '首次校验未停在价格变化分支')
-  mark(checks, failures, 'firstRequestCarriesPagePrice', Boolean(mock.requests[0]) && mock.requests[0].expectedUnitPriceCents === 14900, '首次请求的 expectedUnitPriceCents 不是页面展示价')
+  mark(checks, failures, 'firstRequestCarriesPagePrice', firstRequestPrice === 14900, '首次请求的 expectedUnitPriceCents 不是页面展示价')
   mark(checks, failures, 'firstShowsOldAndNewPrice', first.oldPrice === '¥149.00' && first.newPrice === '¥135.00', '价格变化未并列展示原价与当前价')
   mark(checks, failures, 'confirmationRequired', first.requestCount === 1 && first.confirmVisible === true, '价格变化后未经确认就发出了第二次请求')
   mark(checks, failures, 'secondRequestCarriesConfirmedPrice', second !== null && second.lastExpected === 13500, '确认后未按用户确认的新价重新校验')
@@ -881,7 +884,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
 
   return {
     checks,
-    measurements: { first, second, third, retry, flowDebug, checking, dialogA11y, islandHit, archiveBefore, archiveAfter, insufficient, insufficientDebug, adjusted, oversize, narrowDark, extra390Light, extra1365Dark, consoleErrors: page.consoleErrors.slice(-5) },
+    measurements: { first, firstRequestPrice, second, third, retry, flowDebug, checking, dialogA11y, islandHit, archiveBefore, archiveAfter, insufficient, insufficientDebug, adjusted, oversize, narrowDark, extra390Light, extra1365Dark, consoleErrors: page.consoleErrors.slice(-5) },
     screenshots,
     failureReason: failures.length > 0 ? failures.join('; ') : null,
   }
