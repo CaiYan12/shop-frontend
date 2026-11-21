@@ -33,9 +33,9 @@ const valueOf = (name, fallback = null) => {
 const skipBuild = hasFlag('--skip-build')
 const headed = hasFlag('--headed')
 const reverse = valueOf('--reverse')
-const REVERSE_MODES = new Set(['f1', 'island', 'purchase'])
+const REVERSE_MODES = new Set(['f1', 'island', 'purchase', 'purchase-price'])
 if (reverse && !REVERSE_MODES.has(reverse)) {
-  throw new Error(`未知反向验证：${reverse}；支持 --reverse=f1|island|purchase`)
+  throw new Error(`未知反向验证：${reverse}；支持 --reverse=f1|island|purchase|purchase-price`)
 }
 
 const runId = valueOf('--run-id') ?? new Date().toISOString().replace(/[:.]/g, '-')

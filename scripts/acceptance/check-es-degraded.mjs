@@ -200,8 +200,21 @@ try {
   mark('degradedHasClearKeyword', degraded.hasClear === true, '503 降级没有清除关键词入口')
 
   // 停机期间真实点一次「重试」：请求仍应回 503 且保留关键词。
+  const esNet = { requests: [], responses: [] }
+  await page.send('Network.enable').catch(() => {})
+  page.on('Network.requestWillBeSent', (params) => {
+    const url = params.request && params.request.url ? params.request.url : ''
+    if (url.includes('/api/products') && url.includes('keyword=sony')) esNet.requests.push(url)
+  })
+  page.on('Network.responseReceived', (params) => {
+    const url = params.response && params.response.url ? params.response.url : ''
+    if (url.includes('/api/products') && url.includes('keyword=sony')) esNet.responses.push(params.response.status)
+  })
+  const requestsBeforeRetry = esNet.requests.length
   await clickByText(page, '[data-state="search-unavailable"]', '重试')
-  await sleep(1200)
+  await sleep(1600)
+  mark('retryWhileDownSendsRequest', esNet.requests.length > requestsBeforeRetry, '停机重试没有发出新的关键词请求')
+  mark('retryWhileDownGets503', esNet.responses.slice(requestsBeforeRetry).includes(503), '停机重试的响应不是 HTTP 503')
   const retryWhileDown = await page.eval(`(() => {
     const card = document.querySelector('[data-state="search-unavailable"]')
     return { stillUnavailable: Boolean(card), keyword: new URLSearchParams(location.search).get('keyword') }

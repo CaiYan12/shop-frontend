@@ -29,7 +29,8 @@ pnpm check:ui -- --headed        # 有头浏览器，便于人工观察
 ```bash
 pnpm check:ui -- --skip-build --reverse=f1        # 联想列表上移，F1 必须失败
 pnpm check:ui -- --skip-build --reverse=island     # 岛移到右下压住摘要，P7-NAV 必须失败（islandNotOverSummary）
-pnpm check:ui -- --skip-build --reverse=purchase   # 保留真实变价流程，只把第二次请求记录的期望价改回旧价，P7-PURCHASE 必须失败（secondRequestCarriesConfirmedPrice）
+pnpm check:ui -- --skip-build --reverse=purchase         # 保留首次 PRICE_CHANGED，模拟确认前就发出第二次校验，P7-PURCHASE 必须失败（confirmationRequired）
+pnpm check:ui -- --skip-build --reverse=purchase-price   # 保留真实变价流程，只把第二次请求记录的期望价改回旧价，必须失败（secondRequestCarriesConfirmedPrice）
 ```
 
 反向模式只用于确认断言能变红，不会修改仓库源码；验证完再跑一次正常命令即可。
@@ -86,6 +87,7 @@ pnpm check:ui -- --skip-build --reverse=purchase   # 保留真实变价流程，
 
 - `node scripts/acceptance/check-es-degraded.mjs --skip-build`：先确认在线搜索成功，再停本轮 ES → 关键词 503 固定文案 + 重试 / 清除关键词 → **停机期间真实点一次重试（仍 503、关键词保留）** → 普通浏览可用 → 恢复 ES 并等待冷却 → 点原页面「重试」恢复结果。
 - 任一步抛错时会在 `finally` 恢复本轮停掉的 ES，并记录 `restoreAfterFailure`。
+- 停机重试额外用 CDP `Network` 断言：点击确实发出新的关键词请求（`retryWhileDownSendsRequest`），且该请求响应为 HTTP 503（`retryWhileDownGets503`）。
 - 会停并恢复本轮 `es-dev.mjs` 启动的 ES；不并入 `check:ui`（其预检强依赖联想接口）。
 
 ## 证据目录

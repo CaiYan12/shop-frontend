@@ -35,14 +35,19 @@ async function resetPage (page, baseUrl, { width, height, dark = false } = {}) {
 }
 
 async function clickPoint (page, selector) {
-  const box = await page.eval('(() => {\n' +
-    '  const element = document.querySelector(' + JSON.stringify(selector) + ')\n' +
-    '  if (!element) return null\n' +
-    '  element.scrollIntoView({ block: "center", inline: "center" })\n' +
-    '  const rect = element.getBoundingClientRect()\n' +
-    '  if (rect.width === 0 || rect.height === 0) return null\n' +
-    '  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }\n' +
-    '})()')
+  let box = null
+  for (let attempt = 0; attempt < 30; attempt++) {
+    box = await page.eval('(() => {\n' +
+      '  const element = document.querySelector(' + JSON.stringify(selector) + ')\n' +
+      '  if (!element) return null\n' +
+      '  element.scrollIntoView({ block: "center", inline: "center" })\n' +
+      '  const rect = element.getBoundingClientRect()\n' +
+      '  if (rect.width === 0 || rect.height === 0) return null\n' +
+      '  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }\n' +
+      '})()')
+    if (box) break
+    await sleep(100)
+  }
   if (!box) throw new Error('找不到可点击元素：' + selector)
   for (const type of ['mousePressed', 'mouseReleased']) {
     await page.send('Input.dispatchMouseEvent', { type, x: box.x, y: box.y, button: 'left', clickCount: 1 })
@@ -102,10 +107,9 @@ async function installPurchaseMock (page, scenario) {
     page.__p7Cleanup()
     page.__p7Cleanup = null
   }
-  const mock = { requests: [], sequence: scenario.sequence, prices: scenario.prices, stock: scenario.stock }
+  const mock = { requests: [], appRequests: 0, sequence: scenario.sequence, prices: scenario.prices, stock: scenario.stock }
   const delayMs = Number(scenario.delayMs ?? 0)
-  const buildPayload = (body) => {
-    const index = mock.requests.length - 1
+  const buildPayload = (body, index) => {
     const mode = mock.sequence[Math.min(index, mock.sequence.length - 1)]
     const unitPriceCents = mock.prices[Math.min(index + 1, mock.prices.length - 1)]
     const base = {
@@ -129,7 +133,10 @@ async function installPurchaseMock (page, scenario) {
       }
       let body = {}
       try { body = JSON.parse(params.request.postData ?? '{}') } catch {}
+      // `x-p7-injected` 的请求只用于模拟「页面提前发第二次校验」，不推进应用的响应序列。
+      const injected = Boolean(params.request.headers && params.request.headers['x-p7-injected'])
       mock.requests.push(body)
+      const appIndex = injected ? mock.appRequests : mock.appRequests++
       if (scenario.rewriteExpectedFromIndex !== undefined &&
         mock.requests.length - 1 === scenario.rewriteExpectedFromIndex &&
         scenario.rewriteExpectedTo !== undefined) {
@@ -145,7 +152,7 @@ async function installPurchaseMock (page, scenario) {
         })
         return
       }
-      const payload = buildPayload(body)
+      const payload = buildPayload(body, appIndex)
       await page.send('Fetch.fulfillRequest', {
         requestId: params.requestId,
         responseCode: 200,
@@ -193,6 +200,21 @@ async function closeDialogIfOpen (page) {
   }
   await page.waitFor(`document.querySelector('[data-state="purchase-dialog"]') === null`, 5000).catch(() => {})
   await sleep(300)
+}
+
+async function requireConfirmButton (page, mock) {
+  const state = await page.eval(`(() => {
+    const dialog = document.querySelector('[data-state="purchase-dialog"]')
+    const button = dialog ? dialog.querySelector('[data-state="purchase-confirm-price"]') : null
+    return {
+      phase: dialog ? dialog.getAttribute('data-phase') : null,
+      hasButton: Boolean(button),
+      text: dialog ? dialog.innerText.slice(0, 140) : null,
+    }
+  })()`)
+  if (state.hasButton !== true) {
+    throw new Error('confirm missing: ' + JSON.stringify(state) + ' requests=' + mock.requests.length)
+  }
 }
 
 async function waitForSettledPhase (page) {
@@ -484,9 +506,9 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     sequence: ['price-changed', 'price-changed', 'purchasable'],
     prices: [14900, 13500, 13900],
     stock: 200,
-    // 反向：保留真实变价流程，只把第二、三次请求记录的期望价改回页面价，
+    // `purchase-price`：保留真实变价流程，只把第二次请求记录的期望价改回旧价，
     // 用来验证 `secondRequestCarriesConfirmedPrice` 能抓到「重发旧价」这类缺陷。
-    ...(reverse === 'purchase' ? { rewriteExpectedFromIndex: 1, rewriteExpectedTo: 14900 } : {}),
+    ...(reverse === 'purchase-price' ? { rewriteExpectedFromIndex: 1, rewriteExpectedTo: 14900 } : {}),
   })
 
   await page.eval(`(() => { const button = document.querySelector('[data-state="buy-now"]'); if (button) button.scrollIntoView({ block: 'center' }); return true })()`)
@@ -494,6 +516,16 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   await clickPoint(page, '[data-state="buy-now"]')
   await page.waitFor(`document.querySelector('[data-state="purchase-dialog"]') !== null`, 8000)
   await waitForSettledPhase(page)
+  if (reverse === 'purchase') {
+    // 反向：首次 PRICE_CHANGED 仍保留，但模拟页面在用户确认前就发出第二次校验请求
+    // （期望价直接带新价），让 `confirmationRequired` 抓到「未确认即放行」。
+    await page.eval(`fetch('/api/purchase-check', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-p7-injected': '1' },
+      body: JSON.stringify({ slug: 'apple-earpods', sku: 'EARPODS-LTN-BOX', quantity: 2, expectedUnitPriceCents: 13500 }),
+    }).then((response) => response.status)`)
+    await sleep(250)
+  }
   const first = await dialogSnapshot(page, mock)
   await shot(page, ['p7-purchase', '1365-light', 'price-changed-1.png'], screenshots)
   const dialogA11y = await page.eval(`(() => {
@@ -525,16 +557,20 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   let third = null
   let flowDebug = null
   if (first.confirmVisible) {
+    const beforeSecond = mock.requests.length
+    await requireConfirmButton(page, mock)
     await clickPoint(page, '[data-state="purchase-confirm-price"]')
-    await waitForRequests(mock, 2)
+    await waitForRequests(mock, beforeSecond + 1)
     await waitForSettledPhase(page)
     second = await dialogSnapshot(page, mock)
     await shot(page, ['p7-purchase', '1365-light', 'price-changed-2.png'], screenshots)
 
     if (second.confirmVisible) {
       try {
+        const beforeThird = mock.requests.length
+        await requireConfirmButton(page, mock)
         await clickPoint(page, '[data-state="purchase-confirm-price"]')
-        await waitForRequests(mock, 3)
+        await waitForRequests(mock, beforeThird + 1)
         await page.waitFor(`document.querySelector('[data-phase="purchasable"]') !== null`, 8000)
         await sleep(200)
         third = await dialogSnapshot(page, mock)
@@ -557,9 +593,11 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   }
 
   // 已确认新价 → 500 → 重试必须重发新价（复审 Spec 1 回归）。
+  await closeDialogIfOpen(page)
   mock = await installPurchaseMock(page, { sequence: ['price-changed', 'price-changed', 'purchasable'], prices: [14900, 13500, 13900], stock: 200, failAtIndices: [1] })
   await clickPoint(page, '[data-state="buy-now"]')
   await waitForSettledPhase(page)
+  await requireConfirmButton(page, mock)
   await clickPoint(page, '[data-state="purchase-confirm-price"]')
   await waitForRequests(mock, 2)
   await waitForSettledPhase(page)
@@ -576,6 +614,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   await closeDialogIfOpen(page)
 
   // 校验中与关闭后迟到响应（D103 / D110）：响应延迟 900ms，先看禁用主操作，再关闭。
+  await closeDialogIfOpen(page)
   const purchaseNet = { ids: new Set(), failed: [] }
   await page.send('Network.enable').catch(() => {})
   page.on('Network.requestWillBeSent', (params) => {
@@ -813,7 +852,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   const archiveAfter = await page.eval('localStorage.getItem("shop-frontend:cart:v1")')
 
   mark(checks, failures, 'firstResponseIsPriceChanged', first.phase === 'price-changed', '首次校验未停在价格变化分支')
-  mark(checks, failures, 'firstRequestCarriesPagePrice', first.lastExpected === 14900, '首次请求的 expectedUnitPriceCents 不是页面展示价')
+  mark(checks, failures, 'firstRequestCarriesPagePrice', Boolean(mock.requests[0]) && mock.requests[0].expectedUnitPriceCents === 14900, '首次请求的 expectedUnitPriceCents 不是页面展示价')
   mark(checks, failures, 'firstShowsOldAndNewPrice', first.oldPrice === '¥149.00' && first.newPrice === '¥135.00', '价格变化未并列展示原价与当前价')
   mark(checks, failures, 'confirmationRequired', first.requestCount === 1 && first.confirmVisible === true, '价格变化后未经确认就发出了第二次请求')
   mark(checks, failures, 'secondRequestCarriesConfirmedPrice', second !== null && second.lastExpected === 13500, '确认后未按用户确认的新价重新校验')
