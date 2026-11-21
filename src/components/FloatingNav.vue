@@ -26,9 +26,10 @@
       </v-btn>
     </div>
 
-    <div
-      v-show="expanded"
-      :id="panelId"
+    <Transition :css="false" @enter="onPanelEnter" @leave="onPanelLeave">
+      <div
+        v-if="expanded"
+        :id="panelId"
       ref="panelElement"
       class="floating-nav__panel"
       data-state="nav-panel"
@@ -61,7 +62,8 @@
       >
         {{ themeLabel }}
       </v-btn>
-    </div>
+      </div>
+    </Transition>
   </nav>
 </template>
 
@@ -71,6 +73,7 @@
   import { SITE_NAME } from '@/theme'
   import { useCartPanelStore } from '@/stores/cart-panel'
   import { useThemePreference } from '@/composables/useThemePreference'
+  import { allowsMotion, gsap } from '@/plugins/motion'
 
   /**
    * 灵动岛导航（D106–D108）：顶替原 AppHeader，收起态只显示站名、当前页与展开按钮；
@@ -129,6 +132,25 @@
     event.preventDefault()
     closePanel()
     focusToggle()
+  }
+
+  /** 展开 / 收起（D109）：开 220ms、关 160ms，只动 opacity 与 transform。 */
+  function onPanelEnter(el: Element, done: () => void): void {
+    if (!allowsMotion()) {
+      done()
+      return
+    }
+    gsap.fromTo(el, { autoAlpha: 0, y: -8 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out', onComplete: done })
+  }
+
+  function onPanelLeave(el: Element, done: () => void): void {
+    if (!allowsMotion()) {
+      done()
+      return
+    }
+    // 收起期间面板已不可交互，避免退场元素接住点击。
+    ;(el as HTMLElement).style.pointerEvents = 'none'
+    gsap.to(el, { autoAlpha: 0, y: -8, duration: 0.16, ease: 'power2.in', onComplete: done })
   }
 
   watch(expanded, (open) => {

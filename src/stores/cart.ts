@@ -80,6 +80,8 @@ export interface CartState {
   recoveryNoticeFull: string
   /** 启动恢复只允许触发一次（App 重复挂载 / HMR 时不重复读盘）。 */
   recoveryStarted: boolean
+  /** 成功加购的脉冲计数：只由 `add` 成功时自增，供摘要做约 120ms 的数字强调（D109）。 */
+  addPulse: number
 }
 
 /** 正整数判定：`0`、负数、小数、`NaN`、`Infinity` 全部拒绝（D68）。 */
@@ -202,6 +204,7 @@ export const useCartStore = defineStore('cart', {
     recoveryNotice: '',
     recoveryNoticeFull: '',
     recoveryStarted: false,
+    addPulse: 0,
   }),
   getters: {
     /** 全部条目的数量之和。 */
@@ -265,6 +268,8 @@ export const useCartStore = defineStore('cart', {
       }
 
       this.persist()
+      // 只有成功加购才推进脉冲；编辑 / 删除 / 恢复不触发摘要强调（D109）。
+      this.addPulse += 1
       return { ok: true }
     },
 

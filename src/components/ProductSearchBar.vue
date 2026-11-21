@@ -65,8 +65,9 @@
           窄屏（<640px）搜索按钮在输入框下方，弹层要越过按钮再展开，否则会盖住提交入口；
           `top-[calc(100%+3.5rem)]` = 12px 行间距 + 44px 大按钮高度，`sm:` 起恢复贴输入框。
         -->
-        <v-list
-          v-if="isOpen"
+        <Transition :css="false" @enter="onListEnter" @leave="onListLeave">
+          <v-list
+            v-if="isOpen"
           :id="SUGGESTION_LISTBOX_ID"
           aria-label="商品联想"
           class="absolute left-0 right-0 top-[calc(100%+3.5rem)] z-50 mt-1 overflow-hidden rounded-xl border border-outline bg-surface py-1 shadow-lg sm:top-full"
@@ -94,7 +95,8 @@
               <HighlightedText :fallback="item.brand" :fragments="item.highlight?.brand" />
             </span>
           </v-list-item>
-        </v-list>
+          </v-list>
+        </Transition>
       </div>
 
       <v-btn
@@ -113,6 +115,7 @@
 <script lang="ts" setup>
   import { computed, onBeforeUnmount, ref, watch } from 'vue'
   import { useRoute } from 'vue-router'
+  import { allowsMotion, gsap } from '@/plugins/motion'
   import HighlightedText from '@/components/HighlightedText.vue'
   import { useProductSuggestions } from '@/composables/useProductSuggestions'
   import type { ProductSuggestionItem } from '@/composables/useProductSuggestions'
@@ -350,6 +353,25 @@
     document.removeEventListener('pointerdown', onDocumentOutsideInteraction, true)
     document.removeEventListener('click', onDocumentOutsideInteraction, true)
   })
+
+  /** 联想弹层显隐反馈（D109）：只动 opacity / transform，不改请求、键盘与语义状态。 */
+  function onListEnter(el: Element, done: () => void): void {
+    if (!allowsMotion()) {
+      done()
+      return
+    }
+    gsap.fromTo(el, { autoAlpha: 0, y: -4 }, { autoAlpha: 1, y: 0, duration: 0.16, ease: 'power2.out', onComplete: done })
+  }
+
+  function onListLeave(el: Element, done: () => void): void {
+    if (!allowsMotion()) {
+      done()
+      return
+    }
+    // 退场期间弹层已不可交互，避免残留元素接住点击。
+    ;(el as HTMLElement).style.pointerEvents = 'none'
+    gsap.to(el, { autoAlpha: 0, y: -4, duration: 0.12, ease: 'power2.in', onComplete: done })
+  }
 
   onBeforeUnmount(() => {
     document.removeEventListener('pointerdown', onDocumentOutsideInteraction, true)

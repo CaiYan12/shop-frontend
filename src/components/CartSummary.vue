@@ -83,6 +83,7 @@
     -->
     <button
       id="cart-summary-trigger"
+      ref="triggerElement"
       :aria-controls="PANEL_ID"
       :aria-expanded="cartPanel.panelOpen ? 'true' : 'false'"
       aria-haspopup="dialog"
@@ -140,6 +141,7 @@
   import { computed, ref, watch } from 'vue'
   import { useDisplay } from 'vuetify'
   import { useCartStore } from '@/stores/cart'
+  import { allowsMotion, gsap } from '@/plugins/motion'
   import { useCartPanelStore } from '@/stores/cart-panel'
   import { retryCartRecovery } from '@/utils/cart-startup'
   import { formatPriceCents } from '@/utils/price'
@@ -161,6 +163,23 @@
 
   const totalQuantity = computed(() => cart.totalQuantity)
   const totalAmountCents = computed(() => cart.totalAmountCents)
+
+  /**
+   * 摘要数字强调（D109）：只响应成功加购的 `addPulse`；编辑数量、删除与恢复复核
+   * 沿用既有反馈，不触发动画。减少动态效果时直接跳过，功能与播报不变。
+   */
+  const triggerElement = ref<HTMLElement | null>(null)
+  watch(() => cart.addPulse, () => {
+    const target = triggerElement.value?.querySelector<HTMLElement>('[data-state="cart-summary-figures"]')
+    if (target === null || target === undefined || !allowsMotion()) {
+      return
+    }
+    gsap.fromTo(
+      target,
+      { scale: 1 },
+      { scale: 1.08, duration: 0.06, yoyo: true, repeat: 1, ease: 'power1.inOut', transformOrigin: 'left center', clearProps: 'transform' },
+    )
+  })
 
   /**
    * 短提示最多 3 条，完整清单不折叠。两者不同才需要「查看全部 / 收起」；
