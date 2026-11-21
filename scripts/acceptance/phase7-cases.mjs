@@ -889,6 +889,10 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   await page.waitFor(`document.querySelector('[data-state="floating-nav"]') !== null`, 20000)
   await sleep(250)
   await clickPoint(page, '[data-state="nav-toggle"]')
+  const reducedFocus = await page.eval(`(() => {
+    const nav = document.querySelector('[data-state="floating-nav"]')
+    return { activeIsHome: Boolean(nav) && document.activeElement === nav.querySelector('[data-state="nav-item-home"]') }
+  })()`)
   const reducedEnter = await sampleStyles(page, '[data-state="nav-panel"]', 260)
   const reducedInstant = reducedEnter.length > 0 && reducedEnter.every((sample) => sample.opacity === '1' && isIdentity(sample.transform))
   await shot(page, ['p7-motion', '1365-reduced', 'nav-enter.png'], screenshots)
@@ -915,6 +919,7 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   mark(checks, failures, 'reducedSearchInstant', reducedListInstant, 'reduced-motion 下搜索联想仍有动画')
   mark(checks, failures, 'reducedNoPulse', reducedPulseSeen === false, 'reduced-motion 下摘要仍有强调动画')
   mark(checks, failures, 'reducedFunctional', /1 件/.test(reducedFunctional.cartQuantity), 'reduced-motion 下加购功能未照常生效')
+  mark(checks, failures, 'reducedFocusFirstItem', reducedFocus.activeIsHome === true, 'reduced-motion 下展开后焦点没有落在第一个导航项')
 
   return {
     checks,
