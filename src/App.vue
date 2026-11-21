@@ -1,7 +1,12 @@
 <template>
   <v-app>
-    <AppHeader />
-    <v-main>
+    <!--
+      灵动岛顶替原 AppHeader（D106）：固定悬浮、不参与布局；
+      顶部为收起态预留 64px（D107），展开时正文不位移。
+    -->
+    <FloatingNav />
+
+    <v-main class="pt-16">
       <router-view />
     </v-main>
 
@@ -16,9 +21,9 @@
 
 <script lang="ts" setup>
   import { onMounted } from 'vue'
-  import AppHeader from '@/components/AppHeader.vue'
   import CartPanel from '@/components/CartPanel.vue'
   import CartSummary from '@/components/CartSummary.vue'
+  import FloatingNav from '@/components/FloatingNav.vue'
   import { useCartStore } from '@/stores/cart'
   import { startCartRecovery } from '@/utils/cart-startup'
 
