@@ -57,7 +57,7 @@
           </v-btn>
         </div>
 
-        <div class="max-h-[60vh] overflow-y-auto px-4 py-4">
+        <div class="filter-sheet__body max-h-[60vh] overflow-y-auto px-4 py-4">
           <ProductFilterControls
             :state="state"
             aria-prefix="抽屉"
@@ -126,3 +126,16 @@
     emit('clear')
   }
 </script>
+
+<style scoped>
+  /*
+   * R27-C：只给筛选抽屉内容区上主题色，滚动仍由浏览器原生处理；
+   * 不设置 scrollbar-width / gutter，保持默认宽度与滚动范围。
+   */
+  .filter-sheet__body {
+    scrollbar-color:
+      rgba(var(--v-theme-on-surface), 0.55)
+      rgba(var(--v-theme-on-surface), 0.08);
+    forced-color-adjust: auto;
+  }
+</style>

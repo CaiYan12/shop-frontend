@@ -72,7 +72,7 @@
           -->
           <ul
             v-else
-            class="min-h-0 flex-1 divide-y divide-outline overflow-y-auto overscroll-contain"
+            class="cart-panel__items min-h-0 flex-1 divide-y divide-outline overflow-y-auto overscroll-contain"
             data-state="cart-panel-items"
           >
             <li
@@ -439,5 +439,17 @@
     .cart-panel-leave-to .cart-panel__panel {
       transform: none;
     }
+  }
+
+  /*
+   * R27-C：只给内部列表上主题色，沿用浏览器原生滚动条与滚动行为；
+   * 不设置 scrollbar-width / gutter，宽度与滚动范围保持浏览器默认。
+   * forced-color-adjust: auto 让 Windows 强制色模式仍可接管。
+   */
+  .cart-panel__items {
+    scrollbar-color:
+      rgba(var(--v-theme-on-surface), 0.55)
+      rgba(var(--v-theme-on-surface), 0.08);
+    forced-color-adjust: auto;
   }
 </style>
