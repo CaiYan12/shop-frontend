@@ -6,14 +6,14 @@
     :data-expanded="expanded ? 'true' : 'false'"
     data-state="floating-nav"
   >
-    <div class="floating-nav__bar">
+    <!-- 收起态：站名 + 当前页 + 展开按钮（D106） -->
+    <div v-if="!expanded" class="floating-nav__bar" data-state="nav-bar">
       <span class="floating-nav__brand">{{ SITE_NAME }}</span>
       <span class="floating-nav__page" data-state="nav-page">{{ pageLabel }}</span>
       <v-btn
-        ref="toggleElement"
-        :aria-controls="panelId"
-        :aria-expanded="expanded"
-        :aria-label="expanded ? '收起导航' : '展开导航'"
+        ref="collapsedToggle"
+        aria-expanded="false"
+        aria-label="展开导航"
         class="floating-nav__toggle"
         data-state="nav-toggle"
         density="comfortable"
@@ -22,46 +22,66 @@
         variant="text"
         @click="toggleExpanded"
       >
-        <v-icon :icon="expanded ? 'mdi-close' : 'mdi-menu'" />
+        <v-icon icon="mdi-menu" />
       </v-btn>
     </div>
 
+    <!--
+      展开态：同一行内换成三项 + 收起按钮（D107）。
+      岛高度保持不变，展开不会向下遮住搜索控件或购物车摘要；390 下允许换行兜底。
+    -->
     <Transition :css="false" @enter="onPanelEnter" @leave="onPanelLeave">
       <div
         v-if="expanded"
         :id="panelId"
-      ref="panelElement"
-      class="floating-nav__panel"
-      data-state="nav-panel"
-    >
-      <v-btn
-        class="floating-nav__item"
-        data-state="nav-item-home"
-        size="small"
-        to="/"
-        variant="text"
-        @click="closePanel"
+        class="floating-nav__panel"
+        data-state="nav-panel"
       >
-        商品列表
-      </v-btn>
-      <v-btn
-        class="floating-nav__item"
-        data-state="nav-item-cart"
-        size="small"
-        variant="text"
-        @click="openCart"
-      >
-        购物车
-      </v-btn>
-      <v-btn
-        class="floating-nav__item"
-        data-state="nav-item-theme"
-        size="small"
-        variant="text"
-        @click="toggleTheme"
-      >
-        {{ themeLabel }}
-      </v-btn>
+        <v-btn
+          class="floating-nav__item"
+          data-state="nav-item-home"
+          size="small"
+          to="/"
+          variant="text"
+          @click="closePanel"
+        >
+          商品列表
+        </v-btn>
+        <v-btn
+          class="floating-nav__item"
+          data-state="nav-item-cart"
+          size="small"
+          variant="text"
+          @click="openCart"
+        >
+          购物车
+        </v-btn>
+        <v-btn
+          class="floating-nav__item"
+          :aria-label="themeAriaLabel"
+          data-state="nav-item-theme"
+          size="small"
+          variant="text"
+          @click="toggleTheme"
+        >
+          <v-icon :icon="themeIcon" size="16" start />
+          切换主题
+        </v-btn>
+        <v-btn
+          ref="expandedToggle"
+          :aria-controls="panelId"
+          aria-expanded="true"
+          aria-label="收起导航"
+          class="floating-nav__toggle"
+          data-state="nav-toggle"
+          density="comfortable"
+          icon
+          size="small"
+          variant="text"
+          @click="toggleExpanded"
+        >
+          <v-icon icon="mdi-close" />
+        </v-btn>
       </div>
     </Transition>
   </nav>
@@ -76,9 +96,13 @@
   import { allowsMotion, gsap } from '@/plugins/motion'
 
   /**
-   * 灵动岛导航（D106–D108）：顶替原 AppHeader，收起态只显示站名、当前页与展开按钮；
-   * 展开项为商品列表、购物车、切换主题。当前页文案固定为「商品列表」/「商品详情」，
-   * 不从详情页同步商品名。
+   * 灵动岛导航（D106–D108）：顶替原 AppHeader。收起态显示站名、当前页与展开按钮；
+   * 展开态在同一行内换成商品列表、购物车、切换主题与收起按钮，岛高度不变。
+   * 当前页文案固定为「商品列表」/「商品详情」，不从详情页同步商品名。
+   *
+   * 能力缺口（AGENTS「组件库样式与验收」）：Vuetify 4.3.3 没有浮动岛 / 玻璃导航组件，
+   * 容器用原生 `<nav>`（语义与焦点顺序）承载，控件本体仍是 Vuetify `VBtn` / `VIcon`；
+   * 玻璃只用项目主题色派生样式，浅暗对比、无模糊可读与真实命中由 P7-NAV 覆盖。
    */
   const route = useRoute()
   const cartPanel = useCartPanelStore()
@@ -86,23 +110,34 @@
 
   const expanded = ref(false)
   const navElement = ref<HTMLElement | null>(null)
-  const panelElement = ref<HTMLElement | null>(null)
-  const toggleElement = ref<{ $el?: HTMLElement } | null>(null)
+  /** 收起 / 展开是两个互斥按钮，分开持有 ref，避免离场元素卸载时清空同一个 ref。 */
+  const collapsedToggle = ref<{ $el?: HTMLElement } | null>(null)
+  const expandedToggle = ref<{ $el?: HTMLElement } | null>(null)
   const panelId = `${useId()}-panel`
 
   const pageLabel = computed(() => (route.name === 'product' ? '商品详情' : '商品列表'))
-  const themeLabel = computed(() => (current.value === 'dark' ? '切换主题（当前暗色）' : '切换主题（当前浅色）'))
+  const themeIcon = computed(() => (current.value === 'dark' ? 'mdi-weather-sunny' : 'mdi-weather-night'))
+  const themeAriaLabel = computed(() =>
+    current.value === 'dark' ? '切换到浅色主题' : '切换到暗色主题',
+  )
 
+  function focusToggle(): void {
+    const toggle = expanded.value ? expandedToggle : collapsedToggle
+    void nextTick(() => toggle.value?.$el?.focus({ preventScroll: true }))
+  }
+
+  /** 展开 / 收起都换掉那一行的按钮，焦点要跟着走（D108）。 */
   function toggleExpanded(): void {
     expanded.value = !expanded.value
+    focusToggle()
   }
 
   function closePanel(): void {
+    if (!expanded.value) {
+      return
+    }
     expanded.value = false
-  }
-
-  function focusToggle(): void {
-    void nextTick(() => toggleElement.value?.$el?.focus())
+    focusToggle()
   }
 
   /** 购物车项只打开既有面板；面板自带焦点陷阱与层级（D108）。 */
@@ -124,14 +159,13 @@
     closePanel()
   }
 
-  /** Esc 收起并回焦展开按钮（D108）。 */
+  /** Esc 收起并回焦（D108）。 */
   function onKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Escape') {
       return
     }
     event.preventDefault()
     closePanel()
-    focusToggle()
   }
 
   /** 展开 / 收起（D109）：开 220ms、关 160ms，只动 opacity 与 transform。 */
@@ -140,7 +174,7 @@
       done()
       return
     }
-    gsap.fromTo(el, { autoAlpha: 0, y: -8 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out', onComplete: done })
+    gsap.fromTo(el, { autoAlpha: 0, x: 8 }, { autoAlpha: 1, x: 0, duration: 0.22, ease: 'power2.out', onComplete: done })
   }
 
   function onPanelLeave(el: Element, done: () => void): void {
@@ -150,7 +184,7 @@
     }
     // 收起期间面板已不可交互，避免退场元素接住点击。
     ;(el as HTMLElement).style.pointerEvents = 'none'
-    gsap.to(el, { autoAlpha: 0, y: -8, duration: 0.16, ease: 'power2.in', onComplete: done })
+    gsap.to(el, { autoAlpha: 0, x: 8, duration: 0.16, ease: 'power2.in', onComplete: done })
   }
 
   watch(expanded, (open) => {
@@ -181,8 +215,7 @@
     z-index: 30;
     display: flex;
     max-width: calc(100vw - 32px);
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
     padding: 6px;
     border: 1px solid rgba(var(--v-theme-on-surface), 0.14);
     border-radius: 999px;
@@ -193,16 +226,13 @@
     -webkit-backdrop-filter: blur(16px) saturate(140%);
   }
 
-  .floating-nav[data-expanded='true'] {
-    border-radius: 20px;
-  }
-
-  /* 窄屏左右各留 16px，展开内容允许换行（D107）。 */
+  /* 窄屏左右各留 16px；展开内容允许换行兜底（D107）。 */
   @media (max-width: 599px) {
     .floating-nav {
       right: 16px;
       left: 16px;
       max-width: none;
+      flex-wrap: wrap;
       transform: none;
     }
   }
@@ -214,11 +244,21 @@
     }
   }
 
-  .floating-nav__bar {
+  .floating-nav__bar,
+  .floating-nav__panel {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+  }
+
+  .floating-nav__bar {
     padding-left: 12px;
+  }
+
+  .floating-nav__panel {
+    gap: 2px;
+    padding-left: 4px;
   }
 
   .floating-nav__brand {
@@ -229,21 +269,13 @@
   }
 
   .floating-nav__page {
-    color: rgb(var(--v-theme-muted));
+    color: rgb(var(--v-theme-on-surface-muted));
     font-size: 0.75rem;
     white-space: nowrap;
   }
 
   .floating-nav__toggle {
     margin-left: 2px;
-  }
-
-  .floating-nav__panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding-top: 4px;
-    border-top: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   }
 
   .floating-nav__item {

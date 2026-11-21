@@ -12,6 +12,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "check:cart": "node --test scripts/phase6/*.test.ts",
     "check:ui": "node scripts/acceptance/check-ui.mjs",
+    "check:es": "node scripts/acceptance/check-es-degraded.mjs",
     "check:ui:unit": "node --test scripts/acceptance/native-scrollbar.test.mjs",
     "stack": "node scripts/stack-status.mjs",
     "prepare": "node scripts/install-hooks.mjs"

@@ -6,6 +6,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findFreePort, launchBrowser, openPage, sleep, waitForHttp } from './lib.mjs'
 import { sampleNativeScrollbar } from './native-scrollbar.mjs'
+import { caseP7Motion, caseP7Nav, caseP7Purchase } from './phase7-cases.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const CART_ITEMS = [
@@ -32,8 +33,9 @@ const valueOf = (name, fallback = null) => {
 const skipBuild = hasFlag('--skip-build')
 const headed = hasFlag('--headed')
 const reverse = valueOf('--reverse')
-if (reverse && reverse !== 'f1') {
-  throw new Error(`未知反向验证：${reverse}；目前只支持 --reverse=f1`)
+const REVERSE_MODES = new Set(['f1', 'island', 'purchase'])
+if (reverse && !REVERSE_MODES.has(reverse)) {
+  throw new Error(`未知反向验证：${reverse}；支持 --reverse=f1|island|purchase`)
 }
 
 const runId = valueOf('--run-id') ?? new Date().toISOString().replace(/[:.]/g, '-')
@@ -567,6 +569,24 @@ try {
     preview.baseUrl,
     { id: 'R27', title: '购物车/筛选滚动条对比度', viewport: '1365x900 + 390x360', theme: 'light + dark' },
     (page) => caseR27(page, preview.baseUrl),
+  )
+  await runCase(
+    browser,
+    preview.baseUrl,
+    { id: 'P7-NAV', title: '灵动岛职责、避让与可访问性', viewport: '1365x900 + 390x844', theme: 'light + dark' },
+    (page) => caseP7Nav(page, preview.baseUrl, { shot, reverse }),
+  )
+  await runCase(
+    browser,
+    preview.baseUrl,
+    { id: 'P7-PURCHASE', title: '购买三分支、价格二次确认与前端拦截', viewport: '1365x900 + 390x844', theme: 'light + dark' },
+    (page) => caseP7Purchase(page, preview.baseUrl, { shot, reverse }),
+  )
+  await runCase(
+    browser,
+    preview.baseUrl,
+    { id: 'P7-MOTION', title: '岛 / 搜索 / 摘要动效与 reduced-motion', viewport: '1365x900', theme: 'light + reduced' },
+    (page) => caseP7Motion(page, preview.baseUrl, { shot }),
   )
 } catch (error) {
   fatal = error instanceof Error ? error.message : String(error)

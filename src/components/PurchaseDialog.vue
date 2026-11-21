@@ -2,6 +2,7 @@
   <v-dialog
     :max-width="480"
     :model-value="modelValue"
+    class="purchase-dialog-shell"
     @update:model-value="onDialogUpdate"
   >
     <v-card
@@ -108,6 +109,15 @@
 
       <footer class="flex flex-wrap items-center justify-end gap-2 border-t border-outline px-5 py-3">
         <template v-if="phase === 'checking'">
+          <v-btn
+            color="primary"
+            data-state="purchase-checking-action"
+            disabled
+            loading
+            variant="flat"
+          >
+            校验中
+          </v-btn>
           <v-btn data-state="purchase-dismiss" variant="text" @click="requestClose">关闭</v-btn>
         </template>
 
@@ -163,7 +173,7 @@
             返回列表
           </v-btn>
           <v-btn
-            v-else
+            v-else-if="errorKind === 'variant-missing'"
             color="primary"
             data-state="purchase-reload-product"
             variant="flat"
@@ -187,7 +197,7 @@
   /** 对话框状态：四分支加一个进行中（D99）。 */
   type Phase = 'checking' | 'purchasable' | 'insufficient' | 'price-changed' | 'error'
   /** 非三分支错误的出口：可重试 / 商品失效 / 规格失效（D104）。 */
-  type ErrorKind = 'retryable' | 'product-missing' | 'variant-missing'
+  type ErrorKind = 'retryable' | 'product-missing' | 'variant-missing' | 'invalid-request'
 
   const props = defineProps<{
     modelValue: boolean
@@ -229,6 +239,13 @@
       if (code === 'VARIANT_NOT_FOUND' || code === 'VARIANT_NOT_IN_PRODUCT') {
         errorKind.value = 'variant-missing'
         errorText.value = '该规格已失效，请刷新商品后重新选择规格。'
+        phase.value = 'error'
+        return
+      }
+      // 400 / 413 / 415 属请求侧不可恢复错误：重试只会重复失败，只给关闭。
+      if (error.status === 400 || error.status === 413 || error.status === 415) {
+        errorKind.value = 'invalid-request'
+        errorText.value = '本次校验请求参数无效，请关闭后重试。'
         phase.value = 'error'
         return
       }
@@ -322,3 +339,22 @@
     controller = null
   })
 </script>
+
+<style>
+  /*
+   * D98：390 下对话框左右各留 16px；VDialog 默认 24px，按决定覆盖。
+   * 非 scoped：VDialog 内容 teleport 到 body，需要按组件类名作用。
+   */
+  /* 只作用于包着购买确认卡片的 VDialog，不波及其它对话框。 */
+  .v-dialog:has(.purchase-dialog) {
+    margin: 16px;
+  }
+
+  /* D98：390 下至少留 16px；卡片按内容自适应，实测两侧更宽（见 P7-PURCHASE 的 narrowDarkMargin）。 */
+  @media (max-width: 599px) {
+    .v-dialog:has(.purchase-dialog) {
+      min-width: calc(100% - 32px);
+      margin: 16px;
+    }
+  }
+</style>

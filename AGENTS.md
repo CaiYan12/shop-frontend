@@ -41,7 +41,8 @@ pnpm build          # 类型检查 + 生产构建（run-p type-check build-only�
 pnpm type-check     # 统一类型检查入口（vue-tsc --build --force）
 pnpm check:docs     # README 契约数字（路径数 / 组件数）与 schema.d.ts 一致性
 pnpm check:cart     # 购物车回归：存档恢复、只读入口、persist 守卫
-pnpm check:ui       # UI 验收：干净构建 + F1 / R26 / R27 冒烟与截图证据
+pnpm check:ui       # UI 验收：干净构建 + F1 / R26 / R27 / P7-NAV / P7-PURCHASE / P7-MOTION 冒烟与截图证据
+pnpm check:es       # ES 降级与恢复的独立实机复验（P7-ES；会停并恢复本轮 ES）
 pnpm stack          # 开发栈三端状态：前端 5173 / 后端 3001 / ES 9201
 pnpm preview        # 预览构建产物
 ```
@@ -58,7 +59,7 @@ stop.bat            # 停止并释放端口
 - 重复执行 `start.bat` 不会产生第二个进程，会提示「已在运行」。
 - 新建 worktree 的准备工作（依赖单独安装、读 `node_modules` 的路径写法、素材目录）见 `docs/worktree-setup.md`。
 - 提交前由 pre-commit hook 自动跑 `pnpm check:docs`、`pnpm check:cart` 与 `pnpm build`（含 type-check）；`pnpm install` 时经 `prepare` 安装。CI 按同一顺序执行这三项，其中构建已包含 type-check，不再单独跑 `pnpm type-check`。
-- UI 验收先跑 `pnpm check:ui`（默认 clean build + preview，独立临时浏览器 profile）；脚本通过后仍须实际查看 manifest 指向的关键截图，分别记录 smoke 与视觉验证结果。用法与证据约定见 `scripts/acceptance/README.md`。
+- UI 验收先跑 `pnpm check:ui`（默认 clean build + preview，独立临时浏览器 profile；含 F1 / R26 / R27 与 Phase 7 的 P7-NAV / P7-PURCHASE / P7-MOTION）；ES 降级另有独立入口 `node scripts/acceptance/check-es-degraded.mjs`（会停本轮 ES 再恢复，不并入 check:ui 预检）。脚本通过后仍须实际查看 manifest 指向的关键截图，分别记录 smoke 与视觉验证结果。用法与证据约定见 `scripts/acceptance/README.md`。
 - **依赖构建白名单**：pnpm 12 用 `pnpm-workspace.yaml` 的 `allowBuilds`（**映射形式** `'包名': true`）决定哪些依赖可以跑构建脚本。写在 `package.json` 的 `pnpm` 字段**不生效**，写成列表会报 `expected mapping start`。本仓库用它放行 `@parcel/watcher`（`sass` 的依赖）。
 
 ## Agent skills

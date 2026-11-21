@@ -1050,20 +1050,24 @@
     purchaseOpen.value = true
   }
 
+  function closePurchase(): void {
+    purchaseOpen.value = false
+  }
+
   /** 库存不足 → 关闭并聚焦数量输入，保留用户原输入（D101）。 */
   function onPurchaseAdjustQuantity(): void {
-    purchaseOpen.value = false
+    closePurchase()
     void nextTick(() => quantityInputRef.value?.focus())
   }
 
   function onPurchaseGoList(): void {
-    purchaseOpen.value = false
+    closePurchase()
     void router.push({ name: 'home' })
   }
 
   /** 规格失效 → 关闭、重载商品并清回未选规格（D104）。 */
   function onPurchaseReloadProduct(): void {
-    purchaseOpen.value = false
+    closePurchase()
     resetSelection()
     resetPurchaseState()
     void load()

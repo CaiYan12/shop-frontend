@@ -172,6 +172,7 @@ export async function openPage(port, url) {
   let closed = false
   const pending = new Map()
   const listeners = []
+  const subscriptions = []
 
   const rejectPending = (error) => {
     for (const [messageId, entry] of pending) {
@@ -192,6 +193,12 @@ export async function openPage(port, url) {
     }
     if (message.method) {
       for (const listener of listeners) listener(message)
+      for (const subscription of subscriptions) {
+        if (subscription.method !== message.method) continue
+        Promise.resolve()
+          .then(() => subscription.handler(message.params))
+          .catch(() => {})
+      }
     }
   }
 
@@ -238,6 +245,15 @@ export async function openPage(port, url) {
   const page = {
     send,
     consoleErrors,
+    /** 订阅一个 CDP 事件；返回取消订阅函数（验收脚本用于 Fetch 拦截）。 */
+    on (method, handler) {
+      const entry = { method, handler }
+      subscriptions.push(entry)
+      return () => {
+        const index = subscriptions.indexOf(entry)
+        if (index >= 0) subscriptions.splice(index, 1)
+      }
+    },
     async eval(expression) {
       const result = await send('Runtime.evaluate', {
         expression,

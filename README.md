@@ -15,7 +15,7 @@ Web 前端开发技术课程大作业 · 题目二「电商商品列表及详情
 | 样式 | Tailwind CSS 4 |
 | 状态 | Pinia 4 |
 | 路由 | Vue Router 5 |
-| 动效 | GSAP 3 |
+| 动效 | GSAP 3.15.1（仅灵动岛展开/收起、搜索联想显隐、摘要数字强调） |
 | 契约 | `openapi-typescript` + `openapi-fetch`，消费后端生成的 `openapi.json` |
 
 ## 契约类型（D65）
@@ -56,15 +56,23 @@ Phase 6（详情页与购物车）已实现：
 - 右侧固定购物车：摘要（件数与总金额）、抽屉面板（名称 / 单价 / 数量 / 小计 / 删除）、小屏底部抽屉；
 - `localStorage` 单键存档（`shop-frontend:cart:v1`）与启动恢复复核：脏数据丢弃、按商品去重核对、请求失败不改存档、写入失败保留上次值。
 
+Phase 7（特色组件与模拟购买）已实现：
+
+- 顶部灵动岛（Liquid Glass 包裹层）顶替原页头：收起态显示站名 + 当前页 + 展开按钮，展开态在同一行内换成「商品列表 / 购物车 / 切换主题」+ 收起按钮，岛高不变、正文不位移；
+- 详情页「立即购买」：沿用 D63 单件购买校验，展示可购买 / 库存不足 / 价格变化 / 请求错误；价格变化经「按新价重新校验」二次确认，库存不足可回到数量输入，金额一律 `formatPriceCents()`；
+- 数量输入与「立即购买」不受购物车只读影响，加购仍受它限制；`checkPurchase()` 接 `AbortSignal`，关闭 / 离页 / 切商品取消在途请求；
+- GSAP 3.15.1 只做三处动效（岛展开 220ms / 收起 160ms、搜索联想显隐、成功加购的摘要数字强调），只动 `transform` / `opacity`，`prefers-reduced-motion` 下直接落终态；
+- 构建产物 gzip 331,475 → 360,953 B（Phase 7 全部功能合计）。
+
 ## 目录
 
 ```text
 src/
 ├── api/          # openapi-fetch 客户端、生成的契约类型、购买结果映射
-├── components/   # 页头、搜索、筛选、卡片与高亮组件（需显式 import）
+├── components/   # 灵动岛、购买对话框、购物车、搜索、筛选、卡片与高亮组件（需显式 import）
 ├── composables/  # 商品联想状态机、主题偏好
 ├── pages/        # 列表页 index.vue、详情页 product.vue
-├── plugins/      # Vuetify / Pinia / Router 注册
+├── plugins/      # Vuetify / Pinia / Router 注册；motion.ts 是 gsap 唯一入口
 ├── router/       # 路由表
 ├── stores/       # Pinia store（购物车雏形与骨架期 demo）
 ├── styles/       # Tailwind、Vuetify 设置与圆角样式
@@ -74,7 +82,7 @@ src/
 └── main.ts
 ```
 
-- `components/`：6 个文件——`AppHeader`、`HighlightedText`、`ProductCard`、`ProductFilterBar`、`ProductFilterControls`、`ProductSearchBar`；不使用自动全局注册，必须显式 import。
+- `components/`：10 个文件——`FloatingNav`、`PurchaseDialog`、`CartPanel`、`CartSummary`、`QuantityInput`、`HighlightedText`、`ProductCard`、`ProductFilterBar`、`ProductFilterControls`、`ProductSearchBar`；不使用自动全局注册，必须显式 import。
 - `composables/`：`useProductSuggestions`（250 ms 防抖 + AbortController 的联想状态机）、`useThemePreference`（页头主题切换的唯一入口）。
 - `utils/`：`list-query`（URL ↔ 列表查询参数的唯一编解码）、`price`（分 → 人民币展示）、`highlight`（命中片段分段解析）。
 - `stores/`：`cart`（购物车内存态与 `localStorage` 存档恢复；运行时检查见 `scripts/phase6/cart-runtime-check.test.ts`，运行 `pnpm check:cart`）。
