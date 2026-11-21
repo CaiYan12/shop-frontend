@@ -273,7 +273,9 @@
         return
       case 'Escape':
         // 无条件取消：请求在途时 `isOpen` 仍为 false，不能只在下拉展开时处理。
+        // 同时阻止冒泡：灵动岛的 window Esc 监听不能把导航一起收起（独立复审 Spec 2）。
         event.preventDefault()
+        event.stopPropagation()
         dismissSuggestions()
         return
       case 'Enter':

@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Phase 5：列表页搜索 / 分类与价格筛选 / 排序 / 分页、商品卡片、浅色暗色主题切换。
 - Phase 6：商品详情页（轮播与放大查看、规格选择、数量校验、加购、图文详情、相关推荐）与右侧固定购物车（摘要、抽屉面板、`localStorage` 存档与恢复复核）。
 - Phase 7：顶部灵动岛（玻璃包裹层）顶替页头；详情页「立即购买」与购买确认对话框（三分支、价格二次确认、库存不足调整数量、`AbortSignal`）；GSAP 3.15.1 三处动效与 `prefers-reduced-motion`；`P7-NAV` / `P7-PURCHASE` / `P7-MOTION` 并入 `check:ui`，新增独立 `check-es-degraded.mjs`。
+- Phase 7 独立复审修正：重试复用刚确认的新价；搜索 Esc 不再收起导航；展开后焦点落在首个导航项；构建产物保留无前缀 `backdrop-filter`（浅暗计算值为 blur）；购买对话框补 `aria-labelledby`；P7-ES 增加停机重试与失败后恢复；反向 purchase 改为只改写记录中的期望价；动画截图改为真实中间帧。
 
 ### Fixed
 

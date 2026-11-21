@@ -29,7 +29,7 @@ pnpm check:ui -- --headed        # 有头浏览器，便于人工观察
 ```bash
 pnpm check:ui -- --skip-build --reverse=f1        # 联想列表上移，F1 必须失败
 pnpm check:ui -- --skip-build --reverse=island     # 岛移到右下压住摘要，P7-NAV 必须失败（islandNotOverSummary）
-pnpm check:ui -- --skip-build --reverse=purchase   # 首次校验直接放行，P7-PURCHASE 必须失败（firstResponseIsPriceChanged）
+pnpm check:ui -- --skip-build --reverse=purchase   # 保留真实变价流程，只把第二次请求记录的期望价改回旧价，P7-PURCHASE 必须失败（secondRequestCarriesConfirmedPrice）
 ```
 
 反向模式只用于确认断言能变红，不会修改仓库源码；验证完再跑一次正常命令即可。
@@ -65,14 +65,17 @@ pnpm check:ui -- --skip-build --reverse=purchase   # 首次校验直接放行，
 
 - `1365×900` 与 `390×844`、浅色与暗色四组：收起态文案与 `aria-expanded`、展开项 3 个、`aria-current`、`aria-controls` 指向面板、展开前后岛高差 ≤ 8px。
 - 真实命中：展开态岛与搜索输入框 / 购物车摘要无几何重叠，输入框中心命中输入框；展开态仍能打开联想、点击摘要打开购物车面板。
-- Esc 收起并回焦；反向模式 `island` 把岛移到右下压住摘要后，`islandNotOverSummary` 必须变红。
+- Esc 收起并回焦；展开后焦点落在第一个导航项（Tab 顺序完整）；浅暗两组的 `backdropFilter` 计算值都是 blur，强制无模糊时回退背景可读。
+- 反向模式 `island` 把岛移到右下压住摘要后，`islandNotOverSummary` 必须变红。
 
 ### P7-PURCHASE：购买三分支、价格二次确认与前端拦截
 
 - `1365×900`：用 CDP `Fetch` 拦截 `/api/purchase-check` 返回可控响应，连续两次 `PRICE_CHANGED` 后 `purchasable`；断言首请求携带页面展示价、确认后请求携带刚确认的新价、成功态小计与「不会生成订单」。
 - 库存不足分支按响应库存展示并给「调整数量」，关闭后回焦数量输入且保留原输入。
 - 页面已知的超库存数量必须被前端拦截，且不发出购买校验请求。
-- `390×844` 暗色下购买对话框在视口内。
+- 已确认新价后第一次请求返回 500：点「重试」仍携带刚确认的 13500，不回到旧价。
+- 关闭在途校验：`Network.loadingFailed` 出现 `canceled=true`；关闭后立即重开时旧响应不改写新对话框。
+- 对话框 `aria-labelledby` 指向「模拟购买校验」标题；`390×844` 暗色下在视口内且两侧 ≥16px。
 
 ### P7-MOTION：动效与 reduced-motion
 
@@ -81,7 +84,8 @@ pnpm check:ui -- --skip-build --reverse=purchase   # 首次校验直接放行，
 
 ### P7-ES：ES 降级与恢复（独立入口）
 
-- `node scripts/acceptance/check-es-degraded.mjs --skip-build`：先确认在线搜索成功，再停本轮 ES → 关键词 503 固定文案 + 重试 / 清除关键词 → 普通浏览可用 → 恢复 ES 并等待冷却 → 点原页面「重试」恢复结果。
+- `node scripts/acceptance/check-es-degraded.mjs --skip-build`：先确认在线搜索成功，再停本轮 ES → 关键词 503 固定文案 + 重试 / 清除关键词 → **停机期间真实点一次重试（仍 503、关键词保留）** → 普通浏览可用 → 恢复 ES 并等待冷却 → 点原页面「重试」恢复结果。
+- 任一步抛错时会在 `finally` 恢复本轮停掉的 ES，并记录 `restoreAfterFailure`。
 - 会停并恢复本轮 `es-dev.mjs` 启动的 ES；不并入 `check:ui`（其预检强依赖联想接口）。
 
 ## 证据目录
@@ -104,7 +108,7 @@ session-tmp/ui-acceptance/<runId>/
 ├── p7-nav/390-dark/expanded.png
 ├── p7-purchase/1365-light/{price-changed-1,price-changed-2,purchasable,insufficient}.png
 ├── p7-purchase/390-dark/purchasable.png
-├── p7-motion/1365-light/{nav-enter,search-enter,summary-pulse}.png
+├── p7-motion/1365-light/{nav-enter-mid,nav-enter-final,nav-leave-mid,search-enter-mid,summary-pulse-mid}.png
 ├── p7-motion/1365-reduced/nav-enter.png
 └── r27/
     ├── cart/1365-light/{full,scrollbar-top,scrollbar-bottom}.png

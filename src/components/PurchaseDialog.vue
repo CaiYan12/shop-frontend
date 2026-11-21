@@ -1,5 +1,6 @@
 <template>
   <v-dialog
+    :aria-labelledby="titleId"
     :max-width="480"
     :model-value="modelValue"
     class="purchase-dialog-shell"
@@ -12,7 +13,7 @@
     >
       <header class="flex items-start justify-between gap-3 border-b border-outline px-5 py-3">
         <div class="min-w-0">
-          <h2 class="text-base font-semibold">模拟购买校验</h2>
+          <h2 :id="titleId" class="text-base font-semibold">模拟购买校验</h2>
           <p class="text-xs text-muted" data-state="purchase-product">{{ productName }}</p>
           <p class="text-xs text-muted" data-state="purchase-variant">{{ variantLabel }}</p>
         </div>
@@ -188,7 +189,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { onBeforeUnmount, ref, watch } from 'vue'
+  import { onBeforeUnmount, ref, useId, watch } from 'vue'
   import { ApiError, checkPurchase } from '@/api/client'
   import type { components } from '@/api/schema'
   import { formatPriceCents } from '@/utils/price'
@@ -217,12 +218,15 @@
     reloadProduct: []
   }>()
 
+  const titleId = `purchase-dialog-title-${useId()}`
   const phase = ref<Phase>('checking')
   const result = ref<PurchaseResult | null>(null)
   const errorText = ref('')
   const errorKind = ref<ErrorKind>('retryable')
   /** 用户看到并确认过的单价；价格确认后更新为新价（D100）。 */
   const confirmedUnitPriceCents = ref(props.expectedUnitPriceCents)
+  /** 最近一次实际发出的期望价：失败重试必须复用它，而不是上一次成功的价（复审 Spec 1）。 */
+  const lastRequestedCents = ref(props.expectedUnitPriceCents)
 
   let controller: AbortController | null = null
   let latestRequest = 0
@@ -261,6 +265,7 @@
     const sequence = ++latestRequest
     const nextController = new AbortController()
     controller = nextController
+    lastRequestedCents.value = expectedUnitPriceCents
     result.value = null
     errorText.value = ''
     phase.value = 'checking'
@@ -313,9 +318,9 @@
     void runCheck(result.value.unitPriceCents)
   }
 
-  /** 可重试错误：复用本次请求参数（D104）。 */
+  /** 可重试错误：复用最近一次请求的期望价（D104；不能退回旧价）。 */
   function retry(): void {
-    void runCheck(confirmedUnitPriceCents.value)
+    void runCheck(lastRequestedCents.value)
   }
 
   watch(

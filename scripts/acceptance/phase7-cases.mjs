@@ -130,7 +130,21 @@ async function installPurchaseMock (page, scenario) {
       let body = {}
       try { body = JSON.parse(params.request.postData ?? '{}') } catch {}
       mock.requests.push(body)
+      if (scenario.rewriteExpectedFromIndex !== undefined &&
+        mock.requests.length - 1 === scenario.rewriteExpectedFromIndex &&
+        scenario.rewriteExpectedTo !== undefined) {
+        body.expectedUnitPriceCents = scenario.rewriteExpectedTo
+      }
       if (delayMs > 0) await sleep(delayMs)
+      if (Array.isArray(scenario.failAtIndices) && scenario.failAtIndices.includes(mock.requests.length - 1)) {
+        await page.send('Fetch.fulfillRequest', {
+          requestId: params.requestId,
+          responseCode: 500,
+          responseHeaders: [{ name: 'content-type', value: 'application/json' }],
+          body: Buffer.from(JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: '服务器错误' } }), 'utf8').toString('base64'),
+        })
+        return
+      }
       const payload = buildPayload(body)
       await page.send('Fetch.fulfillRequest', {
         requestId: params.requestId,
@@ -252,6 +266,9 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
       ariaControls: toggle?.getAttribute('aria-controls') ?? null,
       panelId: panel ? panel.id : null,
       height: Math.round(rect.height),
+      activeIsHome: document.activeElement === nav.querySelector('[data-state="nav-item-home"]'),
+      activeText: document.activeElement ? document.activeElement.textContent.trim().slice(0, 20) : null,
+      backdrop: getComputedStyle(nav).backdropFilter || '',
     }
   })()`)
 
@@ -371,6 +388,19 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
   })()`)
   await shot(page, ['p7-nav', '1365-dark', 'expanded.png'], screenshots)
 
+  const fallback = await page.eval(`(() => {
+    const style = document.createElement('style')
+    style.id = 'p7-fallback'
+    style.textContent = '[data-state="floating-nav"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: rgba(var(--v-theme-surface), 0.96) !important; }'
+    document.head.append(style)
+    const nav = document.querySelector('[data-state="floating-nav"]')
+    const computed = getComputedStyle(nav)
+    return { blur: computed.backdropFilter || computed.webkitBackdropFilter || 'none', background: computed.backgroundColor }
+  })()`)
+  await shot(page, ['p7-nav', '1365-dark', 'fallback.png'], screenshots)
+  await page.eval('(() => { const style = document.getElementById("p7-fallback"); if (style) style.remove(); return true })()')
+  mark(checks, failures, 'fallbackReadable', fallback.blur === 'none' && /0\.96/.test(fallback.background), '无模糊回退未生效')
+
   await page.viewport(390, 844, true)
   await page.goto(baseUrl + '/')
   await page.waitFor(`document.querySelector('[data-state="floating-nav"]') !== null`, 20000)
@@ -401,7 +431,9 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse }) {
   mark(checks, failures, 'narrowNoSummaryOverlap', narrow.navSummaryOverlap === false, '390 展开态遮挡购物车摘要')
   mark(checks, failures, 'narrowItems', narrow.items === 3, '390 展开项不是 3 个')
   mark(checks, failures, 'darkTheme', dark.themeDark === true, '暗色主题未生效')
-  mark(checks, failures, 'darkBackdrop', /blur\(/.test(dark.backdrop) || dark.backdropDeclared === true, '暗色下玻璃包裹层没有 backdrop-filter 声明')
+  mark(checks, failures, 'darkBackdrop', /blur\(/.test(dark.backdrop), '玻璃模糊未生效（computed backdropFilter 不是 blur）')
+  mark(checks, failures, 'expandFocusesFirstItem', expanded.activeIsHome === true, '展开后焦点没有落在第一个导航项')
+  mark(checks, failures, 'lightBackdrop', /blur\(/.test(expanded.backdrop ?? ''), '浅色下玻璃模糊未生效')
   mark(checks, failures, 'darkBackgroundOpaque', /rgba?\(/.test(dark.background) && !/, 0\)$/.test(dark.background), '暗色下岛背景完全透明')
 
   return {
@@ -433,9 +465,12 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   const archiveBefore = await page.eval('localStorage.getItem("shop-frontend:cart:v1")')
 
   let mock = await installPurchaseMock(page, {
-    sequence: reverse === 'purchase' ? ['purchasable'] : ['price-changed', 'price-changed', 'purchasable'],
+    sequence: ['price-changed', 'price-changed', 'purchasable'],
     prices: [14900, 13500, 13900],
     stock: 200,
+    // 反向：保留真实变价流程，只把第二、三次请求记录的期望价改回页面价，
+    // 用来验证 `secondRequestCarriesConfirmedPrice` 能抓到「重发旧价」这类缺陷。
+    ...(reverse === 'purchase' ? { rewriteExpectedFromIndex: 1, rewriteExpectedTo: 14900 } : {}),
   })
 
   await page.eval(`(() => { const button = document.querySelector('[data-state="buy-now"]'); if (button) button.scrollIntoView({ block: 'center' }); return true })()`)
@@ -445,6 +480,16 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   await waitForSettledPhase(page)
   const first = await dialogSnapshot(page, mock)
   await shot(page, ['p7-purchase', '1365-light', 'price-changed-1.png'], screenshots)
+  const dialogA11y = await page.eval(`(() => {
+    const dialog = document.querySelector('[role="dialog"]')
+    const id = dialog ? dialog.getAttribute('aria-labelledby') : null
+    const title = id ? document.getElementById(id) : null
+    return {
+      hasLabelledBy: Boolean(id),
+      titleText: title ? title.textContent.trim() : null,
+      sameDialog: dialog === document.querySelector('.v-dialog .purchase-dialog') ? true : Boolean(dialog),
+    }
+  })()`)
   const islandHit = await page.eval(`(() => {
     const nav = document.querySelector('[data-state="floating-nav"]')
     if (!nav) return null
@@ -495,7 +540,38 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
     }
   }
 
+  // 已确认新价 → 500 → 重试必须重发新价（复审 Spec 1 回归）。
+  mock = await installPurchaseMock(page, { sequence: ['price-changed', 'price-changed', 'purchasable'], prices: [14900, 13500, 13900], stock: 200, failAtIndices: [1] })
+  await clickPoint(page, '[data-state="buy-now"]')
+  await waitForSettledPhase(page)
+  await clickPoint(page, '[data-state="purchase-confirm-price"]')
+  await waitForRequests(mock, 2)
+  await waitForSettledPhase(page)
+  const errorPhase = await page.eval(`(() => { const dialog = document.querySelector('[data-state="purchase-dialog"]'); return dialog ? dialog.getAttribute('data-phase') : null })()`)
+  await clickPoint(page, '[data-state="purchase-retry"]')
+  await waitForRequests(mock, 3)
+  await waitForSettledPhase(page)
+  const retry = {
+    errorPhase,
+    secondExpected: mock.requests[1] ? mock.requests[1].expectedUnitPriceCents : null,
+    retryExpected: mock.requests[2] ? mock.requests[2].expectedUnitPriceCents : null,
+    phase: await page.eval(`(() => { const dialog = document.querySelector('[data-state="purchase-dialog"]'); return dialog ? dialog.getAttribute('data-phase') : null })()`),
+  }
+  await closeDialogIfOpen(page)
+
   // 校验中与关闭后迟到响应（D103 / D110）：响应延迟 900ms，先看禁用主操作，再关闭。
+  const purchaseNet = { ids: new Set(), failed: [] }
+  await page.send('Network.enable').catch(() => {})
+  page.on('Network.requestWillBeSent', (params) => {
+    if (params.request && params.request.url && params.request.url.includes('/api/purchase-check')) {
+      purchaseNet.ids.add(params.requestId)
+    }
+  })
+  page.on('Network.loadingFailed', (params) => {
+    if (purchaseNet.ids.has(params.requestId)) {
+      purchaseNet.failed.push({ canceled: params.canceled === true, errorText: params.errorText ?? null })
+    }
+  })
   mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [14900, 14900], stock: 200, delayMs: 900 })
   const beforeChecking = mock.requests.length
   await clickPoint(page, '[data-state="buy-now"]')
@@ -515,6 +591,22 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   }))()`)
   checking.lateRequestCount = mock.requests.length - beforeChecking
   checking.dialogClosedAfterLate = afterLate.dialogOpen === false
+  checking.canceled = purchaseNet.failed.some((item) => item.canceled === true)
+
+  // 关闭后立即开始新一轮：上一轮的响应不得改写新对话框。
+  mock = await installPurchaseMock(page, { sequence: ['purchasable'], prices: [13900, 13900], stock: 200, delayMs: 300 })
+  await clickPoint(page, '[data-state="buy-now"]')
+  await page.waitFor(`document.querySelector('[data-phase="purchasable"]') !== null`, 8000)
+  await sleep(700)
+  checking.reopenPhase = await page.eval(`(() => {
+    const dialog = document.querySelector('[data-state="purchase-dialog"]')
+    return dialog ? dialog.getAttribute('data-phase') : null
+  })()`)
+  checking.reopenSubtotal = await page.eval(`(() => {
+    const node = document.querySelector('[data-state="purchase-subtotal"]')
+    return node ? node.textContent.trim() : null
+  })()`)
+  await closeDialogIfOpen(page)
 
   const beforeInsufficient = mock.requests.length
   await page.eval(`(() => { const button = document.querySelector('[data-state="buy-now"]'); if (button) button.scrollIntoView({ block: 'center' }); return true })()`)
@@ -726,10 +818,15 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse }) {
   mark(checks, failures, 'islandBlockedByDialog', islandHit !== null && islandHit.blocked === true, '购买对话框打开时背景灵动岛仍可交互')
   mark(checks, failures, 'cartArchiveUnchanged', archiveAfter === archiveBefore, '购买校验改动了购物车存档')
   mark(checks, failures, 'fourScreenshotGroups', extra390Light === true && extra1365Dark === true, '购买关键状态截图不足四组')
+  mark(checks, failures, 'retryKeepsConfirmedPrice', retry.errorPhase === 'error' && retry.secondExpected === 13500 && retry.retryExpected === 13500, '重试没有复用刚确认的新价')
+  mark(checks, failures, 'retryRecovers', retry.phase === 'purchasable', '重试后未回到可购买')
+  mark(checks, failures, 'dialogAccessibleName', dialogA11y.hasLabelledBy === true && dialogA11y.titleText === '模拟购买校验', '购买对话框缺少可访问名称')
+  mark(checks, failures, 'lateResponseCanceled', checking.canceled === true, '关闭在途校验后没有观察到请求取消')
+  mark(checks, failures, 'reopenIsolation', checking.reopenPhase === 'purchasable' && checking.reopenSubtotal === '¥278.00', '关闭后立即重开时旧响应改写了新对话框')
 
   return {
     checks,
-    measurements: { first, second, third, flowDebug, checking, islandHit, archiveBefore, archiveAfter, insufficient, insufficientDebug, adjusted, oversize, narrowDark, extra390Light, extra1365Dark, consoleErrors: page.consoleErrors.slice(-5) },
+    measurements: { first, second, third, retry, flowDebug, checking, dialogA11y, islandHit, archiveBefore, archiveAfter, insufficient, insufficientDebug, adjusted, oversize, narrowDark, extra390Light, extra1365Dark, consoleErrors: page.consoleErrors.slice(-5) },
     screenshots,
     failureReason: failures.length > 0 ? failures.join('; ') : null,
   }
@@ -748,23 +845,42 @@ export async function caseP7Motion (page, baseUrl, { shot }) {
   await sleep(300)
 
   await clickPoint(page, '[data-state="nav-toggle"]')
+  const enterShot = shot(page, ['p7-motion', '1365-light', 'nav-enter-mid.png'], screenshots)
   const enterSamples = await sampleStyles(page, '[data-state="nav-panel"]', 420)
   const enterIntermediate = hasIntermediate(enterSamples)
+  await enterShot
   await sleep(250)
-  await shot(page, ['p7-motion', '1365-light', 'nav-enter.png'], screenshots)
+  await shot(page, ['p7-motion', '1365-light', 'nav-enter-final.png'], screenshots)
 
   await clickPoint(page, '[data-state="nav-toggle"]')
+  const leaveShot = shot(page, ['p7-motion', '1365-light', 'nav-leave-mid.png'], screenshots)
   const leaveSamples = await sampleStyles(page, '[data-state="nav-panel"]', 260)
   const leaveIntermediate = hasIntermediate(leaveSamples)
+  await leaveShot
 
+  const listSamplesPromise = sampleStyles(page, '[role="listbox"]', 900)
   await setNativeValue(page, 'input[role="combobox"]', 'sony')
-  const listSamples = await sampleStyles(page, '[role="listbox"]', 900)
+  await page.eval(`new Promise((resolve) => {
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('[role="listbox"]')) {
+        observer.disconnect()
+        resolve(true)
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    setTimeout(() => resolve(false), 4000)
+  })`)
+  const searchShot = shot(page, ['p7-motion', '1365-light', 'search-enter-mid.png'], screenshots)
+  const listSamples = await listSamplesPromise
   const listIntermediate = hasIntermediate(listSamples)
+  await searchShot
   await shot(page, ['p7-motion', '1365-light', 'search-enter.png'], screenshots)
 
   await clearCartThenAdd(page, baseUrl)
+  const pulseShot = shot(page, ['p7-motion', '1365-light', 'summary-pulse-mid.png'], screenshots)
   const pulseSamples = await sampleStyles(page, '[data-state="cart-summary-figures"]', 320)
   const pulseSeen = pulseSamples.some((sample) => !isIdentity(sample.transform))
+  await pulseShot
   await shot(page, ['p7-motion', '1365-light', 'summary-pulse.png'], screenshots)
 
   await page.send('Emulation.setEmulatedMedia', { media: '', features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })

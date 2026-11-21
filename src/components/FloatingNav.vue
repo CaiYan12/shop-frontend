@@ -38,6 +38,7 @@
         data-state="nav-panel"
       >
         <v-btn
+          ref="homeItemRef"
           class="floating-nav__item"
           data-state="nav-item-home"
           size="small"
@@ -113,6 +114,7 @@
   /** 收起 / 展开是两个互斥按钮，分开持有 ref，避免离场元素卸载时清空同一个 ref。 */
   const collapsedToggle = ref<{ $el?: HTMLElement } | null>(null)
   const expandedToggle = ref<{ $el?: HTMLElement } | null>(null)
+  const homeItemRef = ref<{ $el?: HTMLElement } | null>(null)
   const panelId = `${useId()}-panel`
 
   const pageLabel = computed(() => (route.name === 'product' ? '商品详情' : '商品列表'))
@@ -126,9 +128,36 @@
     void nextTick(() => toggle.value?.$el?.focus({ preventScroll: true }))
   }
 
-  /** 展开 / 收起都换掉那一行的按钮，焦点要跟着走（D108）。 */
+  /**
+   * 展开后焦点落在第一个导航项（DOM 顺序在收起按钮之前），Tab 才会按自然顺序走完三项；
+   * 收起后回到收起态展开按钮（D108）。
+   *
+   * 被点击的收起态按钮会在同一轮 patch 里卸载，浏览器可能把焦点丢回 body；
+   * 下一帧再确认一次，普通与减弱动态走同一条路径。
+   */
+  function focusFirstItem(): void {
+    void nextTick(() => {
+      const element = homeItemRef.value?.$el ??
+        navElement.value?.querySelector<HTMLElement>('[data-state="nav-item-home"]') ?? null
+      if (element === null) {
+        return
+      }
+      element.focus({ preventScroll: true })
+      requestAnimationFrame(() => {
+        if (document.activeElement !== element) {
+          element.focus({ preventScroll: true })
+        }
+      })
+    })
+  }
+
   function toggleExpanded(): void {
-    expanded.value = !expanded.value
+    const next = !expanded.value
+    expanded.value = next
+    if (next) {
+      focusFirstItem()
+      return
+    }
     focusToggle()
   }
 
@@ -159,10 +188,20 @@
     closePanel()
   }
 
-  /** Esc 收起并回焦（D108）。 */
+  /**
+   * Esc 收起并回焦（D108）。搜索框 / 文本域内的 Esc 只归该控件处理，事件冒泡到 window
+   * 时不能再把岛一起收起（独立复审 Spec 2）。
+   */
   function onKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Escape') {
       return
+    }
+    const target = event.target
+    if (target instanceof HTMLElement) {
+      const tag = target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
     }
     event.preventDefault()
     closePanel()
@@ -222,8 +261,9 @@
     background: rgba(var(--v-theme-surface), 0.8);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
     transform: translateX(-50%);
-    backdrop-filter: blur(16px) saturate(140%);
+    /* 无前缀写在最后：构建压缩会保留最后一条，仅留 -webkit- 时 Chrome 计算值为 none。 */
     -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
   }
 
   /* 窄屏左右各留 16px；展开内容允许换行兜底（D107）。 */

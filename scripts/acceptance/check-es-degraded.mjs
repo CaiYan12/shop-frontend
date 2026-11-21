@@ -148,6 +148,8 @@ async function cardCount (page) {
 
 let browser = null
 let preview = null
+let stoppedThisRun = false
+let restoredThisRun = false
 
 try {
   if (skipBuild) {
@@ -177,6 +179,7 @@ try {
 
   await runStep(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-stop.mjs')], join(runDir, 'es-stop.log'), 60000)
   const stopped = await waitForEs(false, 30000)
+  stoppedThisRun = stopped
   mark('esStopped', stopped, 'es-stop 之后 9201 仍然可达')
 
   await page.goto(preview.baseUrl + '/?keyword=sony')
@@ -196,6 +199,17 @@ try {
   mark('degradedHasRetry', degraded.hasRetry === true, '503 降级没有重试入口')
   mark('degradedHasClearKeyword', degraded.hasClear === true, '503 降级没有清除关键词入口')
 
+  // 停机期间真实点一次「重试」：请求仍应回 503 且保留关键词。
+  await clickByText(page, '[data-state="search-unavailable"]', '重试')
+  await sleep(1200)
+  const retryWhileDown = await page.eval(`(() => {
+    const card = document.querySelector('[data-state="search-unavailable"]')
+    return { stillUnavailable: Boolean(card), keyword: new URLSearchParams(location.search).get('keyword') }
+  })()`)
+  mark('retryWhileDownStill503', retryWhileDown.stillUnavailable === true, '停机期间点重试后没有回到 503 状态')
+  mark('retryWhileDownKeepsKeyword', retryWhileDown.keyword === 'sony', '停机期间重试丢失关键词')
+  await shot(page, ['p7-es', 'retry-while-down-1365-light.png'])
+
   await clickByText(page, '[data-state="search-unavailable"]', '清除关键词')
   await page.waitFor(`document.querySelectorAll('a[href^="/product/"]').length > 0`, 20000)
   const plainCards = await cardCount(page)
@@ -208,6 +222,7 @@ try {
 
   await runStep(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-dev.mjs')], join(runDir, 'es-dev.log'), 180000)
   const restored = await waitForEs(true, 60000)
+  restoredThisRun = restored
   mark('esRestored', restored, 'es-dev 之后 9201 仍不可达')
 
   await sleep(7000)
@@ -239,6 +254,18 @@ try {
   manifest.fatalError = error instanceof Error ? error.message : String(error)
   console.error('[p7-es] FATAL', manifest.fatalError)
 } finally {
+  if (stoppedThisRun && !restoredThisRun) {
+    // 异常路径也要把本轮停掉的 ES 拉回来，避免把环境留在停机状态。
+    try {
+      await runStep(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-dev.mjs')], join(runDir, 'es-restore-after-failure.log'), 180000)
+      manifest.measurements.restoreAfterFailure = await waitForEs(true, 60000)
+      console.error('[p7-es] 已在本轮失败后恢复 ES：' + manifest.measurements.restoreAfterFailure)
+    } catch (restoreError) {
+      manifest.measurements.restoreAfterFailure = false
+      manifest.measurements.restoreAfterFailureError = restoreError instanceof Error ? restoreError.message : String(restoreError)
+      console.error('[p7-es] 失败后恢复 ES 未成功，请手动检查')
+    }
+  }
   if (browser) await browser.close()
   if (preview) {
     try { preview.child.kill() } catch {}
