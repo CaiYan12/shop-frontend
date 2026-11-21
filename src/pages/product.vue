@@ -248,27 +248,40 @@
             </div>
 
             <!--
-              数量与加购（#21）：规格选齐且组合有库存后才可用；数量不合法时点击加购
-              不触发写入，行内提示保留用户输入。
+              数量与购买（#21 / Phase 7）：规格选齐且组合有库存后才可用；数量不合法时
+              加购与立即购买都不发请求，只亮行内提示。数量输入与立即购买不受购物车
+              只读影响（D97），加购仍受它限制。
             -->
             <div class="flex flex-col gap-3" data-state="purchase">
               <QuantityInput
                 ref="quantityInputRef"
                 v-model="quantityText"
-                :disabled="quantityDisabled"
+                :disabled="quantityInputDisabled"
                 :limit="quantityLimit"
               />
 
               <v-btn
                 block
                 color="primary"
-                :disabled="quantityDisabled"
+                :disabled="addToCartDisabled"
                 data-state="add-to-cart"
                 size="large"
                 variant="flat"
                 @click="addToCart"
               >
                 加入购物车
+              </v-btn>
+
+              <v-btn
+                ref="buyButtonRef"
+                block
+                :disabled="buyNowDisabled"
+                data-state="buy-now"
+                size="large"
+                variant="outlined"
+                @click="openPurchaseDialog"
+              >
+                立即购买
               </v-btn>
 
               <p
@@ -478,13 +491,31 @@
         </v-btn>
       </template>
     </v-snackbar>
+
+    <!--
+      购买确认对话框（D96–D105）：只校验并展示结果，不写库、不改购物车；
+      参数在打开时冻结，价格变化由对话框按新价重新校验。
+    -->
+    <PurchaseDialog
+      :expected-unit-price-cents="purchaseExpectedPriceCents"
+      :model-value="purchaseOpen"
+      :product-name="purchaseProductName"
+      :quantity="purchaseQuantity"
+      :sku="purchaseSku"
+      :slug="purchaseSlug"
+      :variant-label="purchaseVariantLabel"
+      @adjust-quantity="onPurchaseAdjustQuantity"
+      @go-list="onPurchaseGoList"
+      @reload-product="onPurchaseReloadProduct"
+      @update:model-value="onPurchaseToggle"
+    />
   </v-container>
 </template>
 
 <script lang="ts" setup>
   import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
   import type { ComponentPublicInstance } from 'vue'
-  import { useRoute } from 'vue-router'
+  import { useRoute, useRouter } from 'vue-router'
   import { useDisplay } from 'vuetify'
   import type { OverlayScrollbars, PartialOptions } from 'overlayscrollbars'
   import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
@@ -492,6 +523,7 @@
   import { ApiError, getProduct } from '@/api/client'
   import type { components } from '@/api/schema'
   import ProductCard from '@/components/ProductCard.vue'
+  import PurchaseDialog from '@/components/PurchaseDialog.vue'
   import QuantityInput from '@/components/QuantityInput.vue'
   import { useProductRecommendations } from '@/composables/useProductRecommendations'
   import { resolveQuantityLimit, useCartStore } from '@/stores/cart'
@@ -526,6 +558,7 @@
   }
 
   const route = useRoute()
+  const router = useRouter()
 
   const { width: viewportWidth, height: viewportHeight } = useDisplay()
 
@@ -941,7 +974,7 @@
    * 数量与加购（#21）。
    *
    * 数量存**原始文本**，允许输入过程为空；上限由所选组合库存推出（`min(999, 库存)`），
-   * 规格未选齐、不可售组合或组合缺货时上限为 0，控件与加购一起禁用。
+   * 规格未选齐、不可售组合或组合缺货时上限为 0，控件与购买按钮一起禁用（D97）。
    */
   const quantityText = ref('1')
   const quantityInputRef = ref<InstanceType<typeof QuantityInput> | null>(null)
@@ -965,8 +998,76 @@
     return resolveQuantityLimit(view.variant.stock)
   })
 
-  /** 无上限（未选齐 / 不可售 / 缺货）或购物车核对中（#23 只读）时都不可用。 */
-  const quantityDisabled = computed(() => cart.readonly || quantityLimit.value < 1)
+  /** 无上限（未选齐 / 不可售 / 缺货）时数量输入不可用；购物车只读不再拦它（D97）。 */
+  const quantityInputDisabled = computed(() => quantityLimit.value < 1)
+
+  /** 加购仍受购物车恢复核对（只读）限制（D97）。 */
+  const addToCartDisabled = computed(() => cart.readonly || quantityLimit.value < 1)
+
+  /** 立即购买只依赖所选组合是否有货，与购物车状态解耦（D97）。 */
+  const buyNowDisabled = computed(() => quantityLimit.value < 1)
+
+  // ---- 立即购买（D96–D105）----
+  const purchaseOpen = ref(false)
+  const buyButtonRef = ref<{ $el?: HTMLElement } | null>(null)
+  const purchaseSlug = ref('')
+  const purchaseSku = ref('')
+  const purchaseQuantity = ref(1)
+  const purchaseExpectedPriceCents = ref(0)
+  const purchaseVariantLabel = ref('')
+  const purchaseProductName = ref('')
+
+  function focusBuyButton(): void {
+    void nextTick(() => buyButtonRef.value?.$el?.focus())
+  }
+
+  /** 普通关闭（含 Esc / 遮罩 / 关闭按钮）回焦「立即购买」（D103）。 */
+  function onPurchaseToggle(open: boolean): void {
+    purchaseOpen.value = open
+    if (!open) {
+      focusBuyButton()
+    }
+  }
+
+  /** 点击即冻结本次请求参数并打开对话框；数量不合法时不发请求（D97 / D98）。 */
+  function openPurchaseDialog(): void {
+    const view = selectionView.value
+    const current = product.value
+    if (view === null || view.variant === null || current === null || buyNowDisabled.value) {
+      return
+    }
+    const parsed = resolveQuantityInput(quantityText.value, quantityLimit.value)
+    if (!parsed.valid || parsed.value === null) {
+      quantityInputRef.value?.validate()
+      return
+    }
+    purchaseSlug.value = current.slug
+    purchaseSku.value = view.variant.sku
+    purchaseQuantity.value = parsed.value
+    purchaseExpectedPriceCents.value = view.variant.priceCents
+    purchaseVariantLabel.value = `${view.variant.option1Value} / ${view.variant.option2Value}`
+    purchaseProductName.value = current.name
+    purchaseOpen.value = true
+  }
+
+  /** 库存不足 → 关闭并聚焦数量输入，保留用户原输入（D101）。 */
+  function onPurchaseAdjustQuantity(): void {
+    purchaseOpen.value = false
+    void nextTick(() => quantityInputRef.value?.focus())
+  }
+
+  function onPurchaseGoList(): void {
+    purchaseOpen.value = false
+    void router.push({ name: 'home' })
+  }
+
+  /** 规格失效 → 关闭、重载商品并清回未选规格（D104）。 */
+  function onPurchaseReloadProduct(): void {
+    purchaseOpen.value = false
+    resetSelection()
+    resetPurchaseState()
+    void load()
+  }
 
   /**
    * 加购：先按「数量上限」校验原始文本，不合法时只亮行内提示、不改 store；
@@ -977,7 +1078,7 @@
 
     const view = selectionView.value
     const current = product.value
-    if (view === null || view.variant === null || current === null || quantityDisabled.value) {
+    if (view === null || view.variant === null || current === null || addToCartDisabled.value) {
       return
     }
 
@@ -1022,6 +1123,7 @@
     quantityText.value = '1'
     addError.value = ''
     snackbarOpen.value = false
+    purchaseOpen.value = false
     quantityInputRef.value?.resetError()
   }
 

@@ -131,7 +131,15 @@ export async function listRecommendations(
   )
 }
 
-/** POST /api/purchase-check —— 购买校验（只校验，不写库）。 */
-export async function checkPurchase(body: PurchaseCheckRequest): Promise<PurchaseCheckResponse> {
-  return unwrap(await client.POST('/api/purchase-check', { body }), '购买校验')
+/**
+ * POST /api/purchase-check —— 购买校验（只校验，不写库）。
+ *
+ * `signal` 交给 openapi-fetch 的 `RequestInit`：关闭对话框、离开详情页或切换商品时
+ * 由调用方 abort，避免迟到响应写回已经关闭的对话框（D103）。
+ */
+export async function checkPurchase(
+  body: PurchaseCheckRequest,
+  signal?: AbortSignal,
+): Promise<PurchaseCheckResponse> {
+  return unwrap(await client.POST('/api/purchase-check', { body, signal }), '购买校验')
 }
