@@ -1,12 +1,13 @@
 // 最小可重复 UI 验收：F1 搜索按钮 / R26 放大区双轴轨道 / R27 原生滚动条对比度。
 // 零依赖 CDP，默认 clean build + preview，真实点击 + 真实截图取样。
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findFreePort, launchBrowser, openPage, sleep, waitForHttp } from './lib.mjs'
 import { sampleNativeScrollbar } from './native-scrollbar.mjs'
 import { caseP7Motion, caseP7Nav, caseP7Purchase } from './phase7-cases.mjs'
+import { classifyRun, defaultLatestPath, recordRun } from './latest.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const CART_ITEMS = [
@@ -608,8 +609,24 @@ try {
     artifactDir: runDir,
     manifest: join(runDir, 'manifest.json'),
   }
-  writeFileSync(join(runDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
-  console.log('[ui] manifest ->', join(runDir, 'manifest.json'))
+  const manifestPath = join(runDir, 'manifest.json')
+  const latestPath = process.env.UI_LATEST_PATH
+    ? resolve(process.env.UI_LATEST_PATH)
+    : defaultLatestPath(artifactRoot)
+  try {
+    await recordRun({
+      suite: 'check-ui',
+      latestPath,
+      manifestPath,
+      manifest,
+      kind: classifyRun(manifest.mode),
+    })
+    console.log('[ui] latest ->', latestPath)
+  } catch (error) {
+    console.error('[ui] latest.json 更新失败：' + (error instanceof Error ? error.message : String(error)))
+    process.exitCode = 1
+  }
+  console.log('[ui] manifest ->', manifestPath)
   console.log(`[ui] ${manifest.summary.passed}/${manifest.summary.total} passed${fatal ? '; fatal' : ''}`)
   if (fatal || failures.length > 0) process.exitCode = 1
 }
