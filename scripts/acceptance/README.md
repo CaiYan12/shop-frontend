@@ -168,7 +168,9 @@ session-tmp/ui-acceptance/<runId>/
 - 每个 suite 记 `lastFull`（最近一次完成的全量，含失败）与 `lastRun`（最近一次完成，含 `only` / `reverse` / 定向运行）。
 - 先落固定 manifest，再更新指针；manifest 写失败时 `latest.json` 保持原样。
 - 共享文件用文件锁串行合并、整份文档原子替换，四入口并发写不会丢 suite。
-- `verify:e2e` 经 `scripts/acceptance/e2e-latest.mjs` 接线：Playwright 结束后（无论成败）先落固定 e2e manifest，再按 `verify-e2e` 更新指针；不带参数算全量，带 spec 路径 / `--grep` / `--project` 算定向（只写 `lastRun`）；Playwright 崩溃、没留下 reporter manifest 时补一份 fallback manifest。
+- `verify:e2e` 与 `gate` 的 e2e 经 `scripts/acceptance/e2e-latest.mjs` 共用 `finishE2eRun`：先归档附件到 `runDir/attachments`（manifest 记相对路径 + sha256），再落固定 manifest，最后按 `verify-e2e` 更新指针；不带参数算全量，带 spec 路径 / `--grep` / `--project` 算定向（只写 `lastRun`）；Playwright 崩溃、没留下 reporter manifest 时补 fallback manifest 并记 `evidenceErrors`。
+- `finishE2eRun` 把“固定 manifest / E1 附件证据失败”放 `evidenceErrors`，把“只有 latest.json 写入失败”放 `latestError`；独立 `verify:e2e` 不改变 Playwright 退出码，gate 按既有约定把证据或指针失败判非零。
+- gate 的 e2e 前置失败（未启动）只记 `blocked`，不调用 `finishE2eRun`，`latest.json` 的 `verify-e2e` 保留最近一次实际运行指针。
 - 默认路径统一由 `scripts/acceptance/paths.mjs` 的 `findSessionTmp` 解析：优先含 `phase8-spec.md` 的 `<main>/session-tmp`，其次最近的已存在 `session-tmp`，最后退回父目录。worktree 布局（`<main>/wt/<worktree>/`）下四个入口默认写同一份 `<main>/session-tmp/ui-acceptance/latest.json`，不再落到 `wt/session-tmp`；覆盖变量：`UI_LATEST_PATH` / `E2E_LATEST_PATH` / `GATE_LATEST_PATH`。
 
 ## 正式验收（R1 / F11）
@@ -195,7 +197,7 @@ pnpm gate
 | 三条反向 | `runs/<runId>/reverse/<runId>-reverse-{island,purchase,purchase-price}/manifest.json` |
 | `check:es` | `runs/<runId>/check-es/<runId>-es-p7es/manifest.json` |
 
-- `theme.spec.ts` 没有独立 manifest：结果在 e2e manifest 的 `suites.theme`；E1 看 `suites.business`。
+- `theme.spec.ts` 没有独立 manifest：结果在 e2e manifest 的 `suites.theme`；E1 看 `suites.business`。E1 请求/响应归档在 e2e 同目录 `attachments/`，移走 `test-results` 后仍可按 manifest 相对路径 + sha256 核对。
 - 判绿：9 步（`verify` / `backend` / `es` / `e2e` / `check-ui` / 三条反向 / `check:es`）全部 pass，`summary.green === true` 且退出码 0；`gate.json` 的 `frontend` / `backend` 记两仓 HEAD 与 dirty。
 - 记录至少写：双仓 HEAD 与 `git status --short`（含主检出与 worktree）、浏览器版本、每条验收命令与结果、证据路径、`latest.json` 四入口状态，以及 smoke 与人工实看结论的分栏（未实看标待验）。正式证据只引用固定 manifest，`latest.json` 只是调试指针。
 - 本地 gate 不等于 C1：CI 结果另看两个仓库的 Actions。
