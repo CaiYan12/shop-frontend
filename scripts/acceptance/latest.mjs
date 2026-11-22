@@ -7,13 +7,14 @@ import { setTimeout as sleep } from 'node:timers/promises'
 
 export const LATEST_VERSION = 1
 
-// 四个正式入口各占一个 suite；F7 只接入 check-ui / check-es，verify-e2e / gate 由 F10 补齐。
+// 四个正式入口各占一个 suite；check-ui / check-es / verify:e2e / gate 均已接入。
 export const SUITES = ['check-ui', 'check-es', 'verify-e2e', 'gate']
 
 const LOCK_SUFFIX = '.lock'
 const LOCK_RETRY_MS = 10
 const LOCK_TIMEOUT_MS = 20000
-const LOCK_STALE_MS = 10000
+// stale 必须大于等锁超时，避免持锁临界区被误判为失效锁而并发写入（审查 P1-7）。
+const LOCK_STALE_MS = 60000
 
 export function defaultLatestPath (artifactRoot) {
   return resolve(artifactRoot, 'latest.json')

@@ -149,8 +149,9 @@ session-tmp/ui-acceptance/<runId>/
 
 - gate 启动时先记录并删除旧 `dist`；前置失败时依赖步骤记为 `blocked`，独立步骤继续，且不会复用 gate 之前的旧构建。
 - `9201` 被外部实例占用时 `check:es` 记为 `blocked`、总门禁非绿，并记录该实例 PID / 启动时间 / HTTP 响应前后快照；gate 收尾不停止外部实例。
-- 每条运行写固定 `gate.json`（默认 `<session-tmp>/phase8-evidence/F8/gate.json`，可用 `GATE_ARTIFACT_DIR` / `GATE_MANIFEST` 覆盖），并归档到 `runs/<runId>/gate.json`。
-- 环境变量：`SHOP_BACKEND_ROOT`、`GATE_ARTIFACT_DIR`、`GATE_MANIFEST`、`GATE_LATEST_PATH`、`GATE_RUN_ID`、`GATE_BACKEND_PORT`、`GATE_ES_PORT`。
+- 每条运行写固定 `runs/<runId>/gate.json`（latest 指向它）；根 `gate.json` 只是便利副本，可被下一次运行覆盖。`GATE_ARTIFACT_DIR` 决定产物根，`GATE_MANIFEST` 可覆盖根副本路径。
+- `GATE_LATEST_PATH` 默认 `<session-tmp>/ui-acceptance/latest.json`，与 `check-ui` / `check-es` / `verify:e2e` 同一文件；gate 产物仍在 `GATE_ARTIFACT_DIR` 下。
+- 环境变量：`SHOP_BACKEND_ROOT`（未设且 `../shop-backend` 不存在时回退 `../be-int`，日志会打印）、`GATE_ARTIFACT_DIR`、`GATE_MANIFEST`、`GATE_LATEST_PATH`、`GATE_RUN_ID`。端口固定 3001 / 9201，不提供半配置端口变量。
 - 任一步 fail / blocked / skipped，或外部 ES 前后快照不一致，gate 均以非零退出。
 
 受控失败（G2）：

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'vitest'
-import { evaluateReverseRun, summarizeSteps } from '../../scripts/acceptance/gate.mjs'
+import { cleanupVerdict, evaluateReverseRun, gateRunManifestPath, summarizeSteps } from '../../scripts/acceptance/gate.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -94,4 +94,37 @@ test('G1：全部 pass 时 gate 判绿且退出码为 0', () => {
   assert.equal(summary.total, 2)
   assert.equal(summary.failed, 0)
   assert.equal(summary.blocked, 0)
+})
+
+test('P0：gate latest 的固定 manifest 指向 runs/<runId>/gate.json', () => {
+  const runDir = join('D:', 'evidence', 'runs', 'g1')
+  assert.equal(gateRunManifestPath(runDir), join(runDir, 'gate.json'))
+})
+
+test('P0：收尾失败或端口未释放判非绿', () => {
+  assert.equal(cleanupVerdict({
+    preview: { killed: true, portReleased: false },
+    backend: { killed: true, portReleased: true },
+    es: { stopped: true },
+  }).ok, false)
+  assert.equal(cleanupVerdict({
+    preview: { killed: true, portReleased: true },
+    backend: { killed: true, portReleased: false },
+    es: { stopped: true },
+  }).ok, false)
+  assert.equal(cleanupVerdict({
+    preview: { killed: true, portReleased: true },
+    backend: { killed: true, portReleased: true },
+    es: { stopped: false },
+  }).ok, false)
+  assert.equal(cleanupVerdict({
+    preview: { killed: true, portReleased: true },
+    backend: { killed: false, external: true },
+    es: { stopped: false, external: true },
+  }).ok, true)
+  assert.equal(cleanupVerdict({
+    preview: { killed: true, portReleased: true },
+    backend: { killed: true, portReleased: true },
+    es: { stopped: true },
+  }).ok, true)
 })

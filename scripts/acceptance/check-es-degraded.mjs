@@ -182,6 +182,8 @@ try {
   const baselineCards = await cardCount(page)
   mark('baselineKeywordWorks', baselineCards > 0, 'ES 在线时关键词搜索没有结果')
 
+  // P0：先登记“已尝试停机”，es-stop 抛错时 finally 仍会恢复 ES。
+  stoppedThisRun = true
   await runStep(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-stop.mjs')], join(runDir, 'es-stop.log'), 60000)
   const stopped = await waitForEs(false, 30000)
   stoppedThisRun = stopped
