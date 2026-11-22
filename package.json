@@ -13,6 +13,7 @@
     "check:cart": "vitest run tests/unit/cart-runtime.test.ts",
     "check:ui": "node scripts/acceptance/check-ui.mjs",
     "check:es": "node scripts/acceptance/check-es-degraded.mjs",
+    "gate": "node scripts/acceptance/gate.mjs",
     "check:ui:unit": "vitest run tests/unit/native-scrollbar.test.mjs",
     "test:unit": "vitest run",
     "lint": "oxlint",

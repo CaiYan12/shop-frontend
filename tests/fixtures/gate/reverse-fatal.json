@@ -1,0 +1,22 @@
+{
+  "reverse": "island",
+  "manifest": {
+    "mode": {
+      "reverse": "island"
+    },
+    "fatalError": "browser closed",
+    "cases": [
+      {
+        "id": "P7-NAV",
+        "status": "fail",
+        "failureReason": "失败断言：islandNotOverSummary",
+        "checks": {
+          "collapsedVisible": true,
+          "expandedItems": true,
+          "islandNotOverSummary": false
+        },
+        "failures": []
+      }
+    ]
+  }
+}
