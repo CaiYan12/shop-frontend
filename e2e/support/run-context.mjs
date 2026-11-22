@@ -12,13 +12,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { findSessionTmp } from '../../scripts/acceptance/paths.mjs'
 
 export const REPO_ROOT = resolve(fileURLToPath(new URL('../../', import.meta.url)))
 
 function artifactRoot () {
   return process.env.E2E_ARTIFACT_DIR?.trim()
     ? resolve(process.env.E2E_ARTIFACT_DIR)
-    : resolve(REPO_ROOT, '..', 'session-tmp', 'e2e-acceptance')
+    : join(findSessionTmp(REPO_ROOT), 'e2e-acceptance')
 }
 
 function pointerPath (root) {

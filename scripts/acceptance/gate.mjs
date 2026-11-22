@@ -20,24 +20,10 @@ import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { findFreePort, waitForHttp } from './lib.mjs'
 import { recordRun, writeManifest } from './latest.mjs'
+import { findSessionTmp, resolveLatestPath } from './paths.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const GATE_ROOT = resolve(HERE, '..', '..')
-
-function findSessionTmp (start) {
-  const candidates = []
-  let cursor = start
-  for (let i = 0; i < 8; i++) {
-    const candidate = join(cursor, 'session-tmp')
-    if (existsSync(candidate)) candidates.push(candidate)
-    const parent = dirname(cursor)
-    if (parent === cursor) break
-    cursor = parent
-  }
-  // 规划文档所在的 session-tmp 才是权威证据根；worktree 布局下 wt/session-tmp 可能被其他运行创建。
-  const marked = candidates.find((candidate) => existsSync(join(candidate, 'phase8-spec.md')))
-  return marked ?? candidates[0] ?? resolve(start, '..', 'session-tmp')
-}
 
 const DEFAULT_BACKEND_ROOT = resolve(GATE_ROOT, '..', 'shop-backend')
 const WORKTREE_BACKEND_ROOT = resolve(GATE_ROOT, '..', 'be-int')
@@ -48,7 +34,7 @@ export const BACKEND_ROOT_FALLBACK = !process.env.SHOP_BACKEND_ROOT && BACKEND_R
 const SESSION_TMP = findSessionTmp(GATE_ROOT)
 export const ARTIFACT_ROOT = resolve(process.env.GATE_ARTIFACT_DIR ?? join(SESSION_TMP, 'phase8-evidence', 'F8'))
 const GATE_MANIFEST = process.env.GATE_MANIFEST ? resolve(process.env.GATE_MANIFEST) : join(ARTIFACT_ROOT, 'gate.json')
-const LATEST_PATH = process.env.GATE_LATEST_PATH ? resolve(process.env.GATE_LATEST_PATH) : join(SESSION_TMP, 'ui-acceptance', 'latest.json')
+const LATEST_PATH = resolveLatestPath({ start: GATE_ROOT, override: process.env.GATE_LATEST_PATH })
 const BACKEND_PORT = 3001
 const ES_PORT = 9201
 const ES_URL = 'http://127.0.0.1:' + ES_PORT + '/'
@@ -146,6 +132,110 @@ export function summarizeSteps (steps) {
     skipped,
     green,
     exitCode: green ? 0 : 1,
+  }
+}
+
+// ---------- 纯函数：服务归属与构建证据（#32 / R2） ----------
+
+/**
+ * 判定 es-dev 之后 9201 的归属（#32）。
+ *
+ * es-dev 复用已有实例同样 exit 0，退出码不能证明「本轮创建」。只有同时满足
+ * provenance.created===true、provenance.pid 与 9201 监听者/启动后快照 pid 一致、
+ * 进程仍存活，才登记 owned 并允许 check:es；created:false / 缺证据 / pid 不符一律
+ * external：check:es blocked、收尾不停。
+ * es-dev 非零退出但已写 created:true 时仍登记 owned，交给 cleanup 停止本轮拉起的进程。
+ *
+ * @param {{ provenance?: object|null, listenerPid?: number|null, snapshotPid?: number|null, exitCode?: number|null, timedOut?: boolean, alive?: boolean }} input
+ * @returns {{ ownership: 'owned'|'external', code: string, reason: string|null, created: boolean, pid: number|null }}
+ */
+export function evaluateEsOwnership ({ provenance, listenerPid = null, snapshotPid = null, exitCode = 0, timedOut = false, alive = false } = {}) {
+  const record = provenance && typeof provenance === 'object' && !Array.isArray(provenance) ? provenance : null
+  const created = Boolean(record && record.created === true)
+  const pid = record && Number.isInteger(record.pid) && record.pid > 0 ? record.pid : null
+  // 退出码缺失（spawn 失败 / 被信号终止）同样算启动失败，不能当成成功。
+  const failed = timedOut === true || exitCode === null || exitCode === undefined || Number(exitCode) !== 0
+  const parsedExit = Number(exitCode)
+  const base = {
+    created,
+    pid,
+    listenerPid: listenerPid ?? null,
+    snapshotPid: snapshotPid ?? null,
+    exitCode: Number.isFinite(parsedExit) ? parsedExit : null,
+    timedOut: timedOut === true,
+    alive: alive === true,
+  }
+  if (record === null) {
+    return { ...base, ownership: 'external', code: 'missing-provenance', reason: 'es-dev 未写 ES_PROVENANCE_FILE，无法证明本轮创建' }
+  }
+  if (failed) {
+    if (created) {
+      return { ...base, ownership: 'owned', code: 'created-on-failure', reason: 'es-dev 非零退出，但 provenance.created=true；仍登记 owned 供 cleanup 停止' }
+    }
+    return { ...base, ownership: 'external', code: 'failure-not-created', reason: 'es-dev 非零退出且 provenance.created!==true，不登记 owned' }
+  }
+  if (!created) {
+    return { ...base, ownership: 'external', code: 'not-created', reason: record.reused === true ? 'es-dev 复用已有 ES 实例（provenance.reused=true）' : 'provenance.created !== true' }
+  }
+  if (pid === null) {
+    return { ...base, ownership: 'external', code: 'missing-pid', reason: 'provenance.created=true 但 pid 缺失或非法' }
+  }
+  if (base.listenerPid !== null && pid !== base.listenerPid) {
+    return { ...base, ownership: 'external', code: 'listener-pid-mismatch', reason: 'provenance.pid=' + pid + ' 与 9201 监听者 ' + base.listenerPid + ' 不一致' }
+  }
+  if (base.snapshotPid !== null && pid !== base.snapshotPid) {
+    return { ...base, ownership: 'external', code: 'snapshot-pid-mismatch', reason: 'provenance.pid=' + pid + ' 与启动后快照 pid ' + base.snapshotPid + ' 不一致' }
+  }
+  if (alive !== true) {
+    return { ...base, ownership: 'external', code: 'not-alive', reason: 'provenance.pid=' + pid + ' 进程已不存活' }
+  }
+  return { ...base, ownership: 'owned', code: 'ok', reason: null }
+}
+
+/**
+ * 后端构建证据（#32）：把本轮 pnpm build 的结论与 dist/server.js 的 sha256/mtime 绑在一起。
+ * 只记录事实：构建失败时也保留 exitCode 与日志，由调用方决定 fail。
+ *
+ * @param {{ head?: string|null, startedAt?: string|null, finishedAt?: string|null, exitCode?: number|null, timedOut?: boolean, log?: string|null, server?: { path?: string, sha256?: string, mtime?: string, mtimeMs?: number, size?: number }|null }} input
+ */
+export function backendBuildEvidence ({ head = null, startedAt = null, finishedAt = null, exitCode = null, timedOut = false, log = null, server = null } = {}) {
+  const sha = server && typeof server.sha256 === 'string' ? server.sha256 : null
+  const mtime = server && typeof server.mtime === 'string' ? server.mtime : null
+  const mtimeMs = server && Number.isFinite(server.mtimeMs) ? server.mtimeMs : null
+  const startedMs = Date.parse(startedAt ?? '')
+  const serverFresh = mtimeMs !== null && Number.isFinite(startedMs) ? mtimeMs >= startedMs : false
+  let reason = null
+  if (timedOut === true) reason = 'pnpm build 超时'
+  else if (exitCode !== 0) reason = 'pnpm build 失败（exit ' + String(exitCode) + '）'
+  else if (sha === null || mtime === null) reason = 'dist/server.js 不存在或无法读取'
+  else if (!serverFresh) reason = 'dist/server.js mtime 早于本轮构建开始，运行产物不是本轮构建结果'
+  return {
+    head,
+    exitCode: exitCode === null ? null : Number(exitCode),
+    timedOut: timedOut === true,
+    log,
+    serverSha256: sha,
+    serverMtime: mtime,
+    serverPath: server && server.path ? server.path : null,
+    serverSize: server && Number.isFinite(server.size) ? server.size : null,
+    serverFresh,
+    builtAt: startedAt,
+    finishedAt,
+    ok: reason === null,
+    reason,
+  }
+}
+
+/** 外部后端：不声称构建，不登记 owned（#32）。 */
+export function externalBackendRecord ({ pid = null, health = null } = {}) {
+  return {
+    ownership: 'external',
+    pid,
+    health,
+    startedThisRun: false,
+    build: null,
+    buildClaimed: false,
+    reason: '3001 已被外部后端占用：本轮未构建，也不声称运行产物对应本仓库 HEAD',
   }
 }
 
@@ -305,6 +395,29 @@ function snapshotDist () {
   }
 }
 
+/** 读取本轮要运行的 dist/server.js：sha256 + mtime 是「运行产物对应所报 HEAD」的证据。 */
+function serverArtifact () {
+  const target = join(BACKEND_ROOT, 'dist', 'server.js')
+  if (!existsSync(target)) return null
+  try {
+    const stat = statSync(target)
+    return { path: target, sha256: sha256(readFileSync(target)), mtime: stat.mtime.toISOString(), mtimeMs: stat.mtimeMs, size: stat.size }
+  } catch (error) {
+    return { path: target, error: messageOf(error) }
+  }
+}
+
+/** 进程存活；Windows 上 EPERM 表示进程存在但无权限查询，仍算存活。 */
+function isAlive (pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return Boolean(error && error.code === 'EPERM')
+  }
+}
+
 async function esSnapshot (label) {
   const pid = pidOnPort(ES_PORT)
   const info = pid === null ? null : processInfo(pid)
@@ -391,37 +504,54 @@ async function waitBackendHealthy (child, timeoutMs) {
 }
 
 handlers.backend = async (step) => {
+  const serverPath = join(BACKEND_ROOT, 'dist', 'server.js')
   const preflight = {
     backendRoot: BACKEND_ROOT,
     packageJson: existsSync(join(BACKEND_ROOT, 'package.json')),
     envFile: existsSync(join(BACKEND_ROOT, '.env')),
-    dist: existsSync(join(BACKEND_ROOT, 'dist', 'server.js')),
+    dist: existsSync(serverPath),
   }
   step.preflight = preflight
   if (!preflight.backendRoot || !preflight.packageJson) return { status: 'fail', reason: 'SHOP_BACKEND_ROOT 无效：' + BACKEND_ROOT }
   if (!preflight.envFile) return { status: 'fail', reason: '后端 .env 缺失：' + join(BACKEND_ROOT, '.env') }
-  if (!preflight.dist) {
-    const buildLog = join(runDir, 'backend-build.log')
-    const build = await runPnpm('build', buildLog, { cwd: BACKEND_ROOT, timeoutMs: 300000 })
-    step.backendBuild = { exitCode: build.code, log: relPath(buildLog), timedOut: build.timedOut }
-    if (build.code !== 0 || !existsSync(join(BACKEND_ROOT, 'dist', 'server.js'))) {
-      return { status: 'fail', reason: '后端 dist/server.js 缺失且 pnpm build 失败' }
-    }
-  }
+
+  // 3001 已有健康实例：记为 external，不构建、不声称运行产物（#32）。
   const occupied = pidOnPort(BACKEND_PORT)
   if (occupied !== null) {
     const health = await waitBackendHealthy(null, 15000)
     if (!health.ok) return { status: 'fail', reason: '3001 已被进程 ' + occupied + ' 占用，但后端预检不通过' }
-    gate.services.backend = { ownership: 'external', pid: occupied, process: processInfo(occupied), health, startedThisRun: false }
+    const external = externalBackendRecord({ pid: occupied, health })
+    gate.services.backend = { ...external, process: processInfo(occupied) }
     step.ownership = 'external'
     step.pid = occupied
     step.health = health.checks
+    step.backendBuild = null
+    writeManifest(join(runDir, 'backend-build.json'), { ownership: 'external', pid: occupied, build: null, reason: external.reason })
     return { status: 'pass' }
   }
+
+  // 自己启动后端：总是先在本轮跑 pnpm build，把 dist/server.js 的 sha256/mtime 与所报 HEAD 绑在一起（#32）。
+  const buildLog = join(runDir, 'backend-build.log')
+  const builtAt = nowIso()
+  const build = await runPnpm('build', buildLog, { cwd: BACKEND_ROOT, timeoutMs: 300000 })
+  const evidence = backendBuildEvidence({
+    head: headInfo(BACKEND_ROOT).head,
+    startedAt: builtAt,
+    finishedAt: nowIso(),
+    exitCode: build.code,
+    timedOut: build.timedOut,
+    log: relPath(buildLog),
+    server: serverArtifact(),
+  })
+  step.backendBuild = evidence
+  gate.services.backend = { ownership: 'none', pid: null, startedThisRun: false, build: evidence, buildClaimed: false }
+  writeManifest(join(runDir, 'backend-build.json'), evidence)
+  if (!evidence.ok) return { status: 'fail', reason: evidence.reason }
+
   const logPath = join(runDir, 'backend.log')
   appendLog(logPath, '\n$ node dist/server.js (PORT=' + BACKEND_PORT + ')\n[' + nowIso() + ']\n')
   const fd = openSync(logPath, 'a')
-  backendChild = spawn(process.execPath, [join(BACKEND_ROOT, 'dist', 'server.js')], {
+  backendChild = spawn(process.execPath, [serverPath], {
     cwd: BACKEND_ROOT,
     env: { ...process.env, PORT: String(BACKEND_PORT) },
     stdio: ['ignore', fd, fd],
@@ -429,14 +559,14 @@ handlers.backend = async (step) => {
   })
   closeSync(fd)
   // P0：spawn 后立即登记 ownership；后续健康检查失败也必须走 cleanup。
-  gate.services.backend = { ownership: 'owned', pid: backendChild.pid, startedThisRun: true, status: 'starting' }
+  gate.services.backend = { ownership: 'owned', pid: backendChild.pid, startedThisRun: true, status: 'starting', build: evidence, buildClaimed: true }
   const health = await waitBackendHealthy(backendChild, 60000)
   if (!health.ok) {
     killTree(backendChild)
     gate.services.backend = { ...gate.services.backend, health, failed: true }
     return { status: 'fail', reason: health.reason }
   }
-  gate.services.backend = { ownership: 'owned', pid: backendChild.pid, process: processInfo(backendChild.pid), health, startedThisRun: true }
+  gate.services.backend = { ownership: 'owned', pid: backendChild.pid, process: processInfo(backendChild.pid), health, startedThisRun: true, build: evidence, buildClaimed: true }
   step.ownership = 'owned'
   step.pid = backendChild.pid
   step.health = health.checks
@@ -447,8 +577,9 @@ handlers.backend = async (step) => {
 handlers.es = async (step) => {
   const before = gate.externalEs.before
   if (before && before.reachable) {
-    gate.services.es = { ownership: 'external', snapshot: before, startedThisRun: false }
+    gate.services.es = { ownership: 'external', snapshot: before, startedThisRun: false, reason: 'gate 启动前 9201 已有可用实例' }
     step.ownership = 'external'
+    step.ownershipReason = gate.services.es.reason
     step.pid = before.pid
     step.version = before.http.version
     return { status: 'pass' }
@@ -457,18 +588,69 @@ handlers.es = async (step) => {
     return { status: 'fail', reason: '端口 ' + ES_PORT + ' 被非 Elasticsearch 进程 ' + before.pid + ' 占用' }
   }
   const logPath = join(runDir, 'es-start.log')
-  const result = await runLogged(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-dev.mjs')], logPath, { cwd: BACKEND_ROOT, timeoutMs: 240000 })
+  const provenancePath = join(runDir, 'es-provenance.json')
   step.startLog = relPath(logPath)
+  step.provenance = relPath(provenancePath)
+  // 清掉上一轮残留：没有本轮证据时只能判 external，不能被旧文件冒充。
+  try { rmSync(provenancePath, { force: true }) } catch {}
+  const result = await runLogged(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-dev.mjs')], logPath, {
+    cwd: BACKEND_ROOT,
+    timeoutMs: 240000,
+    env: { ...process.env, ES_PROVENANCE_FILE: provenancePath },
+  })
   step.startExitCode = result.code
-  if (result.timedOut || result.code !== 0) return { status: 'fail', reason: 'es-dev.mjs 启动失败（exit ' + String(result.code) + '）' }
-  // P0：es-dev 成功后、快照之前登记 ownership；快照抛错也要能收尾停 ES。
-  gate.services.es = { ownership: 'owned', startedThisRun: true, status: 'starting' }
+  const provenance = readJson(provenancePath)
+  if (provenance) {
+    step.provenanceRecord = {
+      created: provenance.created === true,
+      reused: provenance.reused === true,
+      failed: provenance.failed === true,
+      pid: Number.isInteger(provenance.pid) ? provenance.pid : null,
+      reason: typeof provenance.reason === 'string' ? provenance.reason : null,
+      at: typeof provenance.at === 'string' ? provenance.at : null,
+    }
+  }
+  if (result.timedOut || result.code !== 0) {
+    const verdict = evaluateEsOwnership({ provenance, exitCode: result.code, timedOut: result.timedOut, alive: isAlive(provenance && provenance.pid) })
+    step.ownership = verdict.ownership
+    step.ownershipReason = verdict.reason
+    if (verdict.ownership === 'owned') {
+      gate.services.es = { ownership: 'owned', pid: verdict.pid, startedThisRun: true, status: 'failed', provenance, provenanceFile: step.provenance, reason: verdict.reason }
+    } else {
+      gate.services.es = { ownership: 'none', pid: null, startedThisRun: false, provenance, provenanceFile: step.provenance, reason: verdict.reason }
+    }
+    return { status: 'fail', reason: 'es-dev.mjs 启动失败（exit ' + String(result.code) + (result.timedOut ? '，超时' : '') + '）：' + verdict.reason }
+  }
+  // exit 0 也可能是复用已有实例：先按监听者登记临时 owned，快照抛错时仍能收尾。
+  const listenerPid = pidOnPort(ES_PORT)
+  const provisional = evaluateEsOwnership({ provenance, listenerPid, alive: isAlive(provenance && provenance.pid) })
+  if (provisional.ownership === 'owned') {
+    gate.services.es = { ownership: 'owned', pid: provisional.pid, startedThisRun: true, status: 'starting', provenance, provenanceFile: step.provenance }
+  }
   const snapshot = await esSnapshot('started')
-  if (!snapshot.reachable) return { status: 'fail', reason: 'es-dev 退出后 9201 仍不可达' }
-  gate.services.es = { ...gate.services.es, snapshot }
-  step.ownership = 'owned'
-  step.pid = snapshot.pid
+  if (!snapshot.reachable) {
+    if (provisional.ownership !== 'owned') {
+      gate.services.es = { ownership: 'none', pid: null, startedThisRun: false, provenance, provenanceFile: step.provenance, reason: 'es-dev 退出后 9201 不可达' }
+    }
+    return { status: 'fail', reason: 'es-dev 退出后 9201 仍不可达' }
+  }
+  const verdict = evaluateEsOwnership({
+    provenance,
+    listenerPid: snapshot.pid,
+    snapshotPid: snapshot.pid,
+    alive: isAlive(provenance && provenance.pid),
+  })
+  step.ownership = verdict.ownership
+  step.ownershipReason = verdict.reason
+  step.pid = verdict.pid ?? snapshot.pid
   step.version = snapshot.http.version
+  if (verdict.ownership === 'owned') {
+    gate.services.es = { ownership: 'owned', pid: verdict.pid, startedThisRun: true, provenance, provenanceFile: step.provenance, snapshot }
+    return { status: 'pass' }
+  }
+  // created:false / 缺证据 / pid 不符：一律 external，check:es blocked，收尾不停。
+  gate.services.es = { ownership: 'external', pid: snapshot.pid, startedThisRun: false, provenance, provenanceFile: step.provenance, snapshot, reason: verdict.reason }
+  step.externalReason = verdict.reason
   return { status: 'pass' }
 }
 
@@ -667,7 +849,8 @@ async function runStep (id) {
   }
   if (id === 'check-es' && gate.services.es && gate.services.es.ownership === 'external') {
     step.status = 'blocked'
-    step.reason = '9201 被外部实例占用（pid=' + String(gate.services.es.snapshot.pid) + '）；不对非本轮启动的 ES 执行停机恢复'
+    const externalPid = gate.services.es.snapshot ? gate.services.es.snapshot.pid : gate.services.es.pid
+    step.reason = '9201 不是本轮创建的实例（' + String(gate.services.es.reason ?? '外部实例') + '；pid=' + String(externalPid ?? '?') + '）；不对非本轮启动的 ES 执行停机恢复'
     step.externalEs = gate.services.es.snapshot
     step.startedAt = nowIso()
     step.finishedAt = step.startedAt

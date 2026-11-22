@@ -40,7 +40,7 @@ pnpm check:ui -- --skip-build --reverse=purchase-price   # 保留真实变价流
 
 可选环境变量：
 
-- `UI_ARTIFACT_DIR`：证据根目录；默认 `../session-tmp/ui-acceptance`。
+- `UI_ARTIFACT_DIR`：证据根目录；默认 `<main session-tmp>/ui-acceptance`（由 `paths.mjs` 的 `findSessionTmp` 解析，worktree 下指主检出的 `session-tmp`）。
 - `PREVIEW_PORT`：固定预览端口；默认自动寻找空闲端口。
 - `CHROME_PATH`：Chrome / Edge 可执行文件路径。
 
@@ -138,8 +138,8 @@ session-tmp/ui-acceptance/<runId>/
 `pnpm gate` 是 Phase 8 的本地总验收入口（#32 / G1-G4），顺序固定：
 
 1. `pnpm verify`（docs → unit → lint → build）；
-2. 后端预检 / 启动（`SHOP_BACKEND_ROOT`，默认 `../shop-backend`；校验 `.env` 与 `dist/server.js`）；
-3. Elasticsearch 预检 / 启动（9201，经后端 `scripts/es-dev.mjs`）；
+2. 后端预检 / 启动（`SHOP_BACKEND_ROOT`，默认 `../shop-backend`；校验 `.env`；3001 空闲时先在本轮 `pnpm build` 并记录产物）；
+3. Elasticsearch 预检 / 启动（9201，经后端 `scripts/es-dev.mjs`，传 `ES_PROVENANCE_FILE`）；
 4. `pnpm exec playwright test`（gate 自起 preview，`E2E_SKIP_WEBSERVER=1`）；
 5. `check:ui` 全量正向；
 6. 三条反向：`island` / `purchase` / `purchase-price`，分别只核对 `islandNotOverSummary` / `confirmationRequired` / `secondRequestCarriesConfirmedPrice`；
@@ -148,7 +148,8 @@ session-tmp/ui-acceptance/<runId>/
 约定：
 
 - gate 启动时先记录并删除旧 `dist`；前置失败时依赖步骤记为 `blocked`，独立步骤继续，且不会复用 gate 之前的旧构建。
-- `9201` 被外部实例占用时 `check:es` 记为 `blocked`、总门禁非绿，并记录该实例 PID / 启动时间 / HTTP 响应前后快照；gate 收尾不停止外部实例。
+- `9201` 归属以 `ES_PROVENANCE_FILE` 为准：gate 调 `es-dev` 时传 `<runDir>/es-provenance.json`，只有 `created=true` 且 `pid` 与 9201 监听者 / 启动后快照一致、进程存活才登记 `owned` 并执行 `check:es`；`created:false`（复用已有实例）、缺证据或 pid 不符一律 `external`，`check:es` 记为 `blocked`、总门禁非绿，收尾不停止外部实例。`es-dev` 非零退出但已写 `created=true` 时仍登记 `owned`，交给收尾停止。
+- gate 自起后端（3001 空闲）时总是先在本轮跑 `pnpm build`，把 `{head, exitCode, log, serverSha256, serverMtime, builtAt}` 写入 `runs/<runId>/backend-build.json`、`gate.services.backend.build` 与 `backend` 步骤；`server.js` 缺失、构建失败或 mtime 早于本轮构建开始都判 fail。3001 已被健康外部后端占用时只记 `external`，不声称构建产物。
 - 每条运行写固定 `runs/<runId>/gate.json`（latest 指向它）；根 `gate.json` 只是便利副本，可被下一次运行覆盖。`GATE_ARTIFACT_DIR` 决定产物根，`GATE_MANIFEST` 可覆盖根副本路径。
 - `GATE_LATEST_PATH` 默认 `<session-tmp>/ui-acceptance/latest.json`，与 `check-ui` / `check-es` / `verify:e2e` 同一文件；gate 产物仍在 `GATE_ARTIFACT_DIR` 下。
 - 环境变量：`SHOP_BACKEND_ROOT`（未设且 `../shop-backend` 不存在时回退 `../be-int`，日志会打印）、`GATE_ARTIFACT_DIR`、`GATE_MANIFEST`、`GATE_LATEST_PATH`、`GATE_RUN_ID`。端口固定 3001 / 9201，不提供半配置端口变量。
@@ -168,7 +169,7 @@ session-tmp/ui-acceptance/<runId>/
 - 先落固定 manifest，再更新指针；manifest 写失败时 `latest.json` 保持原样。
 - 共享文件用文件锁串行合并、整份文档原子替换，四入口并发写不会丢 suite。
 - `verify:e2e` 经 `scripts/acceptance/e2e-latest.mjs` 接线：Playwright 结束后（无论成败）先落固定 e2e manifest，再按 `verify-e2e` 更新指针；不带参数算全量，带 spec 路径 / `--grep` / `--project` 算定向（只写 `lastRun`）；Playwright 崩溃、没留下 reporter manifest 时补一份 fallback manifest。
-- 默认路径 `<session-tmp>/ui-acceptance/latest.json`（gate 默认在自己的证据根，建议用变量指到同一份）；覆盖变量：`UI_LATEST_PATH` / `E2E_LATEST_PATH` / `GATE_LATEST_PATH`。
+- 默认路径统一由 `scripts/acceptance/paths.mjs` 的 `findSessionTmp` 解析：优先含 `phase8-spec.md` 的 `<main>/session-tmp`，其次最近的已存在 `session-tmp`，最后退回父目录。worktree 布局（`<main>/wt/<worktree>/`）下四个入口默认写同一份 `<main>/session-tmp/ui-acceptance/latest.json`，不再落到 `wt/session-tmp`；覆盖变量：`UI_LATEST_PATH` / `E2E_LATEST_PATH` / `GATE_LATEST_PATH`。
 
 ## 正式验收（R1 / F11）
 
@@ -183,7 +184,7 @@ GATE_RUN_ID=final \
 pnpm gate
 ```
 
-- 前置：`3001` / `9201` / `4173` / `4174` 空闲（gate 自起后端、ES 与 preview）；后端需已有 `.env` 与 `dist/server.js`；后端 `pnpm test` 与 `pnpm test:es` 必须串行，且不要与 gate 并发。
+- 前置：`3001` / `9201` / `4173` / `4174` 空闲（gate 自起后端、ES 与 preview）；后端需有 `.env`（gate 自起后端时先在本轮 `pnpm build` 生成本轮 `dist`）；后端 `pnpm test` 与 `pnpm test:es` 必须串行，且不要与 gate 并发。
 - 固定证据（`GATE_ARTIFACT_DIR` 下，`<runId>` = `GATE_RUN_ID`）：
 
 | 步骤 | 固定 manifest |

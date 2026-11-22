@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { findFreePort, launchBrowser, openPage, sleep, waitForHttp } from './lib.mjs'
 import { sampleNativeScrollbar } from './native-scrollbar.mjs'
 import { caseP7Motion, caseP7Nav, caseP7Purchase } from './phase7-cases.mjs'
-import { classifyRun, defaultLatestPath, recordRun } from './latest.mjs'
+import { classifyRun, recordRun } from './latest.mjs'
+import { resolveLatestPath, uiAcceptanceDir } from './paths.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const CART_ITEMS = [
@@ -54,7 +55,7 @@ if (reverse && !REVERSE_MODES.has(reverse)) {
 const runId = valueOf('--run-id') ?? new Date().toISOString().replace(/[:.]/g, '-')
 const artifactRoot = process.env.UI_ARTIFACT_DIR
   ? resolve(process.env.UI_ARTIFACT_DIR)
-  : resolve(ROOT, '..', 'session-tmp', 'ui-acceptance')
+  : uiAcceptanceDir(ROOT)
 const runDir = join(artifactRoot, runId)
 mkdirSync(runDir, { recursive: true })
 
@@ -610,9 +611,7 @@ try {
     manifest: join(runDir, 'manifest.json'),
   }
   const manifestPath = join(runDir, 'manifest.json')
-  const latestPath = process.env.UI_LATEST_PATH
-    ? resolve(process.env.UI_LATEST_PATH)
-    : defaultLatestPath(artifactRoot)
+  const latestPath = resolveLatestPath({ start: ROOT, override: process.env.UI_LATEST_PATH })
   try {
     await recordRun({
       suite: 'check-ui',

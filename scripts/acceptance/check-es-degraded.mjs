@@ -5,7 +5,8 @@ import { closeSync, existsSync, mkdirSync, openSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findFreePort, launchBrowser, openPage, sleep, waitForHttp } from './lib.mjs'
-import { defaultLatestPath, recordRun } from './latest.mjs'
+import { recordRun } from './latest.mjs'
+import { resolveLatestPath, uiAcceptanceDir } from './paths.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 // worktree 布局下 ../shop-backend 不一定存在；由调用方用 SHOP_BACKEND_ROOT 指向后端仓库。
@@ -29,7 +30,7 @@ const headed = hasFlag('--headed')
 const runId = valueOf('--run-id') ?? new Date().toISOString().replace(/[:.]/g, '-')
 const artifactRoot = process.env.UI_ARTIFACT_DIR
   ? resolve(process.env.UI_ARTIFACT_DIR)
-  : resolve(ROOT, '..', 'session-tmp', 'ui-acceptance')
+  : uiAcceptanceDir(ROOT)
 const runDir = join(artifactRoot, runId + '-p7es')
 mkdirSync(runDir, { recursive: true })
 
@@ -301,9 +302,7 @@ try {
     artifactDir: runDir,
   }
   const manifestPath = join(runDir, 'manifest.json')
-  const latestPath = process.env.UI_LATEST_PATH
-    ? resolve(process.env.UI_LATEST_PATH)
-    : defaultLatestPath(artifactRoot)
+  const latestPath = resolveLatestPath({ start: ROOT, override: process.env.UI_LATEST_PATH })
   try {
     await recordRun({ suite: 'check-es', latestPath, manifestPath, manifest, kind: 'full' })
     console.log('[p7-es] latest -> ' + latestPath)

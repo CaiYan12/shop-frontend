@@ -30,10 +30,11 @@ node scripts/acceptance/probe-chrome.mjs       # 最小 Chrome 探测（无需�
 | `E2E_BASE_URL` | 覆盖默认 `http://127.0.0.1:4173`；配合 `E2E_SKIP_WEBSERVER=1` 复用已有服务 |
 | `E2E_SKIP_WEBSERVER=1` | 不启动 `vite preview`（gate 复用已通过预检的服务时使用） |
 | `E2E_REUSE_SERVER=1` | 允许 Playwright 复用 4173 上已在运行的服务 |
-| `E2E_ARTIFACT_DIR` | 证据根目录；默认 `<repo>/../session-tmp/e2e-acceptance` |
+| `E2E_ARTIFACT_DIR` | 证据根目录；默认 `<main session-tmp>/e2e-acceptance`（worktree 下由 `scripts/acceptance/paths.mjs` 定位主检出的 `session-tmp`） |
 | `E2E_RUN_ID` | 固定本轮目录名；默认按时间生成 |
 | `E2E_BACKEND_HEAD` | 写入 manifest 的后端提交 SHA（正式验收必填） |
 | `E2E_BACKEND_WORKTREE` | 写入 manifest 的后端 worktree 标识 |
+| `E2E_LATEST_PATH` | 覆盖 latest.json 路径；默认 `<main session-tmp>/ui-acceptance/latest.json`（与 check:ui / check:es / gate 同一份） |
 
 ## 固定 manifest
 

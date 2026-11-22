@@ -14,7 +14,8 @@ import { readFileSync, mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defaultLatestPath, recordRun } from './latest.mjs'
+import { recordRun } from './latest.mjs'
+import { findSessionTmp, resolveLatestPath } from './paths.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -29,14 +30,12 @@ export function classifyE2eArgs (args) {
 /** 与 e2e/support/run-context.mjs 保持同一证据根；E2E_ARTIFACT_DIR 可覆盖。 */
 export function e2eArtifactRoot () {
   const fromEnv = process.env.E2E_ARTIFACT_DIR?.trim()
-  return fromEnv ? resolve(fromEnv) : resolve(REPO_ROOT, '..', 'session-tmp', 'e2e-acceptance')
+  return fromEnv ? resolve(fromEnv) : join(findSessionTmp(REPO_ROOT), 'e2e-acceptance')
 }
 
-/** 默认与 check:ui / check:es 共用同一个 latest.json，四个入口各合并自己的 suite。 */
+/** 默认与 check:ui / check:es / gate 共用同一个 latest.json，四个入口各合并自己的 suite。 */
 export function e2eLatestPath () {
-  const fromEnv = process.env.E2E_LATEST_PATH?.trim()
-  if (fromEnv) return resolve(fromEnv)
-  return defaultLatestPath(resolve(REPO_ROOT, '..', 'session-tmp', 'ui-acceptance'))
+  return resolveLatestPath({ start: REPO_ROOT, override: process.env.E2E_LATEST_PATH })
 }
 
 function messageOf (error) {
