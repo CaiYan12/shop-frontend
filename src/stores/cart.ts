@@ -80,6 +80,11 @@ export interface CartState {
   recoveryNoticeFull: string
   /** 启动恢复只允许触发一次（App 重复挂载 / HMR 时不重复读盘）。 */
   recoveryStarted: boolean
+  /**
+   * 复核轮次（N6）：每次进入核对（启动或重试）自增，作为本轮提交令牌。
+   * 旧轮迟到的结果带着旧代次，提交时按代次拒收，不只是依赖 signal。
+   */
+  recoveryRound: number
   /** 成功加购的脉冲计数：只由 `add` 成功时自增，供摘要做约 120ms 的数字强调（D109）。 */
   addPulse: number
 }
@@ -204,6 +209,7 @@ export const useCartStore = defineStore('cart', {
     recoveryNotice: '',
     recoveryNoticeFull: '',
     recoveryStarted: false,
+    recoveryRound: 0,
     addPulse: 0,
   }),
   getters: {
@@ -376,32 +382,43 @@ export const useCartStore = defineStore('cart', {
         return false
       }
       this.recoveryStarted = true
+      this.recoveryRound += 1
       this.recovery = 'checking'
       return true
     },
 
     /**
      * 从「未核对」重试：沿用内存里的原存档，不重新读盘。
+     *
+     * 每次重试进入新代次；调用方用新代次提交，旧轮迟到的结果会被拒收。
      * @returns 是否允许重试（非「未核对」状态返回 `false`）。
      */
     beginRetry (): boolean {
       if (this.recovery !== 'unverified') {
         return false
       }
+      this.recoveryRound += 1
       this.recovery = 'checking'
       return true
     },
 
     /**
-     * 一次性提交复核结果（#23）。
+     * 一次性提交复核结果（#23 / N6）。
      *
-     * `verified` 用复核后的条目整体替换并写盘一次；`unverified` 原样保留存档、
-     * 不写盘，只把状态标为「未核对」，由摘要提供重试。
+     * `round` 是本轮开始核对时的代次：与当前代次不一致说明这是旧轮的迟到结果，
+     * 必须原样丢弃（返回 `false`），不得覆盖新轮的条目或状态。
+     * 代次一致时：`verified` 用复核后的条目整体替换并写盘一次；`unverified`
+     * 原样保留存档、不写盘，只把状态标为「未核对」，由摘要提供重试。
+     *
+     * @returns 结果是否被采纳；旧轮迟到结果返回 `false`。
      */
-    completeRecovery (result: CartVerificationResult): void {
+    completeRecovery (result: CartVerificationResult, round?: number): boolean {
+      if (round !== undefined && round !== this.recoveryRound) {
+        return false
+      }
       if (result.status === 'unverified') {
         this.recovery = 'unverified'
-        return
+        return true
       }
 
       this.items = result.items.map(item => ({ ...item }))
@@ -409,6 +426,7 @@ export const useCartStore = defineStore('cart', {
       this.recoveryNotice = formatRecoveryNotice(result.changes, true)
       this.recoveryNoticeFull = formatRecoveryNotice(result.changes, false)
       this.persist()
+      return true
     },
   },
 })

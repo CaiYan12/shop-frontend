@@ -16,8 +16,13 @@ import { resolveQuantityLimit, type CartItem } from '../stores/cart.ts'
 /** 详情接口的返回快照；只依赖 `variants`，其余字段由调用方的契约保证。 */
 export type ProductDetailSnapshot = components['schemas']['ProductDetailResponse']
 
-/** 按 `slug` 查详情；返回 `null` 表示商品不存在（404）。 */
-export type ProductLookup = (slug: string) => Promise<ProductDetailSnapshot | null>
+/**
+ * 按 `slug` 查详情；返回 `null` 表示商品不存在（404）。
+ *
+ * `signal` 由本轮复核的共享 `AbortController` 提供：同一轮的所有详情请求共用
+ * 它，任一次超时 / 失败都会连带取消其余在途请求。
+ */
+export type ProductLookup = (slug: string, signal: AbortSignal) => Promise<ProductDetailSnapshot | null>
 
 /** 被移除的条目：带名称与标识，汇总提示据此指出具体行。 */
 export interface RecoveryRemovedItem {
@@ -91,23 +96,72 @@ export function applyRecoverySnapshots(
   return { status: 'verified', items: nextItems, changes: { removed, adjusted } }
 }
 
+/** 单个详情请求的时限；每个请求各自计时，到点取消整轮。 */
+export const RECOVERY_TIMEOUT_MS = 8000
+
+/** `verifyCartItems` 的可选项；目前只开放请求时限，便于测试收窄。 */
+export interface VerifyCartOptions {
+  /** 单个详情请求的时限（毫秒）；默认 `RECOVERY_TIMEOUT_MS`。 */
+  readonly timeoutMs?: number
+}
+
 /**
  * 按商品去重、并发请求详情，再套用行级规则。
  *
- * 任一次请求超时 / 抛错（服务错误、网络错误）→ 返回 `unverified`，调用方必须
- * 保留原存档、不做部分修复。`lookup` 用 `null` 表达「商品不存在」，那是可修复
- * 的行级结果，不计入请求失败。
+ * 同一轮的详情请求共用一个 `AbortController`：每个请求各自计时，任一次超时 /
+ * 抛错（服务错误、网络错误）都先 abort 这个 controller 取消本轮其余在途请求，
+ * 再返回 `unverified`；调用方必须保留原存档、不做部分修复。`lookup` 用
+ * `null` 表达「商品不存在」，那是可修复的行级结果，不计入请求失败。
  */
 export async function verifyCartItems(
   items: readonly CartItem[],
   lookup: ProductLookup,
+  options: VerifyCartOptions = {},
 ): Promise<CartVerificationResult> {
   const slugs = [...new Set(items.map(item => item.slug))]
+  const timeoutMs = options.timeoutMs ?? RECOVERY_TIMEOUT_MS
+
+  // 一轮一个 controller：失败时先取消本轮所有在途请求，再进入「未核对」。
+  const controller = new AbortController()
+  const timers = new Set<ReturnType<typeof setTimeout>>()
+
+  const request = (slug: string): Promise<ProductDetailSnapshot | null> => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        controller.abort()
+        reject(new Error(`商品详情请求超时（${timeoutMs}ms）`))
+      }, timeoutMs)
+      timers.add(timer)
+    })
+    // 别的请求先失败时，本请求不必等自己的计时器到点：round abort 立即结束它。
+    const cancelled = new Promise<never>((_resolve, reject) => {
+      const onAbort = (): void => reject(new Error('本轮复核已取消'))
+      if (controller.signal.aborted) {
+        onAbort()
+      } else {
+        controller.signal.addEventListener('abort', onAbort, { once: true })
+      }
+    })
+
+    return Promise.race([lookup(slug, controller.signal), timeout, cancelled]).finally(() => {
+      if (timer !== undefined) {
+        clearTimeout(timer)
+        timers.delete(timer)
+      }
+    })
+  }
 
   let snapshots: Array<ProductDetailSnapshot | null>
   try {
-    snapshots = await Promise.all(slugs.map(slug => lookup(slug)))
+    snapshots = await Promise.all(slugs.map(request))
   } catch {
+    // 先取消本轮在途请求，再把「未核对」交给调用方。
+    for (const pending of timers) {
+      clearTimeout(pending)
+    }
+    timers.clear()
+    controller.abort()
     return { status: 'unverified' }
   }
 
