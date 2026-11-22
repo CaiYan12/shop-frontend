@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, test } from 'vitest'
 import { finishE2eRun, REQUIRED_E1_ATTACHMENTS } from '../../scripts/acceptance/e2e-latest.mjs'
+import { updateRunPointer } from '../../scripts/acceptance/latest.mjs'
 
 const tempDirs = []
 function tempDir () {
@@ -77,7 +78,7 @@ test('附件归档：复制进 runDir、相对路径、sha256、移走原文件�
   assert.equal(join(root, finished.latest.suites['verify-e2e'].lastFull.manifest), finished.manifestPath)
 })
 
-test('同名附件：不同用例/重试归档路径独立，两个哈希各自正确', async () => {
+test('同名附件：同 retry 中文标题/长文件名仍按用例序号独立归档', async () => {
   const root = tempDir()
   const runId = 'collision'
   const runDir = join(root, runId)
@@ -103,8 +104,8 @@ test('同名附件：不同用例/重试归档路径独立，两个哈希各自�
         failed: 0,
         skipped: 0,
         tests: [
-          { file: 'e2e/retry.spec.ts', title: '用例 A', status: 'passed', durationMs: 1, retry: 0, error: null, attachments: [{ name: 'trace.json', contentType: 'application/json', path: first }] },
-          { file: 'e2e/retry.spec.ts', title: '用例 B', status: 'passed', durationMs: 1, retry: 1, error: null, attachments: [{ name: 'trace.json', contentType: 'application/json', path: second }] },
+          { file: 'e2e/retry.spec.ts', title: '搜索', status: 'passed', durationMs: 1, retry: 0, error: null, attachments: [{ name: '同名附件-'.repeat(20) + 'trace.json', contentType: 'application/json', path: first }] },
+          { file: 'e2e/retry.spec.ts', title: '结算', status: 'passed', durationMs: 1, retry: 0, error: null, attachments: [{ name: '同名附件-'.repeat(20) + 'trace.json', contentType: 'application/json', path: second }] },
         ],
       },
       theme: { total: 0, passed: 0, failed: 0, skipped: 0, tests: [] },
@@ -117,10 +118,30 @@ test('同名附件：不同用例/重试归档路径独立，两个哈希各自�
   const archivedA = rows[0].attachments[0]
   const archivedB = rows[1].attachments[0]
   assert.notEqual(archivedA.path, archivedB.path)
+  assert.match(archivedA.path, /^attachments\/test-0000-retry-0-att-000-/)
+  assert.match(archivedB.path, /^attachments\/test-0001-retry-0-att-000-/)
+  assert.ok(archivedA.path.length <= 220)
   assert.equal(archivedA.sha256, createHash('sha256').update(readFileSync(first)).digest('hex'))
   assert.equal(archivedB.sha256, createHash('sha256').update(readFileSync(second)).digest('hex'))
   assert.deepEqual(JSON.parse(readFileSync(join(runDir, archivedA.path), 'utf8')), { case: 'A' })
   assert.deepEqual(JSON.parse(readFileSync(join(runDir, archivedB.path), 'utf8')), { case: 'B' })
+})
+
+test('指针更新不写固定 manifest', async () => {
+  const root = tempDir()
+  const manifestPath = join(root, 'not-written.json')
+  const latestPath = join(root, 'latest.json')
+  const manifest = {
+    runId: 'pointer-only',
+    status: 'passed',
+    startedAt: '2026-11-22T00:00:00.000Z',
+    finishedAt: '2026-11-22T00:00:01.000Z',
+    commit: { sha: 'test', branch: 'test' },
+    summary: { total: 1, passed: 1, failed: 0, fatal: false, status: 'pass' },
+  }
+  await updateRunPointer({ suite: 'verify-e2e', latestPath, manifestPath, manifest, kind: 'full' })
+  assert.equal(existsSync(manifestPath), false)
+  assert.equal(existsSync(latestPath), true)
 })
 
 test('固定 manifest 缺失：fallback + 证据失败，仍写固定 manifest 与 latest', async () => {

@@ -16,7 +16,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from 'nod
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { recordRun, writeManifest } from './latest.mjs'
+import { updateRunPointer, writeManifest } from './latest.mjs'
 import { findSessionTmp, resolveLatestPath } from './paths.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -137,11 +137,15 @@ function sha256File (path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex')
 }
 
-function safeAttachmentName (testFile, testTitle, retry, attachmentName, index) {
-  return [testFile, testTitle, 'retry-' + String(retry ?? 0), attachmentName, 'att-' + index]
+function safeAttachmentName (testOrdinal, retry, attachmentIndex, testFile, attachmentName) {
+  const prefix = 'test-' + String(testOrdinal).padStart(4, '0') +
+    '-retry-' + String(retry ?? 0) +
+    '-att-' + String(attachmentIndex).padStart(3, '0')
+  const suffix = [testFile, attachmentName]
     .map((value) => String(value ?? 'unknown').replace(/[^a-zA-Z0-9._-]+/g, '-'))
     .join('-')
-    .slice(-220)
+    .slice(0, 160)
+  return (prefix + '-' + suffix).slice(0, 220)
 }
 
 /**
@@ -152,9 +156,12 @@ export function archiveManifestAttachments (manifest, runDir) {
   const attachmentsDir = join(runDir, 'attachments')
   mkdirSync(attachmentsDir, { recursive: true })
   const errors = []
+  let testOrdinal = 0
   for (const suite of Object.values(isPlainObject(manifest.suites) ? manifest.suites : {})) {
     if (!isPlainObject(suite) || !Array.isArray(suite.tests)) continue
     for (const test of suite.tests) {
+      const currentTestOrdinal = testOrdinal
+      testOrdinal += 1
       if (!isPlainObject(test) || !Array.isArray(test.attachments)) continue
       test.attachments = test.attachments.map((attachment, index) => {
         if (!isPlainObject(attachment)) return attachment
@@ -169,7 +176,7 @@ export function archiveManifestAttachments (manifest, runDir) {
           errors.push(error)
           return { ...attachment, archived: false, error }
         }
-        const target = join(attachmentsDir, safeAttachmentName(test.file, test.title, test.retry, attachment.name, index))
+        const target = join(attachmentsDir, safeAttachmentName(currentTestOrdinal, test.retry, index, test.file, attachment.name))
         try {
           copyFileSync(source, target)
           const bytes = statSync(target).size
@@ -268,7 +275,7 @@ export async function finishE2eRun ({
   let document = null
   if (manifestWriteError === null) {
     try {
-      document = await recordRun({
+      document = await updateRunPointer({
         suite: E2E_SUITE,
         latestPath: targetLatest,
         manifestPath,
