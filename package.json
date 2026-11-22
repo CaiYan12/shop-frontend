@@ -18,7 +18,7 @@
     "test:unit": "vitest run",
     "lint": "oxlint",
     "verify": "run-s check:docs test:unit lint build",
-    "verify:e2e": "playwright test",
+    "verify:e2e": "node scripts/acceptance/e2e-latest.mjs",
     "stack": "node scripts/stack-status.mjs",
     "prepare": "node scripts/install-hooks.mjs"
   },

@@ -158,3 +158,13 @@ session-tmp/ui-acceptance/<runId>/
 - 在 `tests/` 放一条临时失败用例，使 `pnpm verify` 在 build 之前失败；gate 会删除旧 `dist`、把依赖 dist 的步骤记为 blocked，并继续后端 / ES 独立步骤。验证完成后删除临时用例。
 
 反向判定：`scripts/acceptance/gate.mjs` 的 `evaluateReverseRun` 要求 manifest 存在、无 fatal、`mode.reverse` 匹配、目标断言实际执行且为 false、失败断言恰好只有预期一条、失败用例恰好只有目标用例；缺 manifest、崩溃、目标未失败或额外失败均判非绿。fixture 见 `tests/fixtures/gate/`，单元测试见 `tests/unit/gate.test.mjs`。
+
+## latest.json（四入口调试指针）
+
+`check:ui` / `check:es` / `verify:e2e` / `gate` 四个入口结束时都把自己的 suite 合并进 `latest.json`。正式证据始终是它指向的固定 manifest；指针只用于快速定位最近一次运行。
+
+- 每个 suite 记 `lastFull`（最近一次完成的全量，含失败）与 `lastRun`（最近一次完成，含 `only` / `reverse` / 定向运行）。
+- 先落固定 manifest，再更新指针；manifest 写失败时 `latest.json` 保持原样。
+- 共享文件用文件锁串行合并、整份文档原子替换，四入口并发写不会丢 suite。
+- `verify:e2e` 经 `scripts/acceptance/e2e-latest.mjs` 接线：Playwright 结束后（无论成败）先落固定 e2e manifest，再按 `verify-e2e` 更新指针；不带参数算全量，带 spec 路径 / `--grep` / `--project` 算定向（只写 `lastRun`）；Playwright 崩溃、没留下 reporter manifest 时补一份 fallback manifest。
+- 默认路径 `<session-tmp>/ui-acceptance/latest.json`（gate 默认在自己的证据根，建议用变量指到同一份）；覆盖变量：`UI_LATEST_PATH` / `E2E_LATEST_PATH` / `GATE_LATEST_PATH`。
