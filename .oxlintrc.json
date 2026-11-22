@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "vue"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "scripts/acceptance/**/*.mjs"
+      ],
+      "rules": {
+        "no-unused-expressions": "warn",
+        "no-unused-vars": "warn",
+        "no-useless-escape": "warn"
+      }
+    }
+  ]
+}
