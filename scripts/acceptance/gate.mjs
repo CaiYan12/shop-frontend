@@ -19,6 +19,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { findFreePort, waitForHttp } from './lib.mjs'
+import { finishE2eRun } from './e2e-latest.mjs'
 import { recordRun, writeManifest } from './latest.mjs'
 import { findSessionTmp, resolveLatestPath } from './paths.mjs'
 
@@ -703,6 +704,7 @@ handlers.e2e = async (step) => {
   const logPath = join(runDir, 'e2e.log')
   step.log = relPath(logPath)
   step.baseUrl = server.baseUrl
+  const startedAt = new Date().toISOString()
   const result = await runPnpm('exec playwright test', logPath, {
     timeoutMs: 900000,
     env: {
@@ -715,15 +717,41 @@ handlers.e2e = async (step) => {
       E2E_BACKEND_WORKTREE: BACKEND_ROOT,
     },
   })
+  const finishedAt = new Date().toISOString()
   step.exitCode = result.code
-  const manifestPath = join(e2eDir, 'manifest.json')
-  step.manifest = relPath(manifestPath)
-  const manifest = readJson(manifestPath)
-  const verdict = inspectE2eManifest(manifest)
+
+  let finished
+  try {
+    finished = await finishE2eRun({
+      artifactRoot: e2eRoot,
+      runId: e2eRunId,
+      latestPath: LATEST_PATH,
+      kind: 'full',
+      result: { exitCode: result.code, timedOut: result.timedOut, signal: null },
+      startedAt,
+      finishedAt,
+    })
+  } catch (error) {
+    return { status: 'fail', reason: 'E2E 收尾失败：' + messageOf(error) }
+  }
+
+  step.manifest = relPath(finished.manifestPath)
+  step.latest = {
+    suite: 'verify-e2e',
+    path: relPath(finished.latestPath),
+    runId: e2eRunId,
+    status: finished.summary.status,
+  }
+  if (finished.latestError) step.latestError = finished.latestError
+  if (finished.manifestWriteError) step.manifestWriteError = finished.manifestWriteError
+  step.evidenceErrors = finished.evidenceErrors
+  const verdict = inspectE2eManifest(finished.manifest)
   step.verdict = verdict.ok ? 'ok' : verdict.reason
   if (verdict.summary) step.summary = verdict.summary
   if (result.timedOut) return { status: 'fail', reason: 'Playwright 超时' }
   if (result.code !== 0) return { status: 'fail', reason: 'Playwright 失败（exit ' + result.code + '）' }
+  if (finished.evidenceErrors.length > 0) return { status: 'fail', reason: '证据失败：' + finished.evidenceErrors.join('；') }
+  if (finished.latestError) return { status: 'fail', reason: 'latest.json 指针写入失败：' + finished.latestError }
   if (!verdict.ok) return { status: 'fail', reason: verdict.reason }
   return { status: 'pass' }
 }

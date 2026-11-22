@@ -205,12 +205,20 @@ export async function updateLatest ({ latestPath, suite, kind, entry }) {
   })
 }
 
+// 只更新指针，不写固定 manifest；供已经完成原子 manifest 写入的调用方复用。
+export async function updateRunPointer ({ suite, latestPath, manifestPath, manifest, kind = 'full', status = null }) {
+  if (!manifest || typeof manifest !== 'object') throw new Error('updateRunPointer 需要 manifest 对象')
+  if (!manifestPath) throw new Error('updateRunPointer 需要固定 manifest 路径')
+  if (!latestPath) throw new Error('updateRunPointer 需要 latest.json 路径')
+  const entry = buildEntry({ suite, kind, manifest, manifestPath, latestPath, status })
+  return updateLatest({ latestPath, suite, kind, entry })
+}
+
 // 先落固定 manifest，再更新指针；manifest 写失败时必须让 latest.json 保持原样。
 export async function recordRun ({ suite, latestPath, manifestPath, manifest, kind = 'full', status = null }) {
   if (!manifest || typeof manifest !== 'object') throw new Error('recordRun 需要 manifest 对象')
   if (!manifestPath) throw new Error('recordRun 需要固定 manifest 路径')
   if (!latestPath) throw new Error('recordRun 需要 latest.json 路径')
   writeManifest(manifestPath, manifest)
-  const entry = buildEntry({ suite, kind, manifest, manifestPath, latestPath, status })
-  return updateLatest({ latestPath, suite, kind, entry })
+  return updateRunPointer({ suite, latestPath, manifestPath, manifest, kind, status })
 }
