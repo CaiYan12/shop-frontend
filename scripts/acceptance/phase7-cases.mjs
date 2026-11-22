@@ -408,13 +408,17 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse, state }) {
   measurements.afterEsc = afterEsc
 
   if (reverse === 'island') {
+    // 先在正常位置真实展开岛，再注入反向下沉 CSS。
+    // clickPoint 现在会做 elementFromPoint 命中检查：若先下沉再点击，右下角的购物车摘要会盖住展开按钮，
+    // 点击会被正确拒绝，反向断言根本没执行。断言口径不变，仍是真实点击 + 几何/命中测量。
+    await clickPoint(page, '[data-state="nav-toggle"]')
+    await sleep(320)
     await page.eval(`(() => {
       const style = document.createElement('style')
       style.textContent = '[data-state="floating-nav"] { top: auto !important; right: 16px !important; bottom: 16px !important; left: auto !important; transform: none !important; }'
       document.head.append(style)
       return true
     })()`)
-    await clickPoint(page, '[data-state="nav-toggle"]')
     await sleep(320)
   }
   const reversed = await page.eval(`(() => {
