@@ -15,7 +15,8 @@
     "check:es": "node scripts/acceptance/check-es-degraded.mjs",
     "check:ui:unit": "vitest run tests/unit/native-scrollbar.test.mjs",
     "test:unit": "vitest run",
-    "verify": "run-s check:docs test:unit build",
+    "lint": "oxlint",
+    "verify": "run-s check:docs test:unit lint build",
     "verify:e2e": "playwright test",
     "stack": "node scripts/stack-status.mjs",
     "prepare": "node scripts/install-hooks.mjs"
@@ -42,6 +43,7 @@
     "@vue/tsconfig": "0.9.1",
     "jsdom": "31.0.1",
     "npm-run-all2": "9.0.4",
+    "oxlint": "1.94.0",
     "sass-embedded": "1.108.2",
     "tailwindcss": "4.3.5",
     "typescript": "npm:@typescript/typescript6@6.0.2",

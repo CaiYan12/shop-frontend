@@ -28,7 +28,7 @@ async function resetPage (page, baseUrl, { width, height, dark = false } = {}) {
     await page.eval('(() => { localStorage.setItem("shop-frontend:theme", "dark"); return true })()')
   }
   await page.goto(baseUrl + '/')
-  await page.waitFor(`document.querySelector('[data-state=\"floating-nav\"]') !== null`, 20000)
+  await page.waitFor(`document.querySelector('[data-state="floating-nav"]') !== null`, 20000)
   if (dark) {
     await page.waitFor(`document.querySelector('.v-theme--dark') !== null`, 10000)
   }
@@ -720,7 +720,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse, state }) {
     await sleep(250)
     insufficient = await dialogSnapshot(page, mock)
     await shot(page, ['p7-purchase', '1365-light', 'insufficient.png'], screenshots)
-  } catch (error) {
+  } catch {
     insufficientDebug.state1 = { ...(await captureInsufficientState()), requests: mock.requests.length, lastRequest: mock.requests[mock.requests.length - 1] ?? null }
     await sleep(800)
     await clickPoint(page, '[data-state="buy-now"]')

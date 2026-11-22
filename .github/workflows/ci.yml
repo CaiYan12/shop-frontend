@@ -1,6 +1,6 @@
 name: CI
 
-# 前端门禁：文档校验 + 购物车回归 + 构建（build 内含 type-check）。
+# 前端门禁：pnpm verify（docs → unit → lint → build；build 内含 type-check）。
 on:
   push:
     branches: [main]
@@ -21,6 +21,4 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check:docs
-      - run: pnpm check:cart
-      - run: pnpm build
+      - run: pnpm verify
