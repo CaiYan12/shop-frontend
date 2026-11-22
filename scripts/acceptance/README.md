@@ -169,3 +169,32 @@ session-tmp/ui-acceptance/<runId>/
 - 共享文件用文件锁串行合并、整份文档原子替换，四入口并发写不会丢 suite。
 - `verify:e2e` 经 `scripts/acceptance/e2e-latest.mjs` 接线：Playwright 结束后（无论成败）先落固定 e2e manifest，再按 `verify-e2e` 更新指针；不带参数算全量，带 spec 路径 / `--grep` / `--project` 算定向（只写 `lastRun`）；Playwright 崩溃、没留下 reporter manifest 时补一份 fallback manifest。
 - 默认路径 `<session-tmp>/ui-acceptance/latest.json`（gate 默认在自己的证据根，建议用变量指到同一份）；覆盖变量：`UI_LATEST_PATH` / `E2E_LATEST_PATH` / `GATE_LATEST_PATH`。
+
+## 正式验收（R1 / F11）
+
+正式验收对**同一对 HEAD** 跑一次 `pnpm gate`，正式证据是它写下的固定 manifest；验收记录写在仓库外 `../session-tmp/phase8-acceptance.md`，两个仓库都不提交该记录。
+
+```bash
+SHOP_BACKEND_ROOT=<后端 worktree> \
+GATE_ARTIFACT_DIR=<session-tmp>/phase8-evidence/<本轮> \
+GATE_MANIFEST=<同一目录>/gate.json \
+GATE_LATEST_PATH=<同一目录>/latest.json \
+GATE_RUN_ID=final \
+pnpm gate
+```
+
+- 前置：`3001` / `9201` / `4173` / `4174` 空闲（gate 自起后端、ES 与 preview）；后端需已有 `.env` 与 `dist/server.js`；后端 `pnpm test` 与 `pnpm test:es` 必须串行，且不要与 gate 并发。
+- 固定证据（`GATE_ARTIFACT_DIR` 下，`<runId>` = `GATE_RUN_ID`）：
+
+| 步骤 | 固定 manifest |
+|---|---|
+| gate | `runs/<runId>/gate.json`，另写一份 `GATE_MANIFEST` 根副本 |
+| `verify:e2e` | `runs/<runId>/e2e/<runId>-e2e/manifest.json`，同目录 `browser.json` 记 Chrome 来源与版本 |
+| `check:ui` | `runs/<runId>/check-ui/<runId>-ui/manifest.json` |
+| 三条反向 | `runs/<runId>/reverse/<runId>-reverse-{island,purchase,purchase-price}/manifest.json` |
+| `check:es` | `runs/<runId>/check-es/<runId>-es-p7es/manifest.json` |
+
+- `theme.spec.ts` 没有独立 manifest：结果在 e2e manifest 的 `suites.theme`；E1 看 `suites.business`。
+- 判绿：9 步（`verify` / `backend` / `es` / `e2e` / `check-ui` / 三条反向 / `check:es`）全部 pass，`summary.green === true` 且退出码 0；`gate.json` 的 `frontend` / `backend` 记两仓 HEAD 与 dirty。
+- 记录至少写：双仓 HEAD 与 `git status --short`（含主检出与 worktree）、浏览器版本、每条验收命令与结果、证据路径、`latest.json` 四入口状态，以及 smoke 与人工实看结论的分栏（未实看标待验）。正式证据只引用固定 manifest，`latest.json` 只是调试指针。
+- 本地 gate 不等于 C1：CI 结果另看两个仓库的 Actions。
