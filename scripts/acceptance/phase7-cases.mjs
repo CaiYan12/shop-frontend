@@ -531,7 +531,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse, state }) {
     await page.eval(`fetch('/api/purchase-check', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-p7-injected': '1' },
-      body: JSON.stringify({ slug: fixture.slug, sku: fixture.sku, quantity: fixture.quantity, expectedUnitPriceCents: fixture.newPriceCents }),
+      body: JSON.stringify({ slug: ${JSON.stringify(fixture.slug)}, sku: ${JSON.stringify(fixture.sku)}, quantity: ${JSON.stringify(fixture.quantity)}, expectedUnitPriceCents: ${JSON.stringify(fixture.newPriceCents)} }),
     }).then((response) => response.status)`)
     await sleep(250)
   }

@@ -132,3 +132,29 @@ session-tmp/ui-acceptance/<runId>/
 - 脚本退出码非 `0`：至少一个断言失败，或构建 / 预览 / 预检 / 浏览器启动失败。
 - 脚本通过后必须实际查看 `manifest.json` 列出的关键截图，再分别记录 smoke 与视觉验证结果；脚本不代替肉眼验收。
 - 本命令不接入 CI，也不启动后端或 Elasticsearch；它只负责前端干净构建后的可重复验收。
+
+## 本地总门禁（`pnpm gate`）
+
+`pnpm gate` 是 Phase 8 的本地总验收入口（#32 / G1-G4），顺序固定：
+
+1. `pnpm verify`（docs → unit → lint → build）；
+2. 后端预检 / 启动（`SHOP_BACKEND_ROOT`，默认 `../shop-backend`；校验 `.env` 与 `dist/server.js`）；
+3. Elasticsearch 预检 / 启动（9201，经后端 `scripts/es-dev.mjs`）；
+4. `pnpm exec playwright test`（gate 自起 preview，`E2E_SKIP_WEBSERVER=1`）；
+5. `check:ui` 全量正向；
+6. 三条反向：`island` / `purchase` / `purchase-price`，分别只核对 `islandNotOverSummary` / `confirmationRequired` / `secondRequestCarriesConfirmedPrice`；
+7. `check:es`（只对本轮启动的专享 ES 执行停机恢复）。
+
+约定：
+
+- gate 启动时先记录并删除旧 `dist`；前置失败时依赖步骤记为 `blocked`，独立步骤继续，且不会复用 gate 之前的旧构建。
+- `9201` 被外部实例占用时 `check:es` 记为 `blocked`、总门禁非绿，并记录该实例 PID / 启动时间 / HTTP 响应前后快照；gate 收尾不停止外部实例。
+- 每条运行写固定 `gate.json`（默认 `<session-tmp>/phase8-evidence/F8/gate.json`，可用 `GATE_ARTIFACT_DIR` / `GATE_MANIFEST` 覆盖），并归档到 `runs/<runId>/gate.json`。
+- 环境变量：`SHOP_BACKEND_ROOT`、`GATE_ARTIFACT_DIR`、`GATE_MANIFEST`、`GATE_LATEST_PATH`、`GATE_RUN_ID`、`GATE_BACKEND_PORT`、`GATE_ES_PORT`。
+- 任一步 fail / blocked / skipped，或外部 ES 前后快照不一致，gate 均以非零退出。
+
+受控失败（G2）：
+
+- 在 `tests/` 放一条临时失败用例，使 `pnpm verify` 在 build 之前失败；gate 会删除旧 `dist`、把依赖 dist 的步骤记为 blocked，并继续后端 / ES 独立步骤。验证完成后删除临时用例。
+
+反向判定：`scripts/acceptance/gate.mjs` 的 `evaluateReverseRun` 要求 manifest 存在、无 fatal、`mode.reverse` 匹配、目标断言实际执行且为 false、失败断言恰好只有预期一条、失败用例恰好只有目标用例；缺 manifest、崩溃、目标未失败或额外失败均判非绿。fixture 见 `tests/fixtures/gate/`，单元测试见 `tests/unit/gate.test.mjs`。

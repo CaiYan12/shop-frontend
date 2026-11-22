@@ -1,0 +1,23 @@
+{
+  "reverse": "island",
+  "manifest": {
+    "mode": {
+      "reverse": "island"
+    },
+    "fatalError": null,
+    "cases": [
+      {
+        "id": "P7-NAV",
+        "status": "fail",
+        "failureReason": "失败断言：islandNotOverSummary, summaryCenterNotIsland",
+        "checks": {
+          "collapsedVisible": true,
+          "expandedItems": true,
+          "islandNotOverSummary": false,
+          "summaryCenterNotIsland": false
+        },
+        "failures": []
+      }
+    ]
+  }
+}
