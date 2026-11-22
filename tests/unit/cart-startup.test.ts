@@ -19,6 +19,7 @@ import {
   type CartStorageLike,
 } from '@/utils/cart-storage'
 import { retryCartRecovery, startCartRecovery } from '@/utils/cart-startup'
+import { RECOVERY_TIMEOUT_MS, verifyCartItems } from '@/utils/cart-recovery'
 
 vi.mock('@/api/client', () => {
   class MockApiError extends Error {
@@ -221,4 +222,27 @@ test('N6 404：只移除对应商品行，其余行保留', async () => {
   assert.deepEqual(cart.items, [item()], '仅 404 的商品行被移除')
   assert.equal(cart.recoveryNotice, '已移除 1 个商品条目：商品二（SKU：s2）。')
   assert.equal(signals[0]?.aborted, false, '404 是行级结果，不取消本轮在途请求')
+})
+
+test('N6 超时：每个详情请求保留 8 秒时限，到点取消整轮', async () => {
+  assert.equal(RECOVERY_TIMEOUT_MS, 8000, '每个详情请求的默认时限保持 8 秒')
+
+  const signals: AbortSignal[] = []
+  const lookup = async (_slug: string, signal: AbortSignal): Promise<never> => {
+    signals.push(signal)
+    return new Promise<never>(() => {
+      // 忽略 signal 的假请求：验证超时本身也能结束整轮，而不是只靠 abort 传播。
+    })
+  }
+
+  const result = await verifyCartItems(
+    [item(), item({ sku: 's2', slug: 'p2', name: '商品二' })],
+    lookup,
+    { timeoutMs: 20 },
+  )
+
+  assert.deepEqual(result, { status: 'unverified' })
+  assert.equal(signals.length, 2)
+  assert.equal(signals[0], signals[1], '超时轮同样共用一个 AbortController')
+  assert.equal(signals[0]?.aborted, true, '到点先取消整轮在途请求')
 })
