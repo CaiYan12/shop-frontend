@@ -3,7 +3,7 @@
  *
  * 页头主题切换的唯一入口（#5）。
  *
- * 分工：Vuetify 负责把主题色板落成 CSS（`theme.global.name`），localStorage 负责
+ * 分工：Vuetify 负责把主题色板落成 CSS（`theme.change` / `theme.name`），localStorage 负责
  * 「下次打开保持一致」。组件只跟这个 composable 打交道，不直接碰 `useTheme()` 或
  * `localStorage`，这样以后换成 Pinia / 跟随系统时只改一处。
  */
@@ -29,12 +29,17 @@ export function useThemePreference() {
   const theme = useTheme()
 
   const current = computed<ThemeName>(() => {
-    const name = theme.global.name.value
+    const name = theme.name.value
     return isThemeName(name) ? name : DEFAULT_THEME
   })
 
+  /**
+   * 写入走 Vuetify 4 的 `theme.change`：`theme.global.name` 是兼容用的 Proxy，
+   * 写它的 `.value` 会触发 `[Vuetify UPGRADE]` 弃用告警（D86）。`change` 在未配置
+   * 过渡时同步生效，返回的 Promise 只为页面过渡存在，这里不阻塞切换。
+   */
   function setTheme(name: ThemeName): void {
-    theme.global.name.value = name
+    void theme.change(name)
     storeTheme(browserStorage(), name)
   }
 
