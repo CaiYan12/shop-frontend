@@ -19,7 +19,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { findFreePort, waitForHttp } from './lib.mjs'
-import { defaultLatestPath, recordRun, writeManifest } from './latest.mjs'
+import { recordRun, writeManifest } from './latest.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const GATE_ROOT = resolve(HERE, '..', '..')
@@ -39,12 +39,18 @@ function findSessionTmp (start) {
   return marked ?? candidates[0] ?? resolve(start, '..', 'session-tmp')
 }
 
-const BACKEND_ROOT = resolve(process.env.SHOP_BACKEND_ROOT ?? resolve(GATE_ROOT, '..', 'shop-backend'))
-export const ARTIFACT_ROOT = resolve(process.env.GATE_ARTIFACT_DIR ?? join(findSessionTmp(GATE_ROOT), 'phase8-evidence', 'F8'))
+const DEFAULT_BACKEND_ROOT = resolve(GATE_ROOT, '..', 'shop-backend')
+const WORKTREE_BACKEND_ROOT = resolve(GATE_ROOT, '..', 'be-int')
+const BACKEND_ROOT = process.env.SHOP_BACKEND_ROOT
+  ? resolve(process.env.SHOP_BACKEND_ROOT)
+  : (existsSync(join(DEFAULT_BACKEND_ROOT, 'package.json')) ? DEFAULT_BACKEND_ROOT : WORKTREE_BACKEND_ROOT)
+export const BACKEND_ROOT_FALLBACK = !process.env.SHOP_BACKEND_ROOT && BACKEND_ROOT === WORKTREE_BACKEND_ROOT
+const SESSION_TMP = findSessionTmp(GATE_ROOT)
+export const ARTIFACT_ROOT = resolve(process.env.GATE_ARTIFACT_DIR ?? join(SESSION_TMP, 'phase8-evidence', 'F8'))
 const GATE_MANIFEST = process.env.GATE_MANIFEST ? resolve(process.env.GATE_MANIFEST) : join(ARTIFACT_ROOT, 'gate.json')
-const LATEST_PATH = process.env.GATE_LATEST_PATH ? resolve(process.env.GATE_LATEST_PATH) : defaultLatestPath(ARTIFACT_ROOT)
-const BACKEND_PORT = Number(process.env.GATE_BACKEND_PORT ?? 3001)
-const ES_PORT = Number(process.env.GATE_ES_PORT ?? 9201)
+const LATEST_PATH = process.env.GATE_LATEST_PATH ? resolve(process.env.GATE_LATEST_PATH) : join(SESSION_TMP, 'ui-acceptance', 'latest.json')
+const BACKEND_PORT = 3001
+const ES_PORT = 9201
 const ES_URL = 'http://127.0.0.1:' + ES_PORT + '/'
 const BACKEND_BASE = 'http://127.0.0.1:' + BACKEND_PORT
 
@@ -233,7 +239,7 @@ async function fetchText (url, timeoutMs = 5000) {
 }
 
 function killTree (child) {
-  if (!child) return
+  if (!child || child.exitCode !== null) return
   try { child.kill() } catch {}
   if (process.platform === 'win32' && child.pid) {
     spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
@@ -422,11 +428,12 @@ handlers.backend = async (step) => {
     windowsHide: true,
   })
   closeSync(fd)
+  // P0：spawn 后立即登记 ownership；后续健康检查失败也必须走 cleanup。
+  gate.services.backend = { ownership: 'owned', pid: backendChild.pid, startedThisRun: true, status: 'starting' }
   const health = await waitBackendHealthy(backendChild, 60000)
   if (!health.ok) {
     killTree(backendChild)
-    backendChild = null
-    gate.services.backend = { ownership: 'owned', pid: null, health, startedThisRun: true, failed: true }
+    gate.services.backend = { ...gate.services.backend, health, failed: true }
     return { status: 'fail', reason: health.reason }
   }
   gate.services.backend = { ownership: 'owned', pid: backendChild.pid, process: processInfo(backendChild.pid), health, startedThisRun: true }
@@ -454,9 +461,11 @@ handlers.es = async (step) => {
   step.startLog = relPath(logPath)
   step.startExitCode = result.code
   if (result.timedOut || result.code !== 0) return { status: 'fail', reason: 'es-dev.mjs 启动失败（exit ' + String(result.code) + '）' }
+  // P0：es-dev 成功后、快照之前登记 ownership；快照抛错也要能收尾停 ES。
+  gate.services.es = { ownership: 'owned', startedThisRun: true, status: 'starting' }
   const snapshot = await esSnapshot('started')
   if (!snapshot.reachable) return { status: 'fail', reason: 'es-dev 退出后 9201 仍不可达' }
-  gate.services.es = { ownership: 'owned', snapshot, startedThisRun: true }
+  gate.services.es = { ...gate.services.es, snapshot }
   step.ownership = 'owned'
   step.pid = snapshot.pid
   step.version = snapshot.http.version
@@ -691,23 +700,27 @@ async function cleanupServices () {
   const cleanup = { preview: null, backend: null, es: null }
   if (preview) {
     killTree(preview.child)
-    cleanup.preview = { killed: true, pid: preview.child.pid, baseUrl: preview.baseUrl }
+    cleanup.preview = { killed: true, pid: preview.child.pid, baseUrl: preview.baseUrl, port: preview.port, portReleased: await waitPortReleased(preview.port) }
   }
   if (backendChild && gate.services.backend && gate.services.backend.ownership === 'owned') {
     killTree(backendChild)
-    cleanup.backend = { killed: true, pid: backendChild.pid }
+    cleanup.backend = { killed: true, pid: backendChild.pid, port: BACKEND_PORT, portReleased: await waitPortReleased(BACKEND_PORT) }
     backendChild = null
   } else if (gate.services.backend && gate.services.backend.ownership === 'external') {
-    cleanup.backend = { killed: false, reason: '外部后端保持原状' }
+    cleanup.backend = { killed: false, external: true, reason: '外部后端保持原状' }
   }
   if (gate.services.es && gate.services.es.ownership === 'owned') {
     const logPath = join(runDir, 'es-stop.log')
     const result = await runLogged(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-stop.mjs')], logPath, { cwd: BACKEND_ROOT, timeoutMs: 120000 })
-    cleanup.es = { stopped: result.code === 0, exitCode: result.code, log: relPath(logPath) }
-    gate.services.es.stoppedAfterGate = result.code === 0
+    const after = await esSnapshot('cleanup')
+    cleanup.es = { stopped: result.code === 0 && after.reachable === false, exitCode: result.code, reachableAfter: after.reachable, log: relPath(logPath) }
+    gate.services.es.stoppedAfterGate = cleanup.es.stopped
   } else if (gate.services.es && gate.services.es.ownership === 'external') {
-    cleanup.es = { stopped: false, reason: '外部 ES 保持原状，未停止或重启' }
+    cleanup.es = { stopped: false, external: true, reason: '外部 ES 保持原状，未停止或重启' }
   }
+  const verdict = cleanupVerdict(cleanup)
+  cleanup.ok = verdict.ok
+  cleanup.failures = verdict.reason
   gate.cleanup = cleanup
   persist()
 }
@@ -722,6 +735,30 @@ async function captureExternalAfter () {
   gate.externalEs.afterFile = relPath(join(runDir, 'es-external-after.json'))
   writeManifest(join(runDir, 'es-external-after.json'), after)
   persist()
+}
+
+export function gateRunManifestPath (dir) {
+  return join(dir, 'gate.json')
+}
+
+// P0：收尾失败或端口未释放必须让 gate 非绿。外部服务不参与判定。
+export function cleanupVerdict (cleanup) {
+  if (!cleanup) return { ok: false, reason: 'cleanup 未执行' }
+  const failures = []
+  if (cleanup.error) failures.push(cleanup.error)
+  if (cleanup.preview && cleanup.preview.killed === true && cleanup.preview.portReleased === false) failures.push('preview 端口未释放')
+  if (cleanup.backend && cleanup.backend.external !== true && cleanup.backend.portReleased === false) failures.push('后端端口未释放')
+  if (cleanup.es && cleanup.es.external !== true && cleanup.es.stopped !== true) failures.push('ES 未停止')
+  return { ok: failures.length === 0, reason: failures.join('; ') || null }
+}
+
+async function waitPortReleased (port, timeoutMs = 5000) {
+  const started = Date.now()
+  while (Date.now() - started < timeoutMs) {
+    if (pidOnPort(port) === null) return true
+    await sleep(200)
+  }
+  return pidOnPort(port) === null
 }
 
 function finalize () {
@@ -740,11 +777,18 @@ function finalize () {
     exitCode: base.green && !fatal ? 0 : 1,
     artifactRoot: ARTIFACT_ROOT,
     runDir,
-    gateManifest: GATE_MANIFEST,
+    gateManifest: gateRunManifestPath(runDir),
+    rootGateManifest: GATE_MANIFEST,
     latestPath: LATEST_PATH,
   }
   if (gate.externalEs && gate.externalEs.comparison && gate.externalEs.comparison.unchanged === false) {
     gate.summary.externalEsChanged = true
+    gate.summary.green = false
+    gate.summary.exitCode = 1
+  }
+  const cleanupCheck = cleanupVerdict(gate.cleanup)
+  if (!cleanupCheck.ok) {
+    gate.summary.cleanupError = cleanupCheck.reason
     gate.summary.green = false
     gate.summary.exitCode = 1
   }
@@ -769,7 +813,8 @@ async function main () {
     env: { node: process.version, platform: process.platform, backendPort: BACKEND_PORT, esPort: ES_PORT },
     artifactRoot: ARTIFACT_ROOT,
     runDir,
-    gateManifest: GATE_MANIFEST,
+    gateManifest: gateRunManifestPath(runDir),
+    rootGateManifest: GATE_MANIFEST,
     latestPath: LATEST_PATH,
     steps: STEP_DEFS.map((def) => ({ ...def, status: 'pending', startedAt: null, finishedAt: null, durationMs: null, reason: null })),
     services: { backend: null, es: null, preview: null },
@@ -781,7 +826,7 @@ async function main () {
     fatalError: null,
   }
   console.log('[gate] run ' + runId)
-  console.log('[gate] backend -> ' + BACKEND_ROOT)
+  console.log('[gate] backend -> ' + BACKEND_ROOT + (BACKEND_ROOT_FALLBACK ? '（未设置 SHOP_BACKEND_ROOT；../shop-backend 不存在，回退 ../be-int）' : ''))
   console.log('[gate] artifacts -> ' + ARTIFACT_ROOT)
 
   try {
@@ -819,7 +864,7 @@ async function main () {
     try { await captureExternalAfter() } catch (error) { gate.externalEs.captureError = messageOf(error) }
     finalize()
     try {
-      await recordRun({ suite: 'gate', latestPath: LATEST_PATH, manifestPath: GATE_MANIFEST, manifest: gate, kind: 'full' })
+      await recordRun({ suite: 'gate', latestPath: LATEST_PATH, manifestPath: gateRunManifestPath(runDir), manifest: gate, kind: 'full' })
     } catch (error) {
       gate.summary.latestError = messageOf(error)
       gate.summary.green = false
