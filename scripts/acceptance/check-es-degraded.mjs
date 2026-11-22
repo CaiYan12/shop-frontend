@@ -1,13 +1,18 @@
 // P7-ES：Elasticsearch 不可用时的降级与恢复实机复验（C39 / C66 / D110）。
 // 独立入口，不并入 check:ui；前置：后端已在 127.0.0.1:3001 运行，ES 由本轮 es-dev.mjs 启动。
 import { execFileSync, spawn } from 'node:child_process'
-import { closeSync, existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findFreePort, launchBrowser, openPage, sleep, waitForHttp } from './lib.mjs'
+import { recordRun } from './latest.mjs'
+import { resolveLatestPath, uiAcceptanceDir } from './paths.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const BACKEND_ROOT = resolve(ROOT, '..', 'shop-backend')
+// worktree 布局下 ../shop-backend 不一定存在；由调用方用 SHOP_BACKEND_ROOT 指向后端仓库。
+const BACKEND_ROOT = process.env.SHOP_BACKEND_ROOT
+  ? resolve(process.env.SHOP_BACKEND_ROOT)
+  : resolve(ROOT, '..', 'shop-backend')
 const ES_URL = 'http://127.0.0.1:9201/'
 
 const argv = process.argv.slice(2)
@@ -25,7 +30,7 @@ const headed = hasFlag('--headed')
 const runId = valueOf('--run-id') ?? new Date().toISOString().replace(/[:.]/g, '-')
 const artifactRoot = process.env.UI_ARTIFACT_DIR
   ? resolve(process.env.UI_ARTIFACT_DIR)
-  : resolve(ROOT, '..', 'session-tmp', 'ui-acceptance')
+  : uiAcceptanceDir(ROOT)
 const runDir = join(artifactRoot, runId + '-p7es')
 mkdirSync(runDir, { recursive: true })
 
@@ -164,6 +169,7 @@ try {
   preview = await startPreview(port)
   manifest.baseUrl = preview.baseUrl
   console.log('[p7-es] preview ->', preview.baseUrl)
+  console.log('[p7-es] backend ->', BACKEND_ROOT)
 
   const baselineResponse = await fetch(preview.baseUrl + '/api/products/suggestions?q=sony', { signal: AbortSignal.timeout(5000) })
   if (!baselineResponse.ok) throw new Error('前置失败：ES 在线时联想接口不是 200；先启动后端与 ES')
@@ -177,6 +183,8 @@ try {
   const baselineCards = await cardCount(page)
   mark('baselineKeywordWorks', baselineCards > 0, 'ES 在线时关键词搜索没有结果')
 
+  // P0：先登记“已尝试停机”，es-stop 抛错时 finally 仍会恢复 ES。
+  stoppedThisRun = true
   await runStep(process.execPath, [join(BACKEND_ROOT, 'scripts', 'es-stop.mjs')], join(runDir, 'es-stop.log'), 60000)
   const stopped = await waitForEs(false, 30000)
   stoppedThisRun = stopped
@@ -293,8 +301,16 @@ try {
     fatal: Boolean(manifest.fatalError),
     artifactDir: runDir,
   }
-  writeFileSync(join(runDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
-  console.log('[p7-es] manifest ->', join(runDir, 'manifest.json'))
+  const manifestPath = join(runDir, 'manifest.json')
+  const latestPath = resolveLatestPath({ start: ROOT, override: process.env.UI_LATEST_PATH })
+  try {
+    await recordRun({ suite: 'check-es', latestPath, manifestPath, manifest, kind: 'full' })
+    console.log('[p7-es] latest -> ' + latestPath)
+  } catch (error) {
+    console.error('[p7-es] latest.json 更新失败：' + (error instanceof Error ? error.message : String(error)))
+    process.exitCode = 1
+  }
+  console.log('[p7-es] manifest -> ' + manifestPath)
   console.log('[p7-es] ' + manifest.summary.passed + '/' + manifest.summary.total + ' checks passed' + (manifest.fatalError ? '; fatal' : ''))
   if (manifest.fatalError || failedChecks.length > 0) process.exitCode = 1
 }

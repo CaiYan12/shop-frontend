@@ -10,10 +10,15 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "check:docs": "node scripts/check-docs.mjs",
-    "check:cart": "node --test scripts/phase6/*.test.ts",
+    "check:cart": "vitest run tests/unit/cart-runtime.test.ts",
     "check:ui": "node scripts/acceptance/check-ui.mjs",
     "check:es": "node scripts/acceptance/check-es-degraded.mjs",
-    "check:ui:unit": "node --test scripts/acceptance/native-scrollbar.test.mjs",
+    "gate": "node scripts/acceptance/gate.mjs",
+    "check:ui:unit": "vitest run tests/unit/native-scrollbar.test.mjs",
+    "test:unit": "vitest run",
+    "lint": "oxlint",
+    "verify": "run-s check:docs test:unit lint build",
+    "verify:e2e": "node scripts/acceptance/e2e-latest.mjs",
     "stack": "node scripts/stack-status.mjs",
     "prepare": "node scripts/install-hooks.mjs"
   },
@@ -30,18 +35,23 @@
     "vuetify": "4.3.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@tailwindcss/vite": "4.3.5",
     "@tsconfig/node26": "26.0.2",
     "@types/node": "26.6.6",
     "@vitejs/plugin-vue": "6.0.11",
+    "@vue/test-utils": "2.6.0",
     "@vue/tsconfig": "0.9.1",
+    "jsdom": "31.0.1",
     "npm-run-all2": "9.0.4",
+    "oxlint": "1.94.0",
     "sass-embedded": "1.108.2",
     "tailwindcss": "4.3.5",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "unplugin-fonts": "2.1.0",
     "vite": "8.3.8",
     "vite-plugin-vuetify": "2.1.3",
+    "vitest": "5.1.1",
     "vue-tsc": "3.3.14"
   }
 }

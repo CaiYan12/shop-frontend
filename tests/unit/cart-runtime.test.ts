@@ -1,15 +1,15 @@
 /**
- * 购物车运行时检查（Node v26 直接跑 TS，无新增依赖）。
+ * 购物车运行时检查（Vitest，Node 环境）。
  *
- * 运行：pnpm check:cart
+ * 运行：pnpm check:cart（定向）或 pnpm test:unit（全量单元层）
  *
  * 只导入仓库内纯逻辑模块；`cart-startup.ts` 依赖 `import.meta.env`，Node 下不可用，
  * 恢复编排由 store 的 `beginRecovery` / `completeRecovery` 直接驱动。
  */
 import assert from 'node:assert/strict'
-import { beforeEach, test } from 'node:test'
+import { beforeEach, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useCartStore, type CartItem } from '../../src/stores/cart.ts'
+import { useCartStore, type CartItem } from '@/stores/cart'
 import {
   CART_STORAGE_KEY,
   loadCartArchive,
@@ -18,12 +18,12 @@ import {
   serializeCartArchive,
   setCartStorage,
   type CartStorageLike,
-} from '../../src/utils/cart-storage.ts'
+} from '@/utils/cart-storage'
 import {
   verifyCartItems,
   type ProductDetailSnapshot,
   type ProductLookup,
-} from '../../src/utils/cart-recovery.ts'
+} from '@/utils/cart-recovery'
 
 interface FakeStorage {
   value: string | null

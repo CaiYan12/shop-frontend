@@ -28,31 +28,58 @@ async function resetPage (page, baseUrl, { width, height, dark = false } = {}) {
     await page.eval('(() => { localStorage.setItem("shop-frontend:theme", "dark"); return true })()')
   }
   await page.goto(baseUrl + '/')
-  await page.waitFor(`document.querySelector('[data-state=\"floating-nav\"]') !== null`, 20000)
+  await page.waitFor(`document.querySelector('[data-state="floating-nav"]') !== null`, 20000)
   if (dark) {
     await page.waitFor(`document.querySelector('.v-theme--dark') !== null`, 10000)
   }
   await sleep(350)
 }
 
+const CLICK_READY_TIMEOUT_MS = 8000
+
+/**
+ * 真实鼠标点击（#32 / 反向 flake）。
+ *
+ * 只按坐标点击时，目标被覆盖层或过渡中的浮层挡住也会把事件发给别的元素，表现为难以复现的等待超时。
+ * 因此点击前用 elementFromPoint 确认命中的是目标本身或其后代，并检查零尺寸 / disabled / aria-disabled；
+ * 任一条件不满足就等待重试，超时抛出带最后状态的明确错误。断言口径不变，仍是真实 UI 点击。
+ */
 async function clickPoint (page, selector) {
-  let box = null
-  for (let attempt = 0; attempt < 30; attempt++) {
-    box = await page.eval('(() => {\n' +
+  const started = Date.now()
+  let last = null
+  while (Date.now() - started < CLICK_READY_TIMEOUT_MS) {
+    last = await page.eval('(() => {\n' +
       '  const element = document.querySelector(' + JSON.stringify(selector) + ')\n' +
-      '  if (!element) return null\n' +
+      '  if (!element) return { ready: false, reason: "missing" }\n' +
       '  element.scrollIntoView({ block: "center", inline: "center" })\n' +
       '  const rect = element.getBoundingClientRect()\n' +
-      '  if (rect.width === 0 || rect.height === 0) return null\n' +
-      '  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }\n' +
+      '  if (rect.width === 0 || rect.height === 0) {\n' +
+      '    return { ready: false, reason: "zero-size", width: rect.width, height: rect.height }\n' +
+      '  }\n' +
+      '  const disabled = element.disabled === true || element.getAttribute("aria-disabled") === "true"\n' +
+      '  const x = rect.x + rect.width / 2\n' +
+      '  const y = rect.y + rect.height / 2\n' +
+      '  const hit = document.elementFromPoint(x, y)\n' +
+      '  const covered = !(hit && (hit === element || element.contains(hit)))\n' +
+      '  const dialog = document.querySelector(\'[data-state="purchase-dialog"]\')\n' +
+      '  return {\n' +
+      '    ready: !disabled && !covered,\n' +
+      '    reason: disabled ? "disabled" : (covered ? "covered" : null),\n' +
+      '    disabled, covered, x, y,\n' +
+      '    hit: hit ? { tag: hit.tagName, className: typeof hit.className === "string" ? hit.className.slice(0, 80) : null } : null,\n' +
+      '    phase: dialog ? dialog.getAttribute("data-phase") : null,\n' +
+      '  }\n' +
       '})()')
-    if (box) break
+    if (last && last.ready === true) {
+      for (const type of ['mousePressed', 'mouseReleased']) {
+        await page.send('Input.dispatchMouseEvent', { type, x: last.x, y: last.y, button: 'left', clickCount: 1 })
+      }
+      return last
+    }
     await sleep(100)
   }
-  if (!box) throw new Error('找不到可点击元素：' + selector)
-  for (const type of ['mousePressed', 'mouseReleased']) {
-    await page.send('Input.dispatchMouseEvent', { type, x: box.x, y: box.y, button: 'left', clickCount: 1 })
-  }
+  throw new Error('目标不可点击（' + (last && last.reason ? last.reason : 'unknown') + '）：' + selector +
+    '；等待 ' + CLICK_READY_TIMEOUT_MS + 'ms 后仍不可用；最后状态 ' + JSON.stringify(last))
 }
 
 async function clickText (page, selector, text) {
@@ -176,7 +203,7 @@ async function installPurchaseMock (page, scenario) {
 }
 
 /** 轮询 Node 侧记录的购买校验请求条数（Fetch 拦截不写页面全局）。 */
-async function waitForRequests (mock, count, timeoutMs = 8000) {
+async function waitForRequests (mock, count, timeoutMs = 12000) {
   const started = Date.now()
   while (Date.now() - started < timeoutMs) {
     if (mock.requests.length >= count) return true
@@ -203,19 +230,32 @@ async function closeDialogIfOpen (page) {
   await sleep(300)
 }
 
+const CONFIRM_READY_TIMEOUT_MS = 5000
+
+/**
+ * 要求确认按钮存在且可用（#32 / 反向 flake）。
+ * 只检查存在时，按钮处于 disabled（校验中 / 相位过渡）仍会让后续坐标点击落空，
+ * 失败会推迟到 waitForRequests 超时。这里等它变成可点击，超时给出 disabled 状态与请求数。
+ */
 async function requireConfirmButton (page, mock) {
-  const state = await page.eval(`(() => {
-    const dialog = document.querySelector('[data-state="purchase-dialog"]')
-    const button = dialog ? dialog.querySelector('[data-state="purchase-confirm-price"]') : null
-    return {
-      phase: dialog ? dialog.getAttribute('data-phase') : null,
-      hasButton: Boolean(button),
-      text: dialog ? dialog.innerText.slice(0, 140) : null,
-    }
-  })()`)
-  if (state.hasButton !== true) {
-    throw new Error('confirm missing: ' + JSON.stringify(state) + ' requests=' + mock.requests.length)
+  const started = Date.now()
+  let state = null
+  while (Date.now() - started < CONFIRM_READY_TIMEOUT_MS) {
+    state = await page.eval(`(() => {
+      const dialog = document.querySelector('[data-state="purchase-dialog"]')
+      const button = dialog ? dialog.querySelector('[data-state="purchase-confirm-price"]') : null
+      return {
+        phase: dialog ? dialog.getAttribute('data-phase') : null,
+        hasButton: Boolean(button),
+        disabled: button ? button.disabled === true || button.getAttribute('aria-disabled') === 'true' : null,
+        text: dialog ? dialog.innerText.slice(0, 140) : null,
+      }
+    })()`)
+    if (state && state.hasButton === true && state.disabled === false) return state
+    await sleep(100)
   }
+  const kind = state && state.hasButton === true ? 'confirm disabled' : 'confirm missing'
+  throw new Error(kind + ': ' + JSON.stringify(state) + ' requests=' + mock.requests.length)
 }
 
 async function waitForSettledPhase (page) {
@@ -368,13 +408,17 @@ export async function caseP7Nav (page, baseUrl, { shot, reverse, state }) {
   measurements.afterEsc = afterEsc
 
   if (reverse === 'island') {
+    // 先在正常位置真实展开岛，再注入反向下沉 CSS。
+    // clickPoint 现在会做 elementFromPoint 命中检查：若先下沉再点击，右下角的购物车摘要会盖住展开按钮，
+    // 点击会被正确拒绝，反向断言根本没执行。断言口径不变，仍是真实点击 + 几何/命中测量。
+    await clickPoint(page, '[data-state="nav-toggle"]')
+    await sleep(320)
     await page.eval(`(() => {
       const style = document.createElement('style')
       style.textContent = '[data-state="floating-nav"] { top: auto !important; right: 16px !important; bottom: 16px !important; left: auto !important; transform: none !important; }'
       document.head.append(style)
       return true
     })()`)
-    await clickPoint(page, '[data-state="nav-toggle"]')
     await sleep(320)
   }
   const reversed = await page.eval(`(() => {
@@ -531,7 +575,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse, state }) {
     await page.eval(`fetch('/api/purchase-check', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-p7-injected': '1' },
-      body: JSON.stringify({ slug: fixture.slug, sku: fixture.sku, quantity: fixture.quantity, expectedUnitPriceCents: fixture.newPriceCents }),
+      body: JSON.stringify({ slug: ${JSON.stringify(fixture.slug)}, sku: ${JSON.stringify(fixture.sku)}, quantity: ${JSON.stringify(fixture.quantity)}, expectedUnitPriceCents: ${JSON.stringify(fixture.newPriceCents)} }),
     }).then((response) => response.status)`)
     await sleep(250)
   }
@@ -720,7 +764,7 @@ export async function caseP7Purchase (page, baseUrl, { shot, reverse, state }) {
     await sleep(250)
     insufficient = await dialogSnapshot(page, mock)
     await shot(page, ['p7-purchase', '1365-light', 'insufficient.png'], screenshots)
-  } catch (error) {
+  } catch {
     insufficientDebug.state1 = { ...(await captureInsufficientState()), requests: mock.requests.length, lastRequest: mock.requests[mock.requests.length - 1] ?? null }
     await sleep(800)
     await clickPoint(page, '[data-state="buy-now"]')

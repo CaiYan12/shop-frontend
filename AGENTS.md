@@ -44,6 +44,10 @@ pnpm check:docs     # README 契约数字（路径数 / 组件数）与 schema.d
 pnpm check:cart     # 购物车回归：存档恢复、只读入口、persist 守卫
 pnpm check:ui       # UI 验收：干净构建 + F1 / R26 / R27 / P7-NAV / P7-PURCHASE / P7-MOTION 冒烟与截图证据（调试可加 `-- --only=P7-PURCHASE`）
 pnpm check:es       # ES 降级与恢复的独立实机复验（P7-ES；会停并恢复本轮 ES）
+pnpm lint           # Oxlint correctness 基线（check-only）
+pnpm verify         # check:docs + 全量单测 + lint + build
+pnpm verify:e2e     # Playwright 六条业务路径 + theme.spec（本地必跑）
+pnpm gate           # 本地总门禁 verify → 后端/ES → Playwright → check:ui → 三条反向 → check:es
 pnpm stack          # 开发栈三端状态：前端 5173 / 后端 3001 / ES 9201
 pnpm preview        # 预览构建产物
 ```

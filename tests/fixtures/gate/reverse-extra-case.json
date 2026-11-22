@@ -1,0 +1,33 @@
+{
+  "reverse": "island",
+  "manifest": {
+    "mode": {
+      "reverse": "island"
+    },
+    "fatalError": null,
+    "cases": [
+      {
+        "id": "P7-NAV",
+        "status": "fail",
+        "failureReason": "失败断言：islandNotOverSummary",
+        "checks": {
+          "collapsedVisible": true,
+          "expandedItems": true,
+          "islandNotOverSummary": false
+        },
+        "failures": []
+      },
+      {
+        "id": "P7-PURCHASE",
+        "status": "fail",
+        "failureReason": "用例抛错",
+        "checks": {
+          "confirmationRequired": true
+        },
+        "failures": [
+          "用例抛错"
+        ]
+      }
+    ]
+  }
+}
