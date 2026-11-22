@@ -1,7 +1,7 @@
 // 对比度门槛的边界回归：展示值可以舍入到 3.00，但原始值必须小于 3 并被拦住。
 import assert from 'node:assert/strict'
-import test from 'node:test'
-import { analyzeScrollbarPair, contrastRatio } from './native-scrollbar.mjs'
+import { test } from 'vitest'
+import { analyzeScrollbarPair, contrastRatio } from '../../scripts/acceptance/native-scrollbar.mjs'
 
 const nearThreshold = contrastRatio([27, 27, 27], [102, 102, 102])
 
