@@ -3,7 +3,7 @@
 Phase 8 F3 建立的本机 E2E 入口，验收项 E1。与 `check:ui` 分工：
 
 - `check:ui`：零依赖 CDP，负责视觉、像素取样、反向与动效证据；
-- `verify:e2e`：Playwright，负责六条业务路径与 theme.spec.ts（O3，由 F4 添加），不替代 `check:ui`。
+- `verify:e2e`：Playwright，负责六条业务路径与 `theme.spec.ts`（O3，F4 已添加，单独统计），不替代 `check:ui`。
 
 ## 前置条件
 
@@ -17,7 +17,7 @@ Phase 8 F3 建立的本机 E2E 入口，验收项 E1。与 `check:ui` 分工：
 ## 命令
 
 ```bash
-pnpm verify:e2e                         # clean build + vite preview + 六条业务 spec
+pnpm verify:e2e                         # clean build + vite preview + 六条业务 spec + theme.spec.ts
 pnpm exec playwright test e2e/search.spec.ts   # 定向复跑单条
 node scripts/acceptance/probe-chrome.mjs       # 最小 Chrome 探测（无需服务）
 ```
@@ -58,3 +58,14 @@ node scripts/acceptance/probe-chrome.mjs       # 最小 Chrome 探测（无需�
 | `purchase.spec.ts` | 正常购买经真实 UI 发出未拦截的 `POST /api/purchase-check`，响应 `result: 'purchasable'` 且页面展示可购买结果 |
 
 购买用例不注册 `page.route` / CDP Fetch 拦截；仅变价 / 库存不足分支允许局部 mock（不在本票六条内）。
+
+## `theme.spec.ts`（O3 / D86，单独统计）
+
+| 文件 | 验收点 |
+|---|---|
+| `theme.spec.ts` | 亮暗双向切换；刷新后 `.v-application` 的主题 class（`v-theme--light` / `v-theme--dark`）、页面计算背景与 localStorage 保存值一致；只判定 `theme.global.name.value` 的旧写入弃用告警 |
+
+- **不计入六条业务路径**：manifest reporter 按文件名分组，本文件进 `suites.theme`，`suites.business` 仍是 6 条。
+- console 监听在首次导航**之前**注册，只收「旧写入」这一条 `[Vuetify UPGRADE]` 告警，其他控制台输出不参与判定。
+- **生产构建里 Vue 的 `warn` 是 NOOP**：`verify:e2e` 跑的是 `pnpm build && vite preview`，产物中 `r=()=>{}`、`So=r`（`dist/assets/index-*.js`），且全产物没有 `"[Vue warn]"` 字符串，所以 Vuetify 的 `deprecate` 不进控制台；本文件的 console 断言在该形态下**不会失败**，只是前向守卫（改用 dev 模式跑时才有牙齿）。
+- 真正能拦住旧写法的告警回归在组件层：`tests/component/theme-preference.test.ts`（jsdom + 真实 `createVuetify` + spy `console.warn`，旧代码下会失败）。
