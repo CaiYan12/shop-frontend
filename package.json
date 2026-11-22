@@ -16,6 +16,7 @@
     "check:ui:unit": "vitest run tests/unit/native-scrollbar.test.mjs",
     "test:unit": "vitest run",
     "verify": "run-s check:docs test:unit build",
+    "verify:e2e": "playwright test",
     "stack": "node scripts/stack-status.mjs",
     "prepare": "node scripts/install-hooks.mjs"
   },
@@ -32,6 +33,7 @@
     "vuetify": "4.3.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@tailwindcss/vite": "4.3.5",
     "@tsconfig/node26": "26.0.2",
     "@types/node": "26.6.6",
